@@ -9,10 +9,13 @@ typedef long long I64;
 typedef char byte;
 
 typedef struct {
-  String key;
+  const char* key;
   int value;
   bool is_occupied;
 } KeyValue;
+
+#define kv(K, V)                                                               \
+  (KeyValue) { .key = K, .value = V, .is_occupied = true }
 
 typedef struct {
   U64 len;
@@ -22,12 +25,31 @@ typedef struct {
 
 #define hash_table_alloc(_arena, _hash_table, _cap)                            \
   do {                                                                         \
-    (_hash_table)->capacity = _cap;                                              \
-    (_hash_table)->len = 0;                                                      \
-    (_hash_table)->items =                                                       \
-        arena_alloc(_arena, sizeof(*(_hash_table)->items) * _cap);               \
-    memory_set((byte *)(_hash_table)->items, sizeof(*(_hash_table)->items) * _cap, 0);      \
+    (_hash_table)->capacity = _cap;                                            \
+    (_hash_table)->len = 0;                                                    \
+    (_hash_table)->items =                                                     \
+        arena_alloc(_arena, sizeof(*(_hash_table)->items) * _cap);             \
+    memory_set((byte *)(_hash_table)->items,                                   \
+               sizeof(*(_hash_table)->items) * _cap, 0);                       \
   } while (false)
+
+int hash_table_find_item(HashTable table, String key) {
+  for (U64 i = 0; i < table.capacity; i++) {
+    if (c_string_equals(table.items[i].key, key.str)) {
+      return table.items[i].value;
+    }
+  }
+  return 0;
+}
+
+const char * hash_table_find_key(HashTable table, int value) {
+  for (U64 i = 0; i < table.capacity; i++) {
+    if (table.items[i].value == value) {
+      return table.items[i].key;
+    }
+  }
+  return NULL;
+}
 
 U64 hash(String string);
 
@@ -56,21 +78,5 @@ double finish_profiling(struct timespec begin) {
   assert(time_error == 0);
   return delta_secs(begin, end);
 }
-
-int compare(const void *a, const void *b) {
-  KeyValue a_kv = *(KeyValue *)a;
-  KeyValue b_kv = *(KeyValue *)b;
-  return (b_kv.value - a_kv.value);
-}
-
-void print_top_n(KeyValue *tokens_filtered, U64 N) {
-  qsort(tokens_filtered, len(tokens_filtered), sizeof(*tokens_filtered),
-        &compare);
-  for (size_t i = 0; i < N; i++) {
-    KeyValue token = tokens_filtered[i];
-    printfln("%lu : %S => %lu", i, token.key, token.value);
-  }
-}
-
 #endif /* ifndef _                                                             \
         */

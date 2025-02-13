@@ -14,6 +14,7 @@ typedef struct {
   unsigned int position;
   unsigned int next_position;
   char current_char;
+  char next_char;
 } Lexer;
 typedef bool (*PredicatorFN)(char);
 
@@ -24,6 +25,7 @@ bool _lexer_is_valid_letter(char c);
 bool _lexer_is_valid_number(char c);
 // hidden
 void _lexer_read_char(Lexer *lexer);
+void _lexer_skip_white_space(Lexer *lexer);
 
 bool _lexer_is_valid_letter(char c) {
   return (c >= 'A' && c <= 'z') || c == '_';
@@ -31,9 +33,6 @@ bool _lexer_is_valid_letter(char c) {
 bool _lexer_is_valid_number(char c) {
   return (c >= '0' && c <= '9') || c == '.';
 }
-
-String _lexer_read_identifier(Arena *arena, Lexer *lexer);
-
 String _lexer_read_blank(Arena *arena, Lexer *lexer,
                          PredicatorFN predicator_fn);
 
@@ -50,8 +49,10 @@ Lexer lexer_new_lexer(String input) {
 
 void _lexer_read_char(Lexer *lexer) {
   if (lexer->next_position >= lexer->input.len) {
+    lexer->next_char = 0;
     lexer->current_char = 0;
   } else {
+    lexer->next_char = lexer->input.str[lexer->next_position + 1];
     lexer->current_char = lexer->input.str[lexer->next_position];
   }
   /*char *read_identifier() STR_WITH_LEN(lexer -> current_char, )*/
@@ -60,10 +61,12 @@ void _lexer_read_char(Lexer *lexer) {
 }
 
 Token lexer_next_token(Arena *arena, Lexer *lexer) {
+  _lexer_skip_white_space(lexer);
   char c = lexer->current_char;
   Token tok = (Token){0};
   switch (c) {
   case '\0':
+  case '-':
   case '=':
   case '+':
   case ',':
@@ -72,25 +75,23 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   case ')':
   case '{':
   case '}': {
-    TokenType type = get_token_type_of_char(c);
     const char *str_slice = lexer->input.str + lexer->position;
-    String str = arena_new_string_with_len(arena, str_slice, 2);
+    String str = arena_new_string_with_len(arena, str_slice, 1);
+    TokenType type = get_token_type(str);
     tok = NEW_TOKEN(type, str);
     break;
   }
   default: {
     if (_lexer_is_valid_letter(c)) {
-      String identifier =
-          _lexer_read_blank(arena, lexer, &_lexer_is_valid_letter);
-      TokenType type = get_token_type_of_char(c);
+      String literal = _lexer_read_blank(arena, lexer, &_lexer_is_valid_letter);
+      TokenType type = get_token_type(literal);
       if (type == ILLEGAL) {
         type = IDENTIFIER;
       }
-      tok = NEW_TOKEN(type, identifier);
+      tok = NEW_TOKEN(type, literal);
     } else if (_lexer_is_valid_number(c)) {
-      String identifier =
-          _lexer_read_blank(arena, lexer, &_lexer_is_valid_number);
-      tok = NEW_TOKEN(INT, identifier);
+      String number = _lexer_read_blank(arena, lexer, &_lexer_is_valid_number);
+      tok = NEW_TOKEN(INT, number);
     }
   }
   }
@@ -98,23 +99,35 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   return tok;
 }
 
-String _lexer_read_identifier(Arena *arena, Lexer *lexer) {
-  U64 start = lexer->position;
-  while (_lexer_is_valid_letter(lexer->current_char)) {
+void _lexer_skip_white_space(Lexer *lexer) {
+  while (                            //
+      lexer->current_char == ' ' ||  //
+      lexer->current_char == '\t' || //
+      lexer->current_char == '\r' || //
+      lexer->current_char == '\n') {
     _lexer_read_char(lexer);
   }
-  U64 end = lexer->position;
-  return arena_new_string_with_len(arena, lexer->input.str + start, end - start);
 }
 
+/*Why i used next_char?*/
+// here we do this gooofy stuff because at the end of
+// the switch of the lexer_next_token we are always
+// doing _lexer_read_char at the end
+// which 'eats up' our `;` because when we read 123; (in the old way)
+// the lexer is stopped at the `;`, and because of that, when we read in the
+// lexer_next_token at the end well we just skip it
+// we could just do an early return in that function
+// but [redacted]
 String _lexer_read_blank(Arena *arena, Lexer *lexer,
                          PredicatorFN predicator_fn) {
   U64 start = lexer->position;
-  while (predicator_fn(lexer->current_char)) {
+  while (predicator_fn(lexer->next_char)) {
     _lexer_read_char(lexer);
   }
-  U64 end = lexer->position;
-  return arena_new_string_with_len(arena, lexer->input.str + start, end - start);
+  U64 end = lexer->next_position;
+  String ret =
+      arena_new_string_with_len(arena, lexer->input.str + start, end - start);
+  return ret;
 }
 
 #endif /* ifndef _LEXER_H */
