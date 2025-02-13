@@ -138,7 +138,109 @@ TEST(test_more_tokens) {
 
   for (int i = 0; i < (sizeof tokens_test / sizeof tokens_test[0]); i++) {
     Token tok = lexer_next_token(&arena, &lexi);
-    Token expected_tok = tokens_test[i];
+    TokenType type = tok.type;
+    TokenType expected_type = tokens_test[i].type;
+    /*print_token(color(4)"MY_TOKEN"end_color, tok);*/
+    /*print_token(color(6)"EXPECTED_TOKEN"end_color, expected_tok);*/
+    ASSERT_TYPES(tok, type, expected_type);
+    printf("\n");
+  }
+}
+
+TEST(test_more_more_tokens) {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+  String input = arena_new_string(&arena, "let five = 5;\n"
+                                          "let ten = 10;\n"
+                                          "let add = fn(x, y) {\n"
+                                          "x + y;\n"
+                                          "};\n"
+                                          "let result = add(five, ten);\n"
+                                          "!-/*5;\n"
+                                          "5 < 10 > 5;\n"
+                                          "if (5 < 10) {\n"
+                                          "return true;\n"
+                                          "} else {\n"
+                                          "return false;\n"
+                                          "}");
+  Lexer lexi = lexer_new_lexer(input);
+  Token tokens_test[] = {
+      (Token){.type = LET, .literal = string("let")},
+      (Token){.type = IDENTIFIER, .literal = string("five")},
+      (Token){.type = ASSIGN, .literal = string("=")},
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = LET, .literal = string("let")},
+      (Token){.type = IDENTIFIER, .literal = string("ten")},
+      (Token){.type = ASSIGN, .literal = string("=")},
+      (Token){.type = INT, .literal = string("10")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = LET, .literal = string("let")},
+      (Token){.type = IDENTIFIER, .literal = string("add")},
+      (Token){.type = ASSIGN, .literal = string("=")},
+      (Token){.type = FUNCTION, .literal = string("fn")},
+      (Token){.type = L_PAREN, .literal = string("(")},
+      (Token){.type = IDENTIFIER, .literal = string("x")},
+      (Token){.type = COMMA, .literal = string(",")},
+      (Token){.type = IDENTIFIER, .literal = string("y")},
+      (Token){.type = R_PAREN, .literal = string(")")},
+      (Token){.type = L_BRACE, .literal = string("{")},
+      (Token){.type = IDENTIFIER, .literal = string("x")},
+      (Token){.type = PLUS, .literal = string("+")},
+      (Token){.type = IDENTIFIER, .literal = string("y")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+      (Token){.type = R_BRACE, .literal = string("}")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = LET, .literal = string("let")},
+      (Token){.type = IDENTIFIER, .literal = string("result")},
+      (Token){.type = ASSIGN, .literal = string("=")},
+      (Token){.type = IDENTIFIER, .literal = string("add")},
+      (Token){.type = L_PAREN, .literal = string("(")},
+      (Token){.type = IDENTIFIER, .literal = string("five")},
+      (Token){.type = COMMA, .literal = string(",")},
+      (Token){.type = IDENTIFIER, .literal = string("ten")},
+      (Token){.type = R_PAREN, .literal = string(")")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = BANG, .literal = string("!")},
+      (Token){.type = MINUS, .literal = string("-")},
+      (Token){.type = SLASH, .literal = string("/")},
+      (Token){.type = ASTERISK, .literal = string("*")},
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = LT, .literal = string("<")},
+      (Token){.type = INT, .literal = string("10")},
+      (Token){.type = GT, .literal = string(">")},
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = IF, .literal = string("if")},
+      (Token){.type = L_PAREN, .literal = string("(")},
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = LT, .literal = string("<")},
+      (Token){.type = INT, .literal = string("10")},
+      (Token){.type = R_PAREN, .literal = string(")")},
+      (Token){.type = L_BRACE, .literal = string("{")},
+      (Token){.type = RETURN, .literal = string("return")},
+      (Token){.type = TRUE, .literal = string("true")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+      (Token){.type = R_BRACE, .literal = string("}")},
+      (Token){.type = ELSE, .literal = string("else")},
+      (Token){.type = L_BRACE, .literal = string("{")},
+      (Token){.type = RETURN, .literal = string("return")},
+      (Token){.type = FALSE, .literal = string("false")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+      (Token){.type = R_BRACE, .literal = string("}")},
+
+      (Token){.type = EOF_, .literal = string("")},
+  };
+
+  for (int i = 0; i < (sizeof tokens_test / sizeof tokens_test[0]); i++) {
+    Token tok = lexer_next_token(&arena, &lexi);
     TokenType type = tok.type;
     TokenType expected_type = tokens_test[i].type;
     /*print_token(color(4)"MY_TOKEN"end_color, tok);*/
@@ -149,6 +251,6 @@ TEST(test_more_tokens) {
 }
 
 int main() {
-  test_more_tokens();
+  test_more_more_tokens();
   return failed;
 }

@@ -27,6 +27,8 @@ typedef enum {
   NOT_EQUALS,
   LT,
   GT,
+  L_EQUALS,
+  G_EQUALS,
 
   // delimiter
   COMMA,
@@ -39,10 +41,14 @@ typedef enum {
 
   // data_types
   INT,
-
   // keywords
-  FUNCTION,
   LET,
+  FUNCTION,
+  IF,
+  ELSE,
+  TRUE,
+  FALSE,
+  RETURN,
 } TokenType;
 
 KeyValue TYPES_ARR[] = {
@@ -50,6 +56,7 @@ KeyValue TYPES_ARR[] = {
     kv("", EOF_),           //
                             // operators
     kv("=", ASSIGN),        //
+    kv("-", MINUS),          //
     kv("+", PLUS),          //
     kv("*", ASTERISK),      //
     kv("/", SLASH),         //
@@ -58,17 +65,24 @@ KeyValue TYPES_ARR[] = {
     kv("!", BANG),          //
     kv("!=", NOT_EQUALS),   //
     kv("<", LT),            //
-    kv(">", GTREATER_THAN), //
-    kv(",", COMMA),         // delimiters
+    kv(">", GT),            //
+    kv(">=", G_EQUALS),     //
+    kv("<=", L_EQUALS),     //
                             //
+    kv(",", COMMA),         // delimiters
     kv(";", SEMICOLON),     //
     kv("(", L_PAREN),       //
-    kv(")", R_PAREN),       // 
+    kv(")", R_PAREN),       //
     kv("{", L_BRACE),       //
     kv("}", R_BRACE),       //
                             // keywords
     kv("fn", FUNCTION),     //
     kv("let", LET),         //
+    kv("if", IF),           //
+    kv("else", ELSE),       //
+    kv("true", TRUE),       //
+    kv("false", FALSE),     //
+    kv("return", RETURN),   //
 }; //
 
 #define TYPES_LEN (sizeof TYPES_ARR / sizeof TYPES_ARR[0])

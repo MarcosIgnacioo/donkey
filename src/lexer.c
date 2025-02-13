@@ -64,39 +64,52 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   _lexer_skip_white_space(lexer);
   char c = lexer->current_char;
   Token tok = (Token){0};
+  U64 default_size = 1;
   switch (c) {
+  case '!':
+  case '<':
+  case '>':
+  case '=': {
+    if (lexer->next_char == '=') {
+      default_size = 2;
+    }
+  }
   case '\0': // eof
-  case '-': // operators
+  case '-':  // operators
   case '+':
-  case '=':
   case '*':
-  case '/':  
+  case '/':
   case ',': // delimiters
   case ';':
-  case '!':
   case '(':
   case ')':
   case '{':
-  case '}': {
-    const char *str_slice = lexer->input.str + lexer->position;
-    String str = arena_new_string_with_len(arena, str_slice, 1);
-    TokenType type = get_token_type(str);
-    tok = NEW_TOKEN(type, str);
-    break;
-  }
-  default: {
-    if (_lexer_is_valid_letter(c)) {
-      String literal = _lexer_read_blank(arena, lexer, &_lexer_is_valid_letter);
-      TokenType type = get_token_type(literal);
-      if (type == ILLEGAL) {
-        type = IDENTIFIER;
-      }
-      tok = NEW_TOKEN(type, literal);
-    } else if (_lexer_is_valid_number(c)) {
-      String number = _lexer_read_blank(arena, lexer, &_lexer_is_valid_number);
-      tok = NEW_TOKEN(INT, number);
+  case '}':
+    //
+    {
+      const char *str_slice = lexer->input.str + lexer->position;
+      String str = arena_new_string_with_len(arena, str_slice, default_size);
+      TokenType type = get_token_type(str);
+      tok = NEW_TOKEN(type, str);
+      break;
     }
-  }
+  default:
+    //
+    {
+      if (_lexer_is_valid_letter(c)) {
+        String literal =
+            _lexer_read_blank(arena, lexer, &_lexer_is_valid_letter);
+        TokenType type = get_token_type(literal);
+        if (type == ILLEGAL) {
+          type = IDENTIFIER;
+        }
+        tok = NEW_TOKEN(type, literal);
+      } else if (_lexer_is_valid_number(c)) {
+        String number =
+            _lexer_read_blank(arena, lexer, &_lexer_is_valid_number);
+        tok = NEW_TOKEN(INT, number);
+      }
+    }
   }
   _lexer_read_char(lexer);
   return tok;
