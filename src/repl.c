@@ -4,7 +4,7 @@
 #include "arena_strings.c"
 #include "lexer.c"
 #include <stdio.h>
-#define MAX_LINE_CHARS 3
+#define MAX_LINE_CHARS 512
 #define color(C) "\033[0;3" #C "m"
 #define end_color "\033[0m"
 

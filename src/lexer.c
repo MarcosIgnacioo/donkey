@@ -122,6 +122,7 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
     }
   }
   _lexer_read_char(lexer);
+  _lexer_skip_white_space(lexer);
   return tok;
 }
 
