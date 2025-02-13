@@ -329,7 +329,7 @@ void string_concat(String *dest, String source) {
 void print_string(String str) {
   printf("======================================\n");
   printf("ptr: %p\n\nlen: %lu\ncap: %lu", str.str, str.len, str.cap);
-  printfln("str: %S", str.str);
+  printfln("str: %S", str);
 }
 
 /*

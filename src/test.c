@@ -1,4 +1,5 @@
 #include "lexer.c"
+#include "repl.c"
 #include "token.c"
 #include <assert.h>
 #include <stdio.h>
@@ -163,8 +164,7 @@ TEST(test_more_more_tokens) {
                                           "return false;\n"
                                           "}"
                                           "5 <= 10 >= 5;\n"
-                                          "5 != 10 == 5;\n"
-                                  );
+                                          "5 != 10 == 5;\n");
   Lexer lexi = lexer_new_lexer(input);
   Token tokens_test[] = {
       (Token){.type = LET, .literal = string("let")},
@@ -268,6 +268,8 @@ TEST(test_more_more_tokens) {
 }
 
 int main() {
-  test_more_more_tokens();
+  /*test_more_more_tokens();*/
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+  donkey_repl(&arena);
   return failed;
 }
