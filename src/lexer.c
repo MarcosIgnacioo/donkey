@@ -52,7 +52,13 @@ void _lexer_read_char(Lexer *lexer) {
     lexer->next_char = 0;
     lexer->current_char = 0;
   } else {
-    lexer->next_char = lexer->input.str[lexer->next_position + 1];
+    // TODO: Asegurarnos aqui que no nos estmaos saliendo d los bounds de manera
+    // mas sexy
+    if (lexer->next_position + 1 < lexer->input.len) {
+      lexer->next_char = lexer->input.str[lexer->next_position + 1];
+    } else {
+      lexer->next_char = 0;
+    }
     lexer->current_char = lexer->input.str[lexer->next_position];
   }
   /*char *read_identifier() STR_WITH_LEN(lexer -> current_char, )*/
@@ -91,6 +97,10 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
       String str = arena_new_string_with_len(arena, str_slice, default_size);
       TokenType type = get_token_type(str);
       tok = NEW_TOKEN(type, str);
+      // ver si hay una manera de que se pueda hacer esto sin bueno hacer esto
+      if (default_size > 1) {
+        _lexer_read_char(lexer);
+      }
       break;
     }
   default:

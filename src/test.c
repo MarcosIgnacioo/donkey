@@ -161,7 +161,10 @@ TEST(test_more_more_tokens) {
                                           "return true;\n"
                                           "} else {\n"
                                           "return false;\n"
-                                          "}");
+                                          "}"
+                                          "5 <= 10 >= 5;\n"
+                                          "5 != 10 == 5;\n"
+                                  );
   Lexer lexi = lexer_new_lexer(input);
   Token tokens_test[] = {
       (Token){.type = LET, .literal = string("let")},
@@ -235,6 +238,20 @@ TEST(test_more_more_tokens) {
       (Token){.type = FALSE, .literal = string("false")},
       (Token){.type = SEMICOLON, .literal = string(";")},
       (Token){.type = R_BRACE, .literal = string("}")},
+
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = L_EQUALS, .literal = string("<=")},
+      (Token){.type = INT, .literal = string("10")},
+      (Token){.type = G_EQUALS, .literal = string(">=")},
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
+
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = NOT_EQUALS, .literal = string("!=")},
+      (Token){.type = INT, .literal = string("10")},
+      (Token){.type = EQUALS, .literal = string("==")},
+      (Token){.type = INT, .literal = string("5")},
+      (Token){.type = SEMICOLON, .literal = string(";")},
 
       (Token){.type = EOF_, .literal = string("")},
   };
