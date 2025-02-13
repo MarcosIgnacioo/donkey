@@ -3,16 +3,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-char *ts[] = {
-    // error handling
-    "ILLEGAL", "EOF_", "IDENTIFIER", "INT",
-    // operators
-    "ASSIGN", "PLUS", "MINUS",
-    // delimiter
-    "COMMA", "SEMICOLON", "L_PAREN", "R_PAREN", "L_BRACE", "R_BRACE",
-    // keywords
-    "FUNCTION", "LET"};
-
 #define color(C) "\033[0;3" #C "m"
 #define end_color "\033[0m"
 
@@ -33,11 +23,11 @@ int failed = 0;
 #define ASSERT_TYPES(TOK, EXPECTED_TYPE, TYPE)                                 \
   if (EXPECTED_TYPE == TYPE) {                                                 \
     printf("\033[0;32mPASS: %s == %s\n\033[0m", TOK.literal.str,               \
-           ts[EXPECTED_TYPE]);                                                 \
+           get_token_literal(expected_type));                                  \
   } else {                                                                     \
     failed = 1;                                                                \
     printf("\033[0;31mFAIL: %s != %s\n\033[0m", TOK.literal.str,               \
-           ts[EXPECTED_TYPE]);                                                 \
+           TYPES_ARR[EXPECTED_TYPE].key);                                      \
   }
 
 #define ASSERT_STR_EQ(str1, str2)                                              \
@@ -102,7 +92,7 @@ TEST(test_more_tokens) {
   String input = arena_new_string(&arena, "let five = 5;"
                                           "let ten = 10;"
                                           "let add = fn(x, y) {"
-                                          "x + y;"
+                                          "x * y;"
                                           "};"
                                           "let result = add(five, ten);");
   Lexer lexi = lexer_new_lexer(input);
@@ -128,7 +118,7 @@ TEST(test_more_tokens) {
       (Token){.type = R_PAREN, .literal = string(")")},
       (Token){.type = L_BRACE, .literal = string("{")},
       (Token){.type = IDENTIFIER, .literal = string("x")},
-      (Token){.type = PLUS, .literal = string("+")},
+      (Token){.type = ASTERISK, .literal = string("*")},
       (Token){.type = IDENTIFIER, .literal = string("y")},
       (Token){.type = SEMICOLON, .literal = string(";")},
       (Token){.type = R_BRACE, .literal = string("}")},
@@ -154,6 +144,7 @@ TEST(test_more_tokens) {
     /*print_token(color(4)"MY_TOKEN"end_color, tok);*/
     /*print_token(color(6)"EXPECTED_TOKEN"end_color, expected_tok);*/
     ASSERT_TYPES(tok, type, expected_type);
+    printf("\n");
   }
 }
 

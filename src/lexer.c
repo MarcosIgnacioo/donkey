@@ -65,12 +65,15 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   char c = lexer->current_char;
   Token tok = (Token){0};
   switch (c) {
-  case '\0':
-  case '-':
-  case '=':
+  case '\0': // eof
+  case '-': // operators
   case '+':
-  case ',':
+  case '=':
+  case '*':
+  case '/':  
+  case ',': // delimiters
   case ';':
+  case '!':
   case '(':
   case ')':
   case '{':

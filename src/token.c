@@ -2,9 +2,10 @@
 #define _TOKEN_H
 #define LOWEST_VALUE
 #include "arena_hash_table.c"
+#define color(C) "\033[0;3" #C "m"
+#define end_color "\033[0m"
 #define NEW_TOKEN(TYPE, LITERAL)                                               \
   (Token) { .type = TYPE, .literal = LITERAL }
-#define TYPES_LEN 15
 typedef enum {
   // error handling
   ILLEGAL,
@@ -12,12 +13,20 @@ typedef enum {
 
   // identifier + literals
   IDENTIFIER,
-  INT,
 
   // operators
   ASSIGN,
   PLUS,
   MINUS,
+  SLASH,
+  ASTERISK,
+
+  // relationals
+  EQUALS,
+  BANG,
+  NOT_EQUALS,
+  LT,
+  GT,
 
   // delimiter
   COMMA,
@@ -28,28 +37,41 @@ typedef enum {
   L_BRACE,
   R_BRACE,
 
+  // data_types
+  INT,
+
   // keywords
   FUNCTION,
   LET,
 } TokenType;
 
 KeyValue TYPES_ARR[] = {
-    kv("ILLEGAL", ILLEGAL),       //
-    kv("", EOF_),                 //
-    kv("IDENTIFIER", IDENTIFIER), //
-    kv("INT", INT),               //
-    kv("=", ASSIGN),              //
-    kv("+", PLUS),                //
-    kv("-", MINUS),               //
-    kv(",", COMMA),               //
-    kv(";", SEMICOLON),           //
-    kv("(", L_PAREN),             //
-    kv(")", R_PAREN),             //
-    kv("{", L_BRACE),             //
-    kv("}", R_BRACE),             //
-    kv("fn", FUNCTION),           //
-    kv("let", LET),               //
+    kv("ILLEGAL", ILLEGAL), // parsing stuff
+    kv("", EOF_),           //
+                            // operators
+    kv("=", ASSIGN),        //
+    kv("+", PLUS),          //
+    kv("*", ASTERISK),      //
+    kv("/", SLASH),         //
+                            // relationals
+    kv("==", EQUALS),       //
+    kv("!", BANG),          //
+    kv("!=", NOT_EQUALS),   //
+    kv("<", LT),            //
+    kv(">", GTREATER_THAN), //
+    kv(",", COMMA),         // delimiters
+                            //
+    kv(";", SEMICOLON),     //
+    kv("(", L_PAREN),       //
+    kv(")", R_PAREN),       // 
+    kv("{", L_BRACE),       //
+    kv("}", R_BRACE),       //
+                            // keywords
+    kv("fn", FUNCTION),     //
+    kv("let", LET),         //
 }; //
+
+#define TYPES_LEN (sizeof TYPES_ARR / sizeof TYPES_ARR[0])
 
 HashTable TYPES =
     (HashTable){.len = TYPES_LEN, .capacity = TYPES_LEN, .items = TYPES_ARR};
@@ -66,14 +88,23 @@ TokenType get_token_type(String input) {
 }
 
 const char *get_token_literal(TokenType token_type) {
-  return hash_table_find_key(TYPES, token_type);
+  switch (token_type) {
+  case IDENTIFIER:
+    return "identifier";
+  case INT:
+    return "int";
+  default:
+    return hash_table_find_key(TYPES, token_type);
+  }
 }
 
 void print_token(const char *title, Token token) {
+  const char *token_literal = get_token_literal(token.type);
   printf("%s:\n"
-         "\tliteral:`%s`\n"
-         "\ttype:`%s`\n",
-         title, token.literal.str, TYPES_ARR[token.type].key);
+         "\tliteral:" color(5) "`%s`" end_color "\n"
+                               "\ttype:" color(6) "`%s`" end_color "\n",
+         title, token.literal.str, token_literal);
+  printf("\n");
 }
 
 #endif /* ifndef _TOKEN_H */
