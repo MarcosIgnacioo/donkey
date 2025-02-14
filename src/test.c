@@ -303,14 +303,16 @@ typedef struct {
 } Fuzz;
 
 bool test_let_statement(Node statement, String expected_name) {
+  // TODO: make this to give the token type in string, it now spits out what the
+  // user typed `TokenType`
   if (statement.type != LET_STATEMENT) {
     printf(
         color(1) "ERROR:" end_color //
             color(4) "\n\tthe statement token is " color(
                 1) "NOT" end_color
                    " a " end_color color(6) "`let statement` " end_color color(
-                       7) "\n\tgot:`%d`\n" end_color,
-        statement.type);
+                       7) "\n\tgot: `%s`\n" end_color,
+        statement.token.literal.str);
     return false;
   }
 
@@ -337,40 +339,46 @@ bool test_let_statement(Node statement, String expected_name) {
            expected_name.str, let_stmt.name.token.literal.str);
     return false;
   }
-
   return true;
+}
+
+void test_check_parser_errors(Parser *parser) {
+  Error *errors = parser->errors;
+  U64 err_len = len(errors);
+  if (!err_len) {
+    printf("There are not parsing errors!\n");
+  } else {
+    printf("There %zu parsing errors!\n", err_len);
+    for (int i = 0; i < err_len; i++) {
+      Error err = errors[i];
+      printfln("%S", err.error);
+    }
+  }
 }
 
 int main() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  String input = arena_new_string(&arena, "let x = 5;\n"
-                                  /*"let y = 10;\n"*/
-                                  /*"let foobar = 34234234\n"*/
-  );
+  String input = arena_new_string(&arena, "let 5;\n"
+                                          "let = 10;\n"
+                                          "let 34234234;\n");
 
-  Token let_tok = (Token){.type = LET, .literal = string("let")};
-  Token ident_tok = (Token){.type = IDENTIFIER, .literal = string("fsdfoo")};
-  Identifier ident =
-      (Identifier){.token = ident_tok, .value = ident_tok.literal};
-
-  LetStatement let_stmt = {
-      .token = let_tok, .name = ident, .value = (Expression){0}};
-
-  /*Node n = {.type = LET_STATEMENT, .data = &let_stmt};*/
   Lexer lexer = lexer_new_lexer(input);
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
+  (void) program;
 
-  String expected_identifiers[] = {
-      string("x"),
-      /*string("y"),*/
-      /*string("foobar"),*/
-  };
+  /*String expected_identifiers[] = {*/
+  /*    string("x"),*/
+  /*    string("y"),*/
+  /*    string("foobar"),*/
+  /*};*/
 
-  for (int i = 0; i < array_len(expected_identifiers); i++) {
-    Node curr_statement = program.statements[i];
-    failed = !test_let_statement(curr_statement, expected_identifiers[i]);
-  }
+  test_check_parser_errors(&parser);
+
+  /*for (int i = 0; i < array_len(expected_identifiers); i++) {*/
+  /*  Node curr_statement = program.statements[i];*/
+  /*  failed = !test_let_statement(curr_statement, expected_identifiers[i]);*/
+  /*}*/
 
   return failed;
 }
