@@ -9,14 +9,10 @@
 #define SYNTAX_ERROR color(1) "[SYNTAX ERROR] : " end_color
 
 typedef enum {
-  NODE_NIL,
-  STATEMENT,
-  EXPRESSION,
   NIL_STATEMENT,
   LET_STATEMENT,
-  IF_STATEMENT,
-  FUNCTION_STATEMENT,
-  IDENTIFIER_STATEMENT,
+  RETURN_STATEMENT,
+  EXPRESSION_STATEMENT,
 } NodeType;
 
 typedef struct {
@@ -33,6 +29,16 @@ typedef struct {
   Identifier name; // removed *
   Expression value;
 } LetStatement;
+
+typedef struct {
+  Token token;
+  Expression return_value;
+} ReturnStatement;
+
+typedef struct {
+  Token token; // first token of the expression
+  Expression expression_value;
+} ExpressionStatement;
 
 typedef struct {
   Token token;
@@ -89,18 +95,6 @@ void ast_next_token(Arena *arena, Parser *parser) {
   parser->peek_token = lexer_next_token(arena, parser->lexer);
 }
 
-Program ast_parse_program(Arena *arena, Parser *parser) {
-  Node *statements = arena_array(arena, Node);
-  while (parser->curr_token.type != EOF_) {
-    Node *stmnt = ast_parse_statement(arena, parser);
-    if (stmnt) {
-      append(statements, *stmnt);
-    }
-    ast_next_token(arena, parser);
-  }
-  return (Program){.statements = statements};
-}
-
 #define peek_token_is(P, E) P->peek_token.type == E
 #define curr_token_is(P, E) P->curr_token.type == E
 
@@ -143,6 +137,31 @@ Node *ast_parse_dummy_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
+// TODO: FIND A WAY TO PUT THIS IN A MACRO
+/*
+ Node *statement = arena_alloc(arena, sizeof(Node));
+ReturnStatement *let_statement = arena_alloc(arena, sizeof(ReturnStatement));
+statement->type = RETURN_STATEMENT;
+statement->data = let_statement;
+let_statement->token = parser->curr_token;
+*/
+
+Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
+  Node *statement = arena_alloc(arena, sizeof(Node));
+  ReturnStatement *let_statement = arena_alloc(arena, sizeof(ReturnStatement));
+  statement->type = RETURN_STATEMENT;
+  statement->data = let_statement;
+  let_statement->token = parser->curr_token;
+
+  // TODO: PARSE EXPRESSIONS
+
+  while (!(curr_token_is(parser, SEMICOLON))) {
+    ast_next_token(arena, parser);
+  }
+
+  return statement;
+}
+
 Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
   LetStatement *let_statement = arena_alloc(arena, sizeof(LetStatement));
@@ -161,7 +180,9 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
     return NULL;
   }
 
-  while (parser->curr_token.type != SEMICOLON) {
+  // TODO: PARSE EXPRESSIONS
+
+  while (!(curr_token_is(parser, SEMICOLON))) {
     ast_next_token(arena, parser);
   }
   return statement;
@@ -175,12 +196,29 @@ Node *ast_parse_statement(Arena *arena, Parser *parser) {
     {
       return ast_parse_let_statement(arena, parser);
     }
+  case RETURN:
+    //
+    {
+      return ast_parse_return_statement(arena, parser);
+    }
   default:
     //
     {
-      return ast_parse_dummy_statement(arena, parser);
+      return NULL;
     }
   }
+}
+
+Program ast_parse_program(Arena *arena, Parser *parser) {
+  Node *statements = arena_array(arena, Node);
+  while (parser->curr_token.type != EOF_) {
+    Node *stmnt = ast_parse_statement(arena, parser);
+    if (stmnt) {
+      append(statements, *stmnt);
+    }
+    ast_next_token(arena, parser);
+  }
+  return (Program){.statements = statements};
 }
 
 String ast_init(Program *program) {
@@ -189,6 +227,53 @@ String ast_init(Program *program) {
   } else {
     return string("");
   }
+}
+
+void print_statement(Node node) {
+  char out[1024];
+  switch (node.type) {
+  case LET_STATEMENT:
+    //
+    {
+      LetStatement statement = *((LetStatement *)node.data);
+      sprintf(                              //
+          out, "%s %s = %s",                //
+          statement.token.literal.str,      //
+          statement.name.value.str,         //
+          statement.value.token.literal.str //
+      );
+      break;
+    }
+  case RETURN_STATEMENT:
+    //
+    {
+      ReturnStatement statement = *((ReturnStatement *)node.data);
+      sprintf(                                     //
+          out, "%s %s",                            //
+          statement.token.literal.str,             //
+          statement.return_value.token.literal.str //
+      );
+      break;
+    }
+  case EXPRESSION_STATEMENT:
+    //
+    {
+      ExpressionStatement statement = *((ExpressionStatement *)node.data);
+      sprintf(                                         //
+          out, "%s",                                   //
+          statement.expression_value.token.literal.str //
+      );
+      break;
+    }
+  default:
+    //
+    {
+      sprintf(                                                        //
+          out, "ILLEGAL STUFF IDUNNO BRO THERE IS NOT THAT STATEMENT" //
+      );
+    }
+  }
+  printf("%s\n", out);
 }
 
 #endif /* ifndef _PARSER_H */

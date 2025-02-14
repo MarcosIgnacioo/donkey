@@ -1,3 +1,47 @@
+
+Something really cool is the way we manage errors in the parser
+
+We have just an array of errors (which is just a type for a string, we do this, so if in a future we wanna put more stuff to our errors, it is as easy as modifying just the struct)
+
+And then we have a function that does the error stuff, which is pretty simple
+
+It just creates a string with the error, message, this kind of error are the ones when we dont have the token we expect, we accept the expected TokenType, and squash the one in the *peek_token* string; BECAUSE WE ACTIVATE THIS ERROR ONLY WHEN WE ARE PEEKING
+```c
+void ast_parser_peek_error(Arena *arena, Parser *parser,
+                           TokenType expected_type) {
+  char tmp_buf[1024];
+  const char *expected_type_c_string = get_token_literal(expected_type);
+  sprintf(tmp_buf,
+          SYNTAX_ERROR "expected token to be : " color(
+              6) "`%s`" end_color " got instead : " color(3) "`%s`" end_color,
+          expected_type_c_string, parser->peek_token.literal.str);
+  String error_msg = arena_new_string(arena, tmp_buf);
+  append(parser->errors, error(error_msg));
+}
+
+```
+which is done by this function, this is used to check if the peeking token is the same type as the expected one
+if is not, it calls the ast_parser_peek_error fn to register the error and vuala
+```c
+bool ast_expect_peek_token(Arena *arena, Parser *parser,
+                           TokenType expected_type) {
+  if (peek_token_is(parser, expected_type)) {
+    ast_next_token(arena, parser);
+    return true;
+  } else {
+    ast_parser_peek_error(arena, parser, expected_type);
+    return false;
+  }
+}
+```
+
+this kind of data piping is what i wanna achieve is so freaking cool
+
+
+
+
+
+
 ```c
 Program ast_init_program(Arena *arena, Token *tokens) {
   Statement *statements = arena_array(arena, Statement);

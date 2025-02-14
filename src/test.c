@@ -31,6 +31,7 @@
 #define color(C) "\033[0;3" #C "m"
 #define stringify(VAR) #VAR
 #define end_color "\033[0m"
+#define LOG_ERROR color(1) "[ERROR] : " end_color
 
 // Very small test helpers
 int failed = 0;
@@ -342,6 +343,20 @@ bool test_let_statement(Node statement, String expected_name) {
   return true;
 }
 
+bool test_return_statement(Node statement) {
+  if (statement.type != RETURN_STATEMENT) {
+    printf(
+        color(1) "ERROR:" end_color //
+            color(4) "\n\tthe statement token is " color(
+                1) "NOT" end_color
+                   " a " end_color color(6) "`let statement` " end_color color(
+                       7) "\n\tgot: `%s`\n" end_color,
+        statement.token.literal.str);
+    return false;
+  }
+  return true;
+}
+
 void test_check_parser_errors(Parser *parser) {
   Error *errors = parser->errors;
   U64 err_len = len(errors);
@@ -356,29 +371,53 @@ void test_check_parser_errors(Parser *parser) {
   }
 }
 
-int main() {
+TEST(test_parser_let_statement) {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  String input = arena_new_string(&arena, "let 5;\n"
-                                          "let = 10;\n"
-                                          "let 34234234;\n");
+  String input = arena_new_string(&arena, "let x = 5;\n"
+                                          "let y = 10;\n"
+                                          "let z = 34234234;\n");
 
   Lexer lexer = lexer_new_lexer(input);
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
-  (void) program;
+  (void)program;
 
-  /*String expected_identifiers[] = {*/
-  /*    string("x"),*/
-  /*    string("y"),*/
-  /*    string("foobar"),*/
-  /*};*/
+  String expected_identifiers[] = {
+      string("x"),
+      string("y"),
+      string("foobar"),
+  };
 
   test_check_parser_errors(&parser);
 
-  /*for (int i = 0; i < array_len(expected_identifiers); i++) {*/
-  /*  Node curr_statement = program.statements[i];*/
-  /*  failed = !test_let_statement(curr_statement, expected_identifiers[i]);*/
-  /*}*/
+  for (int i = 0; i < array_len(expected_identifiers); i++) {
+    Node curr_statement = program.statements[i];
+    failed = !test_let_statement(curr_statement, expected_identifiers[i]);
+  }
+}
 
+int main() {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+  String input = arena_new_string(&arena, "let x = 5;\n"
+                                          "return (x + y);\n"
+                                          "return (x + 10 / 2);\n");
+
+  Lexer lexer = lexer_new_lexer(input);
+  Parser parser = ast_new_parser(&arena, &lexer);
+  Program program = ast_parse_program(&arena, &parser);
+  (void)program;
+
+  if (len(program.statements) != 3) {
+    printf(LOG_ERROR "There are not 3 statements\n");
+  }
+
+  test_check_parser_errors(&parser);
+
+  for (int i = 0; i < len(program.statements); i++) {
+    Node curr_statement = program.statements[i];
+    printf("%u\n", curr_statement.type);
+    print_statement(curr_statement);
+    /*failed = !test_return_statement(curr_statement);*/
+  }
   return failed;
 }
