@@ -229,6 +229,54 @@ String ast_init(Program *program) {
   }
 }
 
+String stringify_statement(Arena *arena, Node node) {
+  String out;
+  switch (node.type) {
+  case LET_STATEMENT:
+    //
+    {
+      LetStatement statement = *((LetStatement *)node.data);
+      out = arena_string_fmt(arena,                       //
+                             "%s %s = (null);",           //
+                             statement.token.literal.str, //
+                             statement.name.value.str     //
+                                                          //
+      );
+      break;
+    }
+  case RETURN_STATEMENT:
+    //
+    {
+      ReturnStatement statement = *((ReturnStatement *)node.data);
+      out = arena_string_fmt(arena,                                   //
+                             "%s %s;",                                //
+                             statement.token.literal.str,             //
+                             statement.return_value.token.literal.str //
+      );
+      break;
+    }
+  case EXPRESSION_STATEMENT:
+    //
+    {
+      ExpressionStatement statement = *((ExpressionStatement *)node.data);
+      out = arena_string_fmt(arena,                                       //
+                             "%s;",                                       //
+                             statement.expression_value.token.literal.str //
+      );
+      break;
+    }
+  default:
+    //
+    {
+      out = arena_string_fmt(
+          arena,                                                 //
+          "ILLEGAL STUFF IDUNNO BRO THERE IS NOT THAT STATEMENT" //
+      );
+    }
+  }
+  return out;
+}
+
 void print_statement(Node node) {
   char out[1024];
   switch (node.type) {
@@ -237,7 +285,7 @@ void print_statement(Node node) {
     {
       LetStatement statement = *((LetStatement *)node.data);
       sprintf(                              //
-          out, "%s %s = %s",                //
+          out, "%s %s = %s;",               //
           statement.token.literal.str,      //
           statement.name.value.str,         //
           statement.value.token.literal.str //
@@ -249,7 +297,7 @@ void print_statement(Node node) {
     {
       ReturnStatement statement = *((ReturnStatement *)node.data);
       sprintf(                                     //
-          out, "%s %s",                            //
+          out, "%s %s;",                           //
           statement.token.literal.str,             //
           statement.return_value.token.literal.str //
       );
@@ -260,7 +308,7 @@ void print_statement(Node node) {
     {
       ExpressionStatement statement = *((ExpressionStatement *)node.data);
       sprintf(                                         //
-          out, "%s",                                   //
+          out, "%s;",                                  //
           statement.expression_value.token.literal.str //
       );
       break;

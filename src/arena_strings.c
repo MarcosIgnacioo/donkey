@@ -1,6 +1,7 @@
 #ifndef _ARENA_STRINGS_H
-#include "array.c"
 #include "arena.c"
+#include "array.c"
+#include <stdarg.h>
 #include <stdbool.h>
 #define _ARENA_STRINGS_H
 typedef unsigned long U64;
@@ -11,7 +12,7 @@ typedef char byte;
   (String) { .str = STRING, .len = str_len(STRING), .cap = str_len(STRING) }
 #define slice(STRING, BEGIN, END)                                              \
   (String) { .str = STRING.str + BEGIN, .len = END - BEGIN, .cap = END - BEGIN }
-#define c_slice(STRING, BEGIN, END)                                              \
+#define c_slice(STRING, BEGIN, END)                                            \
   (String) { .str = STRING + BEGIN, .len = END - BEGIN, .cap = END - BEGIN }
 
 typedef struct {
@@ -58,6 +59,7 @@ void c_string_copy(String *to, const char *from);
 void string_copy(String *to, String from);
 
 bool is_lower_case(char c) { return c >= 'a' && c <= 'z'; }
+bool is_space(char c) { return c == ' ' || c == '\t' || c == '\n'; };
 bool memory_cmp(byte *this, byte *that, U64 length);
 bool string_equals(String this, String that);
 
@@ -86,11 +88,8 @@ String arena_new_string_zero(Arena *arena, const char *source) {
   return new_string;
 }
 
-
-
 String arena_new_string_with_len(Arena *arena, const char *source, U64 len) {
-  String new_string =
-      (String){.str = NULL, .len = len, .cap = len};
+  String new_string = (String){.str = NULL, .len = len, .cap = len};
   byte *arena_str = arena_alloc_zero(arena, len);
   memory_copy(arena_str, source, len);
   new_string.str = arena_str;
@@ -121,6 +120,92 @@ String arena_string_slice(Arena *arena, String chopping, U64 start, U64 end) {
   end = min(end, chopping.len);
   start = min(start, 0);
   return (String){.str = chopping.str + start, .len = end - start};
+}
+
+int fmt_buffer(char *buffer, char *token, va_list arg_ptr, const char *fmt,
+               int i, int k) {
+  if (fmt[i + 1] == '%' || fmt[i + 1] == '\0') {
+    token[k] = '\0';
+    k = 0;
+    if (token[0] != '%') {
+      sprintf(buffer, "%s", token);
+    } else {
+      int j = 1;
+      char ch1 = 0;
+      while ((ch1 = token[j++]) < 58) {
+      }
+      if (ch1 == 'i' || ch1 == 'd' || ch1 == 'u' || ch1 == 'h') {
+        sprintf(buffer, token, va_arg(arg_ptr, int));
+      } else if (ch1 == 'p') {
+        sprintf(buffer, token, va_arg(arg_ptr, void *));
+      } else if (ch1 == 'c') {
+        sprintf(buffer, token, va_arg(arg_ptr, int));
+      } else if (ch1 == 'S') {
+        String string = va_arg(arg_ptr, String);
+        U64 index;
+        for (index = 0; index < string.len; index++) {
+          sprintf(buffer + index, "%c", string.str[index]);
+        }
+        sprintf(buffer + index, "%s", token + 2);
+      } else if (ch1 == 'b') {
+        int boolean = va_arg(arg_ptr, int);
+        int len = 4;
+        if (boolean) {
+          sprintf(buffer, "%s", "true");
+        } else {
+          len = 5;
+          sprintf(buffer, "%s", "false");
+        }
+        sprintf(buffer + len, "%s", token + 2);
+      } else if (ch1 == 'f') {
+        sprintf(buffer, token, va_arg(arg_ptr, double));
+      } else if (ch1 == 'z') {
+        char ch2 = token[2];
+        if (ch2 == 'u') {
+          sprintf(buffer, token, va_arg(arg_ptr, unsigned long));
+        }
+      } else if (ch1 == 'l') {
+        char ch2 = token[2];
+        if (ch2 == 'u' || ch2 == 'd' || ch2 == 'i') {
+          sprintf(buffer, token, va_arg(arg_ptr, long));
+        } else if (ch2 == 'f') {
+          sprintf(buffer, token, va_arg(arg_ptr, double));
+        }
+      } else if (ch1 == 'L') {
+        char ch2 = token[2];
+        if (ch2 == 'u' || ch2 == 'd' || ch2 == 'i') {
+          sprintf(buffer, token, va_arg(arg_ptr, long long));
+        } else if (ch2 == 'f') {
+          sprintf(buffer, token, va_arg(arg_ptr, long double));
+        }
+      } else if (ch1 == 's') {
+        sprintf(buffer, token, va_arg(arg_ptr, char *));
+      } else {
+        sprintf(buffer, "%s", token);
+      }
+    }
+  }
+  return k;
+}
+
+String arena_string_fmt(Arena *arena, const char *fmt, ...) {
+  char buffer[1024];
+  buffer[0] = '\0';
+  va_list arg_ptr;
+  va_start(arg_ptr, fmt);
+  char token[1024];
+  String res = arena_new_empty_string_with_cap(arena, 256);
+  int k = 0;
+  for (int i = 0; fmt[i] != '\0'; i++) {
+    token[k++] = fmt[i];
+    k = fmt_buffer(buffer, token, arg_ptr, fmt, i, k);
+    if (!k) {
+      arena_c_string_concat(arena, &res, buffer);
+    }
+    buffer[0] = '\0';
+  }
+  va_end(arg_ptr);
+  return res;
 }
 
 String arena_string_append(Arena *arena, String body, String appending) {
@@ -246,7 +331,7 @@ String *string_split(String *tokens, String chopping, String delimiter) {
 bool c_string_equals(const char *this, const char *that) {
   char this_chr, that_chr;
   do {
-    this_chr = *this++;
+    this_chr = *this ++;
     that_chr = *that++;
     if (!this_chr) {
       return !(this_chr - that_chr);
@@ -306,7 +391,7 @@ void arena_c_string_concat(Arena *arena, String *dest, const char *source) {
   U64 source_len = str_len(source);
   U64 total_size = dest->len + source_len;
   if (total_size > dest->cap) {
-    arena_string_ptr_realloc_with_cap(arena, dest, total_size * 1.5);
+    arena_string_ptr_realloc_with_cap(arena, dest, total_size * 7);
   }
   memory_copy(dest->str + dest->len, source, source_len);
   dest->len = total_size;

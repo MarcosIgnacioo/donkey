@@ -398,26 +398,8 @@ TEST(test_parser_let_statement) {
 
 int main() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  String input = arena_new_string(&arena, "let x = 5;\n"
-                                          "return (x + y);\n"
-                                          "return (x + 10 / 2);\n");
-
-  Lexer lexer = lexer_new_lexer(input);
-  Parser parser = ast_new_parser(&arena, &lexer);
-  Program program = ast_parse_program(&arena, &parser);
-  (void)program;
-
-  if (len(program.statements) != 3) {
-    printf(LOG_ERROR "There are not 3 statements\n");
-  }
-
-  test_check_parser_errors(&parser);
-
-  for (int i = 0; i < len(program.statements); i++) {
-    Node curr_statement = program.statements[i];
-    printf("%u\n", curr_statement.type);
-    print_statement(curr_statement);
-    /*failed = !test_return_statement(curr_statement);*/
-  }
+  String test= arena_new_string(&arena, "hello helo world");
+  String str = arena_string_fmt(&arena, "j%ddshf %f %b %S im sorry i love u %f", 54, 123.34234,true, test, 123.5);
+  printf("str=`%s`\n", str.str);
   return failed;
 }
