@@ -1,3 +1,11 @@
+# TODO
+
+make the functions inprefix and prefix hashmap to be a macro like making the macro that takes the name of the enum variable
+and then it makes also an array of strings with that name (this is achieved with xmacros)
+so i can access the array within just the enum value 
+
+
+
 
 Something really cool is the way we manage errors in the parser
 

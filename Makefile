@@ -24,11 +24,11 @@ build-test: build-dir
 
 .PHONY: run
 run: build-main
-	./build/main
+	./build/test
 
 .PHONY: test
 test: build-test
-	./build/test
+	./build/main
 
 .PHONY: debug
 debug: build-main

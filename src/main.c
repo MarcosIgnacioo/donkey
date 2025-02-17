@@ -1,5 +1,6 @@
 #include "arena_strings.c"
 #include <stdio.h>
+
 typedef enum { ONE, TWO, THREE } foo;
 
 int main() {

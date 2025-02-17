@@ -10,7 +10,7 @@ typedef char byte;
 
 typedef struct {
   const char* key;
-  int value;
+  U64 value;
   bool is_occupied;
 } KeyValue;
 

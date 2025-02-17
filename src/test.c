@@ -397,63 +397,38 @@ TEST(test_parser_let_statement) {
   }
 }
 
-int main() {
+TEST(test_parser_identifier_expression) {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  /*String input = arena_new_string(&arena, "let x = 5;\n"*/
-  /*                                        "return (x + y);\n"*/
-  /*                                        "return (x + 10 / 2);\n");*/
-  /*Lexer lexer = lexer_new_lexer(input);*/
-  /*Parser parser = ast_new_parser(&arena, &lexer);*/
-  /*Program program = ast_parse_program(&arena, &parser);*/
-  Program program;
-  Node *statements = arena_array(&arena, Node);
-  program.statements = statements;
+  String input = arena_new_string(&arena, "foobar;");
+  Lexer lexer = lexer_new_lexer(input);
+  Parser parser = ast_new_parser(&arena, &lexer);
+  Program program = ast_parse_program(&arena, &parser);
 
-  if (len(program.statements) != 3) {
-    printf(LOG_ERROR "There are not 3 statements\n");
+  String expected_identifiers[] = {
+      string("foobar"),
+  };
+
+  if (len(program.statements) != 1) {
+    printf(LOG_ERROR "There are not 1 statements, only %zu\n",
+           len(program.statements));
   }
 
-  Token let_token = (Token){.type = LET, .literal = string("let")};
-  Token name_token = (Token){.type = IDENTIFIER, .literal = string("var")};
-  Token expression_token =
-      (Token){.type = IDENTIFIER, .literal = string("another_var")};
-  LetStatement let = (LetStatement){
-      .token = let_token,
-      .name = (Identifier){.token = name_token, .value = string("x")},
-      .value = {expression_token}};
-  Node statement =
-      (Node){.token = let_token, .type = LET_STATEMENT, .data = &let};
-  append(program.statements, statement);
-  /*Program program : = */
-  /*  (Node){*/
-  /*.token;*/
-  /*.type;*/
-  /*void *data;*/
-  /*    &LetStatement{*/
-  /*      Token : token.Token{Type : token.LET, Literal : "let"},*/
-  /*      Name : &Identifier{*/
-  /*        Token : token.Token{Type : token.IDENT, Literal : "myVar"},*/
-  /*        Value : "myVar",*/
-  /*        51*/
-  /*      },*/
-  /*      Value : &Identifier{*/
-  /*        Token : token.Token{Type : token.IDENT, Literal : "anotherVar"},*/
-  /*        Value : "anotherVar",*/
-  /*      },*/
-  /*    },*/
-  /*  },*/
-  /*}*/
-
-  String program_str = stringify_program(&arena, &program);
-  String expected = string("let x = another_var;");
-  if (!string_equals(program_str, expected)) {
-    printfln(LOG_ERROR "`%S` != `%S`", program_str, expected);
-  } else {
-    printfln(LOG_SUCCESS "`%S` == `%S`", program_str, expected);
+  if (program.statements[0].type != EXPRESSION_STATEMENT) {
+    printf(LOG_ERROR "The statement type is not a EXPRESSION_STATEMENT\n");
   }
 
-  /*test_check_parser_errors(&parser);*/
+  ExpressionStatement expr = *(ExpressionStatement *)program.statements[0].data;
 
-  /*print_program(&program);*/
+  test_check_parser_errors(&parser);
+
+  for (int i = 0; i < array_len(expected_identifiers); i++) {
+    Node curr_statement = program.statements[i];
+    /*failed = !test_let_statement(curr_statement, expected_identifiers[i]);*/
+  }
+  arena_free(&arena);
+}
+
+int main() {
+  test_parser_identifier_expression();
   return failed;
 }

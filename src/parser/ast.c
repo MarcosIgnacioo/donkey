@@ -64,17 +64,25 @@ typedef struct {
 typedef Expression (*prefix_parse_fn)(Node *);
 typedef Expression (*infix_parse_fn)(Node *, Node *);
 
+HashTable _prefix_parse_fns;
+HashTable _infix_parse_fns;
+
 // fn defs
 void ast_next_token(Arena *arena, Parser *parser);
 
-Parser ast_new_parser(Arena *arena, Lexer *lexer);
-
-Program ast_parse_program(Arena *arena, Parser *parser);
 void print_program(Program *program);
 void print_statement(Node node);
 String arena_stringify_statement(Arena *arena, Node node);
+
+// parsing stuff
+Parser ast_new_parser(Arena *arena, Lexer *lexer);
+Program ast_parse_program(Arena *arena, Parser *parser);
+
 Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
+Node *ast_parse_return_statement(Arena *arena, Parser *parser);
+Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
+//
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
 void ast_parser_peek_error(Arena *arena, Parser *parser,
@@ -152,22 +160,6 @@ statement->data = let_statement;
 let_statement->token = parser->curr_token;
 */
 
-Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
-  Node *statement = arena_alloc(arena, sizeof(Node));
-  ReturnStatement *let_statement = arena_alloc(arena, sizeof(ReturnStatement));
-  statement->type = RETURN_STATEMENT;
-  statement->data = let_statement;
-  let_statement->token = parser->curr_token;
-
-  // TODO: PARSE EXPRESSIONS
-
-  while (!(curr_token_is(parser, SEMICOLON))) {
-    ast_next_token(arena, parser);
-  }
-
-  return statement;
-}
-
 Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
   LetStatement *let_statement = arena_alloc(arena, sizeof(LetStatement));
@@ -194,6 +186,26 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
+Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
+  Node *statement = arena_alloc(arena, sizeof(Node));
+  ReturnStatement *let_statement = arena_alloc(arena, sizeof(ReturnStatement));
+  statement->type = RETURN_STATEMENT;
+  statement->data = let_statement;
+  let_statement->token = parser->curr_token;
+
+  // TODO: PARSE EXPRESSIONS
+
+  while (!(curr_token_is(parser, SEMICOLON))) {
+    ast_next_token(arena, parser);
+  }
+
+  return statement;
+}
+
+Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
+  return NULL;
+}
+
 Node *ast_parse_statement(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
   switch (curr_token.type) {
@@ -210,7 +222,7 @@ Node *ast_parse_statement(Arena *arena, Parser *parser) {
   default:
     //
     {
-      return NULL;
+      return ast_parse_expression_statement(arena, parser);
     }
   }
 }
