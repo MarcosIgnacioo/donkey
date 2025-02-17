@@ -397,7 +397,9 @@ TEST(test_parser_let_statement) {
   }
 }
 
-TEST(test_parser_identifier_expression) {
+#define end_program goto exit_program
+
+int main() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
   String input = arena_new_string(&arena, "foobar;");
   Lexer lexer = lexer_new_lexer(input);
@@ -411,24 +413,32 @@ TEST(test_parser_identifier_expression) {
   if (len(program.statements) != 1) {
     printf(LOG_ERROR "There are not 1 statements, only %zu\n",
            len(program.statements));
+    end_program;
   }
 
   if (program.statements[0].type != EXPRESSION_STATEMENT) {
     printf(LOG_ERROR "The statement type is not a EXPRESSION_STATEMENT\n");
+    end_program;
   }
 
   ExpressionStatement expr = *(ExpressionStatement *)program.statements[0].data;
+  String identifier = expr.expression_value.token.literal;
+  (void)identifier;
+
+  if (expr.expression_value.token.type != IDENTIFIER) {
+    printf(LOG_ERROR "The expression type is not a IDENTIFIER\n");
+    end_program;
+  }
 
   test_check_parser_errors(&parser);
-
-  for (int i = 0; i < array_len(expected_identifiers); i++) {
-    Node curr_statement = program.statements[i];
-    /*failed = !test_let_statement(curr_statement, expected_identifiers[i]);*/
+  if (!string_equals(expr.expression_value.token.literal,
+                    expected_identifiers[0])) {
+    printfln(LOG_ERROR "The expression literal: `%S` is not: `%S`\n",
+             expr.expression_value.token.literal, expected_identifiers[0]);
+    arena_free(&arena);
   }
+exit_program:
   arena_free(&arena);
-}
-
-int main() {
-  test_parser_identifier_expression();
+  failed = 0;
   return failed;
 }

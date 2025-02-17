@@ -13,7 +13,21 @@ typedef enum {
   LET_STATEMENT,
   RETURN_STATEMENT,
   EXPRESSION_STATEMENT,
+  // expressions
+  IDENTIFIER_EXP,
+  INTEGER_LIT_EXP,
 } NodeType;
+
+typedef enum {
+  NIL_PREC,
+  LOWEST_PREC,
+  EQUALS_PREC,      // ==
+  LESSGREATER_PREC, // > or <
+  SUM_PREC,         // +
+  PRODUCT_PREC,     // *
+  PREFIX_PREC,      // -X or !X
+  CALL_PREC,        // myFunction(X)
+} Precedence;
 
 typedef struct {
   Token token;
@@ -82,6 +96,8 @@ Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 Node *ast_parse_return_statement(Arena *arena, Parser *parser);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
+Expression *ast_parse_expression(Arena *arena, Parser *parser,
+                                 Precedence prece);
 //
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
@@ -202,8 +218,26 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
+Expression *ast_parse_expression(Arena *arena, Parser *parser,
+                                 Precedence prece) {
+  Expression *exp = arena_alloc(arena, sizeof(Expression));
+  exp->token.literal = string("foobar");
+  exp->token.type = IDENTIFIER;
+  return exp;
+}
+
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
-  return NULL;
+  Node *statement = arena_alloc(arena, sizeof(Node));
+  ExpressionStatement *expr_statement =
+      arena_alloc(arena, sizeof(ExpressionStatement));
+  expr_statement->expression_value =
+      *ast_parse_expression(arena, parser, LOWEST_PREC);
+  statement->type = EXPRESSION_STATEMENT;
+  statement->data = expr_statement;
+  if (peek_token_is(parser, SEMICOLON)) {
+    ast_next_token(arena, parser);
+  }
+  return statement;
 }
 
 Node *ast_parse_statement(Arena *arena, Parser *parser) {
