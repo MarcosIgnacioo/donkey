@@ -35,7 +35,7 @@ String arena_new_string_zero(Arena *arena, const char *source);
 String arena_string_slice(Arena *arena, String chopping, U64 start, U64 end);
 String arena_string_append(Arena *arena, String body, String appending);
 String *arena_string_split(Arena *arena, String chopping, String delimiter);
-String arena_string_realloc(Arena *arena, String source);
+String arena_string_realloc(Arena *arena, String source, U64 cap);
 void arena_string_ptr_realloc_with_cap(Arena *arena, String *source,
                                        U64 new_cap);
 
@@ -291,8 +291,11 @@ String arena_read_file(Arena *arena, const char *file_name) {
   return content;
 }
 
-String arena_string_realloc(Arena *arena, String source) {
-  String str = arena_new_empty_string_with_cap(arena, source.cap * 2);
+String arena_string_realloc(Arena *arena, String source, U64 cap) {
+  if (!cap) {
+    cap = source.cap * 2;
+  }
+  String str = arena_new_empty_string_with_cap(arena, cap);
   string_copy(&str, source);
   return str;
 }
@@ -407,6 +410,16 @@ void string_concat(String *dest, String source) {
     total_size = dest->len + n_bytes;
   }
   /*ARENA_ASSERT(total_size < dest->cap);*/
+  memory_copy(dest->str + dest->len, source.str, n_bytes);
+  dest->len = total_size;
+}
+
+void string_concat_resize(Arena *arena, String *dest, String source) {
+  U64 total_size = dest->len + source.len;
+  U64 n_bytes = source.len;
+  if (total_size >= dest->cap) {
+    arena_string_realloc(arena, *dest, total_size);
+  }
   memory_copy(dest->str + dest->len, source.str, n_bytes);
   dest->len = total_size;
 }

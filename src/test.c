@@ -32,6 +32,7 @@
 #define stringify(VAR) #VAR
 #define end_color "\033[0m"
 #define LOG_ERROR color(1) "[ERROR] : " end_color
+#define LOG_SUCCESS color(2) "[SUCCESS] : " end_color
 
 // Very small test helpers
 int failed = 0;
@@ -398,8 +399,61 @@ TEST(test_parser_let_statement) {
 
 int main() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  String test= arena_new_string(&arena, "hello helo world");
-  String str = arena_string_fmt(&arena, "j%ddshf %f %b %S im sorry i love u %f", 54, 123.34234,true, test, 123.5);
-  printf("str=`%s`\n", str.str);
+  /*String input = arena_new_string(&arena, "let x = 5;\n"*/
+  /*                                        "return (x + y);\n"*/
+  /*                                        "return (x + 10 / 2);\n");*/
+  /*Lexer lexer = lexer_new_lexer(input);*/
+  /*Parser parser = ast_new_parser(&arena, &lexer);*/
+  /*Program program = ast_parse_program(&arena, &parser);*/
+  Program program;
+  Node *statements = arena_array(&arena, Node);
+  program.statements = statements;
+
+  if (len(program.statements) != 3) {
+    printf(LOG_ERROR "There are not 3 statements\n");
+  }
+
+  Token let_token = (Token){.type = LET, .literal = string("let")};
+  Token name_token = (Token){.type = IDENTIFIER, .literal = string("var")};
+  Token expression_token =
+      (Token){.type = IDENTIFIER, .literal = string("another_var")};
+  LetStatement let = (LetStatement){
+      .token = let_token,
+      .name = (Identifier){.token = name_token, .value = string("x")},
+      .value = {expression_token}};
+  Node statement =
+      (Node){.token = let_token, .type = LET_STATEMENT, .data = &let};
+  append(program.statements, statement);
+  /*Program program : = */
+  /*  (Node){*/
+  /*.token;*/
+  /*.type;*/
+  /*void *data;*/
+  /*    &LetStatement{*/
+  /*      Token : token.Token{Type : token.LET, Literal : "let"},*/
+  /*      Name : &Identifier{*/
+  /*        Token : token.Token{Type : token.IDENT, Literal : "myVar"},*/
+  /*        Value : "myVar",*/
+  /*        51*/
+  /*      },*/
+  /*      Value : &Identifier{*/
+  /*        Token : token.Token{Type : token.IDENT, Literal : "anotherVar"},*/
+  /*        Value : "anotherVar",*/
+  /*      },*/
+  /*    },*/
+  /*  },*/
+  /*}*/
+
+  String program_str = stringify_program(&arena, &program);
+  String expected = string("let x = another_var;");
+  if (!string_equals(program_str, expected)) {
+    printfln(LOG_ERROR "`%S` != `%S`", program_str, expected);
+  } else {
+    printfln(LOG_SUCCESS "`%S` == `%S`", program_str, expected);
+  }
+
+  /*test_check_parser_errors(&parser);*/
+
+  /*print_program(&program);*/
   return failed;
 }

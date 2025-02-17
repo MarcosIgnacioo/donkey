@@ -61,12 +61,18 @@ typedef struct {
   Token peek_token;
 } Parser;
 
+typedef Expression (*prefix_parse_fn)(Node *);
+typedef Expression (*infix_parse_fn)(Node *, Node *);
+
 // fn defs
 void ast_next_token(Arena *arena, Parser *parser);
 
 Parser ast_new_parser(Arena *arena, Lexer *lexer);
 
 Program ast_parse_program(Arena *arena, Parser *parser);
+void print_program(Program *program);
+void print_statement(Node node);
+String arena_stringify_statement(Arena *arena, Node node);
 Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
@@ -229,18 +235,35 @@ String ast_init(Program *program) {
   }
 }
 
-String stringify_statement(Arena *arena, Node node) {
-  String out;
+void print_program(Program *program) {
+  for (size_t i = 0; i < len(program->statements); i++) {
+    print_statement(program->statements[i]);
+  }
+}
+
+String stringify_program(Arena *arena, Program *program) {
+  String result = arena_new_empty_string_with_cap(arena, 256);
+  for (size_t i = 0; i < len(program->statements); i++) {
+    string_concat_resize(
+        arena, &result,
+        arena_stringify_statement(arena, program->statements[i]));
+  }
+  return result;
+}
+
+String arena_stringify_statement(Arena *arena, Node node) {
+  String str_stmt;
   switch (node.type) {
   case LET_STATEMENT:
     //
     {
       LetStatement statement = *((LetStatement *)node.data);
-      out = arena_string_fmt(arena,                       //
-                             "%s %s = (null);",           //
-                             statement.token.literal.str, //
-                             statement.name.value.str     //
-                                                          //
+      str_stmt = arena_string_fmt(          //
+          arena,                            //
+          "%s %s = %s;",                    //
+          statement.token.literal.str,      //
+          statement.name.value.str,         //
+          statement.value.token.literal.str //
       );
       break;
     }
@@ -248,10 +271,9 @@ String stringify_statement(Arena *arena, Node node) {
     //
     {
       ReturnStatement statement = *((ReturnStatement *)node.data);
-      out = arena_string_fmt(arena,                                   //
-                             "%s %s;",                                //
-                             statement.token.literal.str,             //
-                             statement.return_value.token.literal.str //
+      str_stmt = arena_string_fmt(arena, "%s %s;",                         //
+                                  statement.token.literal.str,             //
+                                  statement.return_value.token.literal.str //
       );
       break;
     }
@@ -259,22 +281,22 @@ String stringify_statement(Arena *arena, Node node) {
     //
     {
       ExpressionStatement statement = *((ExpressionStatement *)node.data);
-      out = arena_string_fmt(arena,                                       //
-                             "%s;",                                       //
-                             statement.expression_value.token.literal.str //
-      );
+      str_stmt =
+          arena_string_fmt(arena, "%s;",                                //
+                           statement.expression_value.token.literal.str //
+          );
       break;
     }
   default:
     //
     {
-      out = arena_string_fmt(
-          arena,                                                 //
+      str_stmt = arena_string_fmt(
+          arena,
           "ILLEGAL STUFF IDUNNO BRO THERE IS NOT THAT STATEMENT" //
       );
     }
   }
-  return out;
+  return str_stmt;
 }
 
 void print_statement(Node node) {
