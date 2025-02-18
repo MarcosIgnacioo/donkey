@@ -1,6 +1,7 @@
 #ifndef _ARENA_HASH_TABLE_H
 #define _ARENA_HASH_TABLE_H
 #include "arena_strings.c"
+#include "token.c"
 #include <stdbool.h>
 #include <time.h>
 
@@ -57,12 +58,10 @@ typedef struct {
 
 void *hash_table_find_item(HashTable table, void *key) {
   byte *items = table.items;
-  U64 i = 0;
-  KeyValue *item_kv_cast = (KeyValue *)(items + i * table.item_size);
-  for (; i < table.capacity; i++) {
-    void *item_kv = items + i * table.item_size;
-    item_kv_cast = (KeyValue *)(items + i * table.item_size);
-    (void)item_kv_cast;
+  void *item_kv;
+  U64 i;
+  for (i = 0; i < table.capacity; i++) {
+    item_kv = items + i * table.item_size;
     if (table.are_keys_equals(item_kv, key)) {
       return item_kv;
     }
@@ -72,9 +71,12 @@ void *hash_table_find_item(HashTable table, void *key) {
 
 void *hash_table_find_key(HashTable table, void *value) {
   byte *items = table.items;
-  for (U64 i = 0; i < table.capacity; i++) {
-    if (table.are_values_equals(items + i * table.item_size, value)) {
-      return items + i * table.item_size;
+  void *item_kv;
+  U64 i;
+  for (i = 0; i < table.capacity; i++) {
+    item_kv = items + i * table.item_size;
+    if (table.are_values_equals(item_kv, value)) {
+      return item_kv;
     }
   }
   return NULL;

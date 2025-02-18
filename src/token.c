@@ -88,13 +88,13 @@ KeyValue TYPES_ARR[] = {
 #define TYPES_LEN (sizeof TYPES_ARR / sizeof TYPES_ARR[0])
 
 bool compare_string_keys(void *a, void *b) {
-  const char *a_key = (*(KeyValue*)a).key;
+  const char *a_key = (*(KeyValue *)a).key;
   const char *b_key = (*(String *)b).str;
   return c_string_equals(a_key, b_key);
 }
 
 bool compare_token_type_values(void *a, void *b) {
-  TokenType a_key = *(TokenType *)a;
+  TokenType a_key = (*(KeyValue *)a).value;
   TokenType b_key = *(TokenType *)b;
   return a_key == b_key;
 }
@@ -130,8 +130,10 @@ const char *get_token_literal(TokenType token_type) {
     return "identifier";
   case INT:
     return "int";
-  default:
-    return ((String *)hash_table_find_key(TYPES, &token_type))->str;
+  default: {
+    KeyValue *kv = (KeyValue *)hash_table_find_key(TYPES, &token_type);
+    return kv->key;
+  }
   }
 }
 

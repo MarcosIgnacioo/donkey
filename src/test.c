@@ -449,7 +449,7 @@ exit_program:
 int main() {
   /*Arena arena = (Arena){.begin = NULL, .end = NULL};*/
   /*TokenType type = get_token_type("ILLEGAL");*/
-  test_more_tokens();
+  test_more_more_tokens();
   /*test_more_more_tokens();*/
   /*prefix_parse_fn fnptr = (prefix_parse_fn)get_ arena_free(&arena);*/
   return failed;
