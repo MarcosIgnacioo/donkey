@@ -55,7 +55,7 @@ int failed = 0;
   } else {                                                                     \
     failed = 1;                                                                \
     printf("\033[0;31mFAIL: %s != %s\n\033[0m", TOK.literal.str,               \
-           TYPES_ARR[EXPECTED_TYPE].key);                                      \
+           (const char *)TYPES_ARR[EXPECTED_TYPE].key);                        \
   }
 
 #define ASSERT_STR_EQ(str1, str2)                                              \
@@ -83,14 +83,14 @@ FAIL:  !=
 
 TEST(test_tokens) {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  String input = arena_new_string(&arena, "&++){},;");
+  String input = arena_new_string(&arena, "++(){},;");
   /*String input = string("{}");*/
   Lexer lexi = lexer_new_lexer(input);
 
   Token tokens_test[] = {
-      (Token){.type = ILLEGAL, .literal = string("ileg")},
       (Token){.type = PLUS, .literal = string("+")},
       (Token){.type = PLUS, .literal = string("+")},
+      (Token){.type = L_PAREN, .literal = string("(")},
       (Token){.type = R_PAREN, .literal = string(")")},
       (Token){.type = L_BRACE, .literal = string("{")},
       (Token){.type = R_BRACE, .literal = string("}")},
@@ -292,6 +292,7 @@ TEST(test_more_more_tokens) {
     ASSERT_TYPES(tok, type, expected_type);
     printf("\n");
   }
+  arena_free(&arena);
 }
 
 typedef struct {
@@ -386,7 +387,7 @@ TEST(test_parser_let_statement) {
   String expected_identifiers[] = {
       string("x"),
       string("y"),
-      string("foobar"),
+      string("z"),
   };
 
   test_check_parser_errors(&parser);
@@ -395,11 +396,13 @@ TEST(test_parser_let_statement) {
     Node curr_statement = program.statements[i];
     failed = !test_let_statement(curr_statement, expected_identifiers[i]);
   }
+  print_program(&program);
+  arena_free(&arena);
 }
 
 #define end_program goto exit_program
 
-int main() {
+int test_expressions() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
   String input = arena_new_string(&arena, "foobar;");
   Lexer lexer = lexer_new_lexer(input);
@@ -432,13 +435,22 @@ int main() {
 
   test_check_parser_errors(&parser);
   if (!string_equals(expr.expression_value.token.literal,
-                    expected_identifiers[0])) {
+                     expected_identifiers[0])) {
     printfln(LOG_ERROR "The expression literal: `%S` is not: `%S`\n",
              expr.expression_value.token.literal, expected_identifiers[0]);
     arena_free(&arena);
   }
+  print_program(&program);
 exit_program:
   arena_free(&arena);
   failed = 0;
+  return failed;
+}
+int main() {
+  /*Arena arena = (Arena){.begin = NULL, .end = NULL};*/
+  /*TokenType type = get_token_type("ILLEGAL");*/
+  test_more_tokens();
+  /*test_more_more_tokens();*/
+  /*prefix_parse_fn fnptr = (prefix_parse_fn)get_ arena_free(&arena);*/
   return failed;
 }

@@ -52,43 +52,61 @@ typedef enum {
 } TokenType;
 
 KeyValue TYPES_ARR[] = {
-    kv("ILLEGAL", ILLEGAL), // parsing stuff
-    kv("", EOF_),           //
-                            // operators
-    kv("=", ASSIGN),        //
-    kv("-", MINUS),          //
-    kv("+", PLUS),          //
-    kv("*", ASTERISK),      //
-    kv("/", SLASH),         //
-                            // relationals
-    kv("==", EQUALS),       //
-    kv("!", BANG),          //
-    kv("!=", NOT_EQUALS),   //
-    kv("<", LT),            //
-    kv(">", GT),            //
-    kv(">=", G_EQUALS),     //
-    kv("<=", L_EQUALS),     //
-                            //
-    kv(",", COMMA),         // delimiters
-    kv(";", SEMICOLON),     //
-    kv("(", L_PAREN),       //
-    kv(")", R_PAREN),       //
-    kv("{", L_BRACE),       //
-    kv("}", R_BRACE),       //
-                            // keywords
-    kv("fn", FUNCTION),     //
-    kv("let", LET),         //
-    kv("if", IF),           //
-    kv("else", ELSE),       //
-    kv("true", TRUE),       //
-    kv("false", FALSE),     //
-    kv("return", RETURN),   //
+    kv(KeyValue, "ILLEGAL", ILLEGAL), // parsing stuff
+    kv(KeyValue, "", EOF_),           //
+                                      // operators
+    kv(KeyValue, "=", ASSIGN),        //
+    kv(KeyValue, "-", MINUS),         //
+    kv(KeyValue, "+", PLUS),          //
+    kv(KeyValue, "*", ASTERISK),      //
+    kv(KeyValue, "/", SLASH),         //
+                                      // relationals
+    kv(KeyValue, "==", EQUALS),       //
+    kv(KeyValue, "!", BANG),          //
+    kv(KeyValue, "!=", NOT_EQUALS),   //
+    kv(KeyValue, "<", LT),            //
+    kv(KeyValue, ">", GT),            //
+    kv(KeyValue, ">=", G_EQUALS),     //
+    kv(KeyValue, "<=", L_EQUALS),     //
+                                      //
+    kv(KeyValue, ",", COMMA),         // delimiters
+    kv(KeyValue, ";", SEMICOLON),     //
+    kv(KeyValue, "(", L_PAREN),       //
+    kv(KeyValue, ")", R_PAREN),       //
+    kv(KeyValue, "{", L_BRACE),       //
+    kv(KeyValue, "}", R_BRACE),       //
+                                      // keywords
+    kv(KeyValue, "fn", FUNCTION),     //
+    kv(KeyValue, "let", LET),         //
+    kv(KeyValue, "if", IF),           //
+    kv(KeyValue, "else", ELSE),       //
+    kv(KeyValue, "true", TRUE),       //
+    kv(KeyValue, "false", FALSE),     //
+    kv(KeyValue, "return", RETURN),   //
 }; //
 
 #define TYPES_LEN (sizeof TYPES_ARR / sizeof TYPES_ARR[0])
 
-HashTable TYPES =
-    (HashTable){.len = TYPES_LEN, .capacity = TYPES_LEN, .items = TYPES_ARR};
+bool compare_string_keys(void *a, void *b) {
+  const char *a_key = (*(KeyValue*)a).key;
+  const char *b_key = (*(String *)b).str;
+  return c_string_equals(a_key, b_key);
+}
+
+bool compare_token_type_values(void *a, void *b) {
+  TokenType a_key = *(TokenType *)a;
+  TokenType b_key = *(TokenType *)b;
+  return a_key == b_key;
+}
+
+HashTable TYPES = (HashTable){
+    .len = TYPES_LEN,                                //
+    .capacity = TYPES_LEN,                           //
+    .items = TYPES_ARR,                              //
+    .are_keys_equals = &compare_string_keys,         //
+    .are_values_equals = &compare_token_type_values, //
+    .item_size = sizeof(KeyValue)                    //
+};
 
 typedef struct {
   TokenType type;
@@ -98,7 +116,12 @@ typedef struct {
 // todo cambiar a algo que no sea O(N)
 // probablemente sea un hashmap
 TokenType get_token_type(String input) {
-  return (TokenType)hash_table_find_item(TYPES, input);
+  KeyValue *kv = hash_table_find_item(TYPES, &input);
+  if (kv) {
+    return (TokenType)(kv)->value;
+  } else {
+    return ILLEGAL;
+  }
 }
 
 const char *get_token_literal(TokenType token_type) {
@@ -108,7 +131,7 @@ const char *get_token_literal(TokenType token_type) {
   case INT:
     return "int";
   default:
-    return hash_table_find_key(TYPES, token_type);
+    return ((String *)hash_table_find_key(TYPES, &token_type))->str;
   }
 }
 

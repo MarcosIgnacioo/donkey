@@ -101,7 +101,7 @@ String arena_new_string(Arena *arena, const char *source) {
   U64 string_len = str_len(source);
   String new_string =
       (String){.str = NULL, .len = string_len, .cap = string_len};
-  byte *arena_str = arena_alloc_zero(arena, string_len);
+  byte *arena_str = arena_alloc_zero(arena, string_len + 1);
   memory_copy(arena_str, source, string_len);
   new_string.str = arena_str;
   return new_string;

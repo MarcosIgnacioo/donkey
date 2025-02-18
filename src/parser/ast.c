@@ -75,11 +75,90 @@ typedef struct {
   Token peek_token;
 } Parser;
 
+typedef struct {
+  TokenType key;
+  void *value;
+  bool is_occupied;
+} KeyValue_PrefixFNS;
+
 typedef Expression (*prefix_parse_fn)(Node *);
 typedef Expression (*infix_parse_fn)(Node *, Node *);
 
-HashTable _prefix_parse_fns;
-HashTable _infix_parse_fns;
+#define kv_p(K, V)                                                             \
+  (KeyValue_PrefixFNS) { .key = K, .value = V, .is_occupied = true }
+
+typedef struct {
+  prefix_parse_fn prefix_fn;
+  infix_parse_fn infix_fn;
+} ParsingFunctions;
+
+typedef struct {
+  TokenType key;
+  ParsingFunctions value;
+  bool is_occupied;
+} KeyValue_PF;
+
+bool compare_token_type_keys(void *a, void *b) {
+  TokenType a_key = *(TokenType *)a;
+  TokenType b_key = *(TokenType *)b;
+  return a_key == b_key;
+}
+
+typedef struct {
+  U64 len;
+  U64 capacity;
+  KeyValue_PF *items;
+  predicator_fn are_keys_equals;
+} HashTable_PF;
+
+#define prs_fn(INFIX, PREFIX)                                                  \
+  (ParsingFunctions) { .infix_fn = INFIX, .prefix_fn = PREFIX }
+
+KeyValue_PF FUNCTIONS_ARR[] = {
+    kv(KeyValue_PF, ILLEGAL, prs_fn(NULL, NULL)),    // parsing stuff
+    kv(KeyValue_PF, EOF_, prs_fn(NULL, NULL)),       //
+    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),     //
+    kv(KeyValue_PF, MINUS, prs_fn(NULL, NULL)),      //
+    kv(KeyValue_PF, PLUS, prs_fn(NULL, NULL)),       //
+    kv(KeyValue_PF, ASTERISK, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, SLASH, prs_fn(NULL, NULL)),      //
+    kv(KeyValue_PF, EQUALS, prs_fn(NULL, NULL)),     //
+    kv(KeyValue_PF, BANG, prs_fn(NULL, NULL)),       //
+    kv(KeyValue_PF, NOT_EQUALS, prs_fn(NULL, NULL)), //
+    kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),         //
+    kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),         //
+    kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),      // delimiters
+    kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)),  //
+    kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),        //
+    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),         //
+    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),       //
+    kv(KeyValue_PF, TRUE, prs_fn(NULL, NULL)),       //
+    kv(KeyValue_PF, FALSE, prs_fn(NULL, NULL)),      //
+    kv(KeyValue_PF, RETURN, prs_fn(NULL, NULL)),     //
+}; //
+
+#define PARSING_FUNCTIONS_LEN (sizeof FUNCTIONS_ARR / sizeof FUNCTIONS_ARR[0])
+HashTable PARSING_FUNCTIONS =
+    (HashTable){.len = PARSING_FUNCTIONS_LEN,
+                .capacity = PARSING_FUNCTIONS_LEN,
+                .items = FUNCTIONS_ARR,
+                .are_keys_equals = &compare_string_keys};
+
+prefix_parse_fn *get_prefix_fn_from_hm(HashTable_PF *table, TokenType key) {
+  hash_table_find_item(PARSING_FUNCTIONS, &key);
+  return NULL;
+}
+
+infix_parse_fn *get_infix_fn_from_hm(HashTable_PF *table, TokenType key) {
+  return NULL;
+}
 
 // fn defs
 void ast_next_token(Arena *arena, Parser *parser);
@@ -221,7 +300,7 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
 Expression *ast_parse_expression(Arena *arena, Parser *parser,
                                  Precedence prece) {
   Expression *exp = arena_alloc(arena, sizeof(Expression));
-  exp->token.literal = string("foobar");
+  exp->token.literal = parser->curr_token.literal;
   exp->token.type = IDENTIFIER;
   return exp;
 }

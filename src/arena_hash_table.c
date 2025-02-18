@@ -9,18 +9,23 @@ typedef long long I64;
 typedef char byte;
 
 typedef struct {
-  const char* key;
-  U64 value;
+  const char *key;
+  int value;
   bool is_occupied;
 } KeyValue;
 
-#define kv(K, V)                                                               \
-  (KeyValue) { .key = K, .value = V, .is_occupied = true }
+#define kv(KV_T, K, V)                                                         \
+  (KV_T) { .key = K, .value = V, .is_occupied = true }
+
+typedef bool (*predicator_fn)(void *, void *);
 
 typedef struct {
   U64 len;
   U64 capacity;
-  KeyValue *items;
+  U64 item_size;
+  void *items;
+  predicator_fn are_keys_equals;
+  predicator_fn are_values_equals;
 } HashTable;
 
 #define hash_table_alloc(_arena, _hash_table, _cap)                            \
@@ -33,19 +38,43 @@ typedef struct {
                sizeof(*(_hash_table)->items) * _cap, 0);                       \
   } while (false)
 
-int hash_table_find_item(HashTable table, String key) {
-  for (U64 i = 0; i < table.capacity; i++) {
-    if (c_string_equals(table.items[i].key, key.str)) {
-      return table.items[i].value;
+#define ht_insert(TABLE, KEY, VALUE)                                           \
+  do {                                                                         \
+    U64 hash = (TABLE).get_hash(KEY) % cap((TABLE).items);                     \
+    while ((TABLE).items[hash].is_occupied &&                                  \
+           !(TABLE).are_keys_equals((TABLE).items[hash].key, KEY) &&           \
+           hash < cap((TABLE).items)) {                                        \
+      hash++;                                                                  \
+    }                                                                          \
+    if ((TABLE).items[hash].is_occupied &&                                     \
+        !((TABLE).are_keys_equals((TABLE).items[hash].key, KEY))) {            \
+      printf("table overflow\n");                                              \
+    }                                                                          \
+    (TABLE).items[hash].key = KEY;                                             \
+    (TABLE).items[hash].value = VALUE;                                         \
+    (TABLE).items[hash].is_occupied = true;                                    \
+  } while (false)
+
+void *hash_table_find_item(HashTable table, void *key) {
+  byte *items = table.items;
+  U64 i = 0;
+  KeyValue *item_kv_cast = (KeyValue *)(items + i * table.item_size);
+  for (; i < table.capacity; i++) {
+    void *item_kv = items + i * table.item_size;
+    item_kv_cast = (KeyValue *)(items + i * table.item_size);
+    (void)item_kv_cast;
+    if (table.are_keys_equals(item_kv, key)) {
+      return item_kv;
     }
   }
-  return 0;
+  return NULL;
 }
 
-const char * hash_table_find_key(HashTable table, int value) {
+void *hash_table_find_key(HashTable table, void *value) {
+  byte *items = table.items;
   for (U64 i = 0; i < table.capacity; i++) {
-    if (table.items[i].value == value) {
-      return table.items[i].key;
+    if (table.are_values_equals(items + i * table.item_size, value)) {
+      return items + i * table.item_size;
     }
   }
   return NULL;

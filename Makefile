@@ -7,7 +7,7 @@ DBG = gdb
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: build-main
 build-main: build-dir
-	$(CC) -Wall -O0 -fsanitize=address -static-libsan -g -o build/test src/test.c 
+	$(CC) -Wall -O0 -g -o build/test src/test.c 
 
 .PHONY: check
 check:

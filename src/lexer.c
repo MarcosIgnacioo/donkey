@@ -118,6 +118,8 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
         String number =
             _lexer_read_blank(arena, lexer, &_lexer_is_valid_number);
         tok = NEW_TOKEN(INT, number);
+      } else {
+        tok = NEW_TOKEN(ILLEGAL, arena_new_string(arena,&c));
       }
     }
   }
