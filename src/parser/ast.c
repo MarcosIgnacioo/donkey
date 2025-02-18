@@ -81,8 +81,8 @@ typedef struct {
   bool is_occupied;
 } KeyValue_PrefixFNS;
 
-typedef Expression (*prefix_parse_fn)(Node *);
-typedef Expression (*infix_parse_fn)(Node *, Node *);
+typedef Expression (*prefix_parse_fn)(Arena *, Parser *);
+typedef Expression (*infix_parse_fn)(Arena *, Parser *, Node *, Node *);
 
 #define kv_p(K, V)                                                             \
   (KeyValue_PrefixFNS) { .key = K, .value = V, .is_occupied = true }
@@ -99,65 +99,17 @@ typedef struct {
 } KeyValue_PF;
 
 bool compare_token_type_keys(void *a, void *b) {
-  TokenType a_key = *(TokenType *)a;
+  KeyValue_PF a_key = *(KeyValue_PF *)a;
   TokenType b_key = *(TokenType *)b;
-  return a_key == b_key;
+  return a_key.key == b_key;
 }
 
-typedef struct {
-  U64 len;
-  U64 capacity;
-  KeyValue_PF *items;
-  predicator_fn are_keys_equals;
-} HashTable_PF;
-
-#define prs_fn(INFIX, PREFIX)                                                  \
-  (ParsingFunctions) { .infix_fn = INFIX, .prefix_fn = PREFIX }
-
-KeyValue_PF FUNCTIONS_ARR[] = {
-    kv(KeyValue_PF, ILLEGAL, prs_fn(NULL, NULL)),    // parsing stuff
-    kv(KeyValue_PF, EOF_, prs_fn(NULL, NULL)),       //
-    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),     //
-    kv(KeyValue_PF, MINUS, prs_fn(NULL, NULL)),      //
-    kv(KeyValue_PF, PLUS, prs_fn(NULL, NULL)),       //
-    kv(KeyValue_PF, ASTERISK, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, SLASH, prs_fn(NULL, NULL)),      //
-    kv(KeyValue_PF, EQUALS, prs_fn(NULL, NULL)),     //
-    kv(KeyValue_PF, BANG, prs_fn(NULL, NULL)),       //
-    kv(KeyValue_PF, NOT_EQUALS, prs_fn(NULL, NULL)), //
-    kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),         //
-    kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),         //
-    kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),      // delimiters
-    kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)),  //
-    kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),        //
-    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),         //
-    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),       //
-    kv(KeyValue_PF, TRUE, prs_fn(NULL, NULL)),       //
-    kv(KeyValue_PF, FALSE, prs_fn(NULL, NULL)),      //
-    kv(KeyValue_PF, RETURN, prs_fn(NULL, NULL)),     //
-}; //
-
-#define PARSING_FUNCTIONS_LEN (sizeof FUNCTIONS_ARR / sizeof FUNCTIONS_ARR[0])
-HashTable PARSING_FUNCTIONS =
-    (HashTable){.len = PARSING_FUNCTIONS_LEN,
-                .capacity = PARSING_FUNCTIONS_LEN,
-                .items = FUNCTIONS_ARR,
-                .are_keys_equals = &compare_string_keys};
-
-prefix_parse_fn *get_prefix_fn_from_hm(HashTable_PF *table, TokenType key) {
-  hash_table_find_item(PARSING_FUNCTIONS, &key);
-  return NULL;
-}
-
-infix_parse_fn *get_infix_fn_from_hm(HashTable_PF *table, TokenType key) {
-  return NULL;
+// this one kinda sucks but i wont be using
+// it because yeah i dont think is really necesary
+bool compare_parsing_fns_values(void *a, void *b) {
+  KeyValue_PF a_key = *(KeyValue_PF *)a;
+  ParsingFunctions b_key = *(ParsingFunctions *)b;
+  return a_key.value.infix_fn == b_key.infix_fn;
 }
 
 // fn defs
@@ -175,15 +127,78 @@ Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 Node *ast_parse_return_statement(Arena *arena, Parser *parser);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
-Expression *ast_parse_expression(Arena *arena, Parser *parser,
-                                 Precedence prece);
+Expression ast_parse_identifier(Arena *arena, Parser *parser);
+Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
 //
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
 void ast_parser_peek_error(Arena *arena, Parser *parser,
                            TokenType expected_type);
+prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key);
+infix_parse_fn get_infix_fn_from_hm(HashTable table, TokenType key);
 
 #define ast_token_literal(NODE) (((Token *)NODE)->literal)
+
+#define prs_fn(INFIX, PREFIX)                                                  \
+  (ParsingFunctions) { .prefix_fn = INFIX, .infix_fn = PREFIX }
+KeyValue_PF FUNCTIONS_ARR[] = {
+    kv(KeyValue_PF, ILLEGAL, prs_fn(NULL, NULL)), // parsing stuff
+    kv(KeyValue_PF, EOF_, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, IDENTIFIER, prs_fn(&ast_parse_identifier, NULL)), //
+    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                      //
+    kv(KeyValue_PF, MINUS, prs_fn(NULL, NULL)),                       //
+    kv(KeyValue_PF, PLUS, prs_fn(NULL, NULL)),                        //
+    kv(KeyValue_PF, ASTERISK, prs_fn(NULL, NULL)),                    //
+    kv(KeyValue_PF, SLASH, prs_fn(NULL, NULL)),                       //
+    kv(KeyValue_PF, EQUALS, prs_fn(NULL, NULL)),                      //
+    kv(KeyValue_PF, BANG, prs_fn(NULL, NULL)),                        //
+    kv(KeyValue_PF, NOT_EQUALS, prs_fn(NULL, NULL)),                  //
+    kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),                          //
+    kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),                          //
+    kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),                    //
+    kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                    //
+    kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
+    kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
+    kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),   //
+    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),  //
+    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),       //
+    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),        //
+    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),      //
+    kv(KeyValue_PF, TRUE, prs_fn(NULL, NULL)),      //
+    kv(KeyValue_PF, FALSE, prs_fn(NULL, NULL)),     //
+    kv(KeyValue_PF, RETURN, prs_fn(NULL, NULL)),    //
+}; //
+
+#define PARSING_FUNCTIONS_LEN (sizeof FUNCTIONS_ARR / sizeof FUNCTIONS_ARR[0])
+HashTable PARSING_FUNCTIONS = (HashTable){
+    .len = PARSING_FUNCTIONS_LEN,
+    .item_size = sizeof(KeyValue_PF),
+    .capacity = PARSING_FUNCTIONS_LEN,
+    .items = FUNCTIONS_ARR,
+    .are_keys_equals = &compare_token_type_keys,
+    .are_values_equals = &compare_parsing_fns_values //
+};
+
+prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key) {
+  KeyValue_PF *kv = hash_table_find_item(PARSING_FUNCTIONS, &key);
+  if (kv) {
+    return kv->value.prefix_fn;
+  } else {
+    return NULL;
+  }
+}
+
+infix_parse_fn get_infix_fn_from_hm(HashTable table, TokenType key) {
+  KeyValue_PF *kv = hash_table_find_item(PARSING_FUNCTIONS, &key);
+  if (kv) {
+    return kv->value.infix_fn;
+  } else {
+    return NULL;
+  }
+}
 
 Parser ast_new_parser(Arena *arena, Lexer *lexer) {
   Error *errors = arena_array(arena, Error);
@@ -297,12 +312,28 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
-Expression *ast_parse_expression(Arena *arena, Parser *parser,
-                                 Precedence prece) {
-  Expression *exp = arena_alloc(arena, sizeof(Expression));
-  exp->token.literal = parser->curr_token.literal;
-  exp->token.type = IDENTIFIER;
-  return exp;
+Expression ast_parse_identifier(Arena *arena, Parser *parser) {
+  (void)arena;
+  (void)parser;
+  return (Expression){.token = parser->curr_token};
+}
+
+// TODO:
+// HOW do we recover from error here
+// gamer idea just return a pointer dude, the problem
+// is that would require to allocate in the heap and
+// we are divorced, an empty struct will do the trick
+// maybe a expression nil or something like that
+// like the one randys did in the game dev videos
+Expression ast_parse_expression(Arena *arena, Parser *parser,
+                                Precedence prece) {
+  prefix_parse_fn prefix =
+      get_prefix_fn_from_hm(PARSING_FUNCTIONS, parser->curr_token.type);
+  if (!prefix) {
+    return (Expression){0};
+  }
+  Expression left_value = prefix(arena, parser);
+  return left_value;
 }
 
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
@@ -310,7 +341,7 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
   ExpressionStatement *expr_statement =
       arena_alloc(arena, sizeof(ExpressionStatement));
   expr_statement->expression_value =
-      *ast_parse_expression(arena, parser, LOWEST_PREC);
+      ast_parse_expression(arena, parser, LOWEST_PREC);
   statement->type = EXPRESSION_STATEMENT;
   statement->data = expr_statement;
   if (peek_token_is(parser, SEMICOLON)) {

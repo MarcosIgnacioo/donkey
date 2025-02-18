@@ -1,13 +1,15 @@
 # You can change these variables if you want to use a different compiler or debugger
 CC = clang
 DBG = gdb
+MEMORY = 
 
 # We use .PHONY to tell make to always run these commands even if a file exists
 # with the same name in this directory. For more information on .PHONY, see
 # https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
+# fix this yay
 .PHONY: build-main
 build-main: build-dir
-	$(CC) -Wall -O0 -g -o build/test src/test.c 
+	$(CC) -Wall -O0 $(MEMORY) -g -o build/test src/test.c 
 
 .PHONY: check
 check:

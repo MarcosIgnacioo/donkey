@@ -31,7 +31,7 @@
 #define color(C) "\033[0;3" #C "m"
 #define stringify(VAR) #VAR
 #define end_color "\033[0m"
-#define LOG_ERROR color(1) "[ERROR] : " end_color
+#define LOG_ERROR color(3) "[ERROR] : " end_color
 #define LOG_SUCCESS color(2) "[SUCCESS] : " end_color
 
 // Very small test helpers
@@ -363,12 +363,12 @@ void test_check_parser_errors(Parser *parser) {
   Error *errors = parser->errors;
   U64 err_len = len(errors);
   if (!err_len) {
-    printf("There are not parsing errors!\n");
+    printf(LOG_SUCCESS "There are not parsing errors!\n");
   } else {
-    printf("There %zu parsing errors!\n", err_len);
+    printf(LOG_ERROR "There %zu parsing errors!\n", err_len);
     for (int i = 0; i < err_len; i++) {
       Error err = errors[i];
-      printfln("%S", err.error);
+      printfln(LOG_ERROR "%S", err.error);
     }
   }
 }
@@ -410,7 +410,7 @@ int test_expressions() {
   Program program = ast_parse_program(&arena, &parser);
 
   String expected_identifiers[] = {
-      string("foobar"),
+      string("foobarasdf"),
   };
 
   if (len(program.statements) != 1) {
@@ -446,11 +446,13 @@ exit_program:
   failed = 0;
   return failed;
 }
+
 int main() {
   /*Arena arena = (Arena){.begin = NULL, .end = NULL};*/
   /*TokenType type = get_token_type("ILLEGAL");*/
-  test_more_more_tokens();
+  /*test_more_more_tokens();*/
   /*test_more_more_tokens();*/
   /*prefix_parse_fn fnptr = (prefix_parse_fn)get_ arena_free(&arena);*/
+  test_expressions();
   return failed;
 }
