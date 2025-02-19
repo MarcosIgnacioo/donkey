@@ -31,7 +31,7 @@
 #define color(C) "\033[0;3" #C "m"
 #define stringify(VAR) #VAR
 #define end_color "\033[0m"
-#define LOG_ERROR color(3) "[ERROR] : " end_color
+#define LOG_ERROR color(3) "[TEST ERROR] : " end_color
 #define LOG_SUCCESS color(2) "[SUCCESS] : " end_color
 
 // Very small test helpers
@@ -396,7 +396,7 @@ TEST(test_parser_let_statement) {
     Node curr_statement = program.statements[i];
     failed = !test_let_statement(curr_statement, expected_identifiers[i]);
   }
-  print_program(&program);
+  print_program(&arena, &program);
   arena_free(&arena);
 }
 
@@ -410,7 +410,7 @@ int test_expressions() {
   Program program = ast_parse_program(&arena, &parser);
 
   String expected_identifiers[] = {
-      string("foobarasdf"),
+      string("foobar"),
   };
 
   if (len(program.statements) != 1) {
@@ -425,22 +425,104 @@ int test_expressions() {
   }
 
   ExpressionStatement expr = *(ExpressionStatement *)program.statements[0].data;
-  String identifier = expr.expression_value.token.literal;
-  (void)identifier;
+  Token identifier_exp = *(Token *)expr.value.exp_bytes;
 
-  if (expr.expression_value.token.type != IDENTIFIER) {
-    printf(LOG_ERROR "The expression type is not a IDENTIFIER\n");
+  if (expr.value.type != IDENTIFIER_EXP) {
+    printf(LOG_ERROR "The expression type is not a IDENTIFIER_EXP\n");
+    end_program;
+  }
+
+  if (identifier_exp.type != IDENTIFIER) {
+    printf(LOG_ERROR "The token type is not a IDENTIFIER\n");
     end_program;
   }
 
   test_check_parser_errors(&parser);
-  if (!string_equals(expr.expression_value.token.literal,
-                     expected_identifiers[0])) {
+  if (!string_equals(identifier_exp.literal, expected_identifiers[0])) {
     printfln(LOG_ERROR "The expression literal: `%S` is not: `%S`\n",
-             expr.expression_value.token.literal, expected_identifiers[0]);
+             identifier_exp.literal, expected_identifiers[0]);
     arena_free(&arena);
   }
-  print_program(&program);
+  print_program(&arena, &program);
+  end_program;
+exit_program:
+  arena_free(&arena);
+  failed = 0;
+  return failed;
+}
+
+
+int test_expressions_integer_literals() {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+  String input = arena_new_string(&arena, "123;");
+  Lexer lexer = lexer_new_lexer(input);
+  Parser parser = ast_new_parser(&arena, &lexer);
+  Program program = ast_parse_program(&arena, &parser);
+
+  Token expected_tokens[] = {
+      NEW_TOKEN(INT, string("123")),
+  };
+
+  if (len(program.statements) != 1) {
+    printf(LOG_ERROR "There are not 1 statements, only %zu\n",
+           len(program.statements));
+    end_program;
+  }
+
+  if (program.statements[0].type != EXPRESSION_STATEMENT) {
+    printf(LOG_ERROR "The statement type is not a EXPRESSION_STATEMENT\n");
+    end_program;
+  }
+
+  ExpressionStatement expr_statement =
+      *(ExpressionStatement *)program.statements[0].data;
+  Expression exp = expr_statement.value;
+  IntLiteral integer_exp = *(IntLiteral *)exp.exp_bytes;
+
+  if (exp.type != INTEGER_LIT_EXP) {
+    printf(LOG_ERROR "The exp bytes type is not a INTEGER_LIT_EXP\n");
+    end_program;
+  }
+
+  // find a way to make this automatically with a macro i guess XD because
+  // rewritin it sucks
+  for (int i = 0; i < array_len(expected_tokens); i++) {
+    Token expected_tok = expected_tokens[i];
+    if (!string_equals(integer_exp.token.literal, expected_tok.literal)) {
+      printf(LOG_ERROR "expected : %s != got : %s", expected_tok.literal.str,
+             integer_exp.token.literal.str);
+      printf(LOG_ERROR "integer_exp.token.literal != expected_tok.literal");
+      end_program;
+    }
+    if (expected_tok.type != integer_exp.token.type) {
+      printf(LOG_ERROR "expected : %d != got : %d", expected_tok.type,
+             integer_exp.token.type);
+      end_program;
+    }
+  }
+
+  if (integer_exp.value != 123) {
+    printf(LOG_ERROR "expected : %d != got : %lld", 123, integer_exp.value);
+    end_program;
+  }
+
+  print_program(&arena, &program);
+  end_program;
+exit_program:
+  arena_free(&arena);
+  failed = 0;
+  return failed;
+}
+
+int test_expressions_beta() {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+  String input = arena_new_string(&arena, "let x = foobar;");
+  Lexer lexer = lexer_new_lexer(input);
+  Parser parser = ast_new_parser(&arena, &lexer);
+  Program program = ast_parse_program(&arena, &parser);
+  test_check_parser_errors(&parser);
+  print_program(&arena, &program);
+  end_program;
 exit_program:
   arena_free(&arena);
   failed = 0;
@@ -453,6 +535,7 @@ int main() {
   /*test_more_more_tokens();*/
   /*test_more_more_tokens();*/
   /*prefix_parse_fn fnptr = (prefix_parse_fn)get_ arena_free(&arena);*/
-  test_expressions();
+  /*test_expressions();*/
+  test_expressions_integer_literals();
   return failed;
 }

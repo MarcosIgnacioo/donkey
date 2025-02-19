@@ -146,4 +146,11 @@ void print_token(const char *title, Token token) {
   printf("\n");
 }
 
+Token *arena_token_clone(Arena *arena, Token token) {
+  Token *clonned = arena_alloc(arena, sizeof(Token));
+  clonned->type = token.type;
+  clonned->literal = token.literal;
+  return clonned;
+}
+
 #endif /* ifndef _TOKEN_H */

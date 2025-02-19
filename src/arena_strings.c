@@ -122,6 +122,8 @@ String arena_string_slice(Arena *arena, String chopping, U64 start, U64 end) {
   return (String){.str = chopping.str + start, .len = end - start};
 }
 
+//  TODO: WEEKEND IMPLEMENT my String sprintf ASAP after that, modify the 
+//  parts of the code that use fmt_buffer and String.str so it is String only
 int fmt_buffer(char *buffer, char *token, va_list arg_ptr, const char *fmt,
                int i, int k) {
   if (fmt[i + 1] == '%' || fmt[i + 1] == '\0') {
@@ -455,6 +457,37 @@ void string_trim_space_right(String *trimming) {
 void string_trim_space(String *trimming) {
   string_trim_space_left(trimming);
   string_trim_space_right(trimming);
+}
+
+// add this and find a way to make the error checking less painful
+// maybe a macro that does is_error_present(Result) and does
+// the shit for me
+/*typedef int Error_;*/
+/*typedef struct  {*/
+/*  Error error;*/
+/*  I64 value;*/
+/*} ResultInt64;*/
+
+I64 string_to_integer_64(String number) {
+  I64 sign = 1;
+  I64 i = 0;
+  I64 result = 0;
+
+  if (number.len <= 0) {
+    return 0;
+  }
+
+  if (number.str[0] == '-') {
+    sign = -sign;
+    i++;
+  }
+
+  do {
+    result = result * 10 + number.str[i] - '0';
+    i++;
+  } while (i < number.len);
+
+  return result * sign;
 }
 
 /*

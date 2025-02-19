@@ -6,7 +6,8 @@
 #include "../token.c"
 #define color(C) "\033[0;3" #C "m"
 #define end_color "\033[0m"
-#define SYNTAX_ERROR color(1) "[SYNTAX ERROR] : " end_color
+#define SYNTAX_ERROR color(3) "[SYNTAX ERROR] : " end_color
+typedef long long I64;
 
 typedef enum {
   NIL_STATEMENT,
@@ -29,10 +30,22 @@ typedef enum {
   CALL_PREC,        // myFunction(X)
 } Precedence;
 
+// TODO: ver como puedo en vez de tener que usar un void * poder tener toda la
+// informacion aqui en discovery kids, porque, no me gusta tener o sea si, es
+// una arena collected language, pero aun asi, queria mantener la menor cantidad
 typedef struct {
-  Token token;
+  NodeType type;
+  void *exp_bytes;
 } Expression;
 
+typedef struct {
+  Token token;
+  I64 value;
+} IntLiteral;
+
+// this can be an expression or a part of a statement
+// let foo = 1; <- this is an statement
+// foo;         <- this is an expression
 typedef struct {
   Token token;
   String value;
@@ -46,12 +59,12 @@ typedef struct {
 
 typedef struct {
   Token token;
-  Expression return_value;
+  Expression value;
 } ReturnStatement;
 
 typedef struct {
   Token token; // first token of the expression
-  Expression expression_value;
+  Expression value;
 } ExpressionStatement;
 
 typedef struct {
@@ -115,8 +128,8 @@ bool compare_parsing_fns_values(void *a, void *b) {
 // fn defs
 void ast_next_token(Arena *arena, Parser *parser);
 
-void print_program(Program *program);
-void print_statement(Node node);
+void print_program(Arena *arena, Program *program);
+void print_statement(Arena *arena, Node node);
 String arena_stringify_statement(Arena *arena, Node node);
 
 // parsing stuff
@@ -128,14 +141,16 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 Node *ast_parse_return_statement(Arena *arena, Parser *parser);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression ast_parse_identifier(Arena *arena, Parser *parser);
+Expression ast_parse_int(Arena *arena, Parser *parser);
 Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
-//
+// utility
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
 void ast_parser_peek_error(Arena *arena, Parser *parser,
                            TokenType expected_type);
 prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key);
 infix_parse_fn get_infix_fn_from_hm(HashTable table, TokenType key);
+String stringify_expression(Arena *arena, Node node, Expression expression);
 
 #define ast_token_literal(NODE) (((Token *)NODE)->literal)
 
@@ -145,6 +160,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, ILLEGAL, prs_fn(NULL, NULL)), // parsing stuff
     kv(KeyValue_PF, EOF_, prs_fn(NULL, NULL)),    //
     kv(KeyValue_PF, IDENTIFIER, prs_fn(&ast_parse_identifier, NULL)), //
+    kv(KeyValue_PF, INT, prs_fn(&ast_parse_int, NULL)),               //
     kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                      //
     kv(KeyValue_PF, MINUS, prs_fn(NULL, NULL)),                       //
     kv(KeyValue_PF, PLUS, prs_fn(NULL, NULL)),                        //
@@ -287,9 +303,13 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
     // here we should pop from the arena rite?
     return NULL;
   }
+  // SILLY : Silliness warning this was made just to try something, do not keep
+  // it like this!
+  ast_next_token(arena, parser);
 
-  // TODO: PARSE EXPRESSIONS
-
+  // TODO: PARSE EXPRESSIONS (this is just for a test, i gotta make this really
+  // work later)
+  let_statement->value = ast_parse_expression(arena, parser, LOWEST_PREC);
   while (!(curr_token_is(parser, SEMICOLON))) {
     ast_next_token(arena, parser);
   }
@@ -312,10 +332,23 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
+Expression ast_parse_int(Arena *arena, Parser *parser) {
+  IntLiteral *integer_literal = arena_alloc(arena, sizeof(IntLiteral));
+  integer_literal->token = parser->curr_token;
+  // TODO: add error handling to this function cause it
+  // may fail so yeah but right now we dont care!
+  // Result<Int,Error>
+  integer_literal->value = string_to_integer_64(parser->curr_token.literal);
+  return (Expression){.type = INTEGER_LIT_EXP,
+                      .exp_bytes = (void *)integer_literal};
+}
+
 Expression ast_parse_identifier(Arena *arena, Parser *parser) {
   (void)arena;
   (void)parser;
-  return (Expression){.token = parser->curr_token};
+  return (Expression){.type = IDENTIFIER_EXP,
+                      .exp_bytes =
+                          (void *)arena_token_clone(arena, parser->curr_token)};
 }
 
 // TODO:
@@ -340,8 +373,7 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
   ExpressionStatement *expr_statement =
       arena_alloc(arena, sizeof(ExpressionStatement));
-  expr_statement->expression_value =
-      ast_parse_expression(arena, parser, LOWEST_PREC);
+  expr_statement->value = ast_parse_expression(arena, parser, LOWEST_PREC);
   statement->type = EXPRESSION_STATEMENT;
   statement->data = expr_statement;
   if (peek_token_is(parser, SEMICOLON)) {
@@ -391,9 +423,9 @@ String ast_init(Program *program) {
   }
 }
 
-void print_program(Program *program) {
+void print_program(Arena *arena, Program *program) {
   for (size_t i = 0; i < len(program->statements); i++) {
-    print_statement(program->statements[i]);
+    print_statement(arena, program->statements[i]);
   }
 }
 
@@ -407,19 +439,48 @@ String stringify_program(Arena *arena, Program *program) {
   return result;
 }
 
+String stringify_expression(Arena *arena, Node node, Expression expression) {
+  (void)node;
+  String exp_string = {0};
+  switch (expression.type) {
+  case IDENTIFIER_EXP: {
+    Identifier parsed_identifier = *(Identifier *)expression.exp_bytes;
+    exp_string = arena_string_fmt(arena, "%s", parsed_identifier.token.literal);
+    break;
+  }
+  case INTEGER_LIT_EXP: {
+    IntLiteral parsed_int = *(IntLiteral *)expression.exp_bytes;
+    exp_string = arena_string_fmt(arena, "%d", parsed_int);
+    break;
+  }
+  default: {
+    // TODO:
+    // make the stupid macro that makes string representations
+    // for enums too please
+    exp_string = arena_string_fmt(
+        arena,
+        "There has not been a expression string for this expression type: %d",
+        expression.type);
+  }
+  }
+  return exp_string;
+}
+
 String arena_stringify_statement(Arena *arena, Node node) {
   String str_stmt;
   switch (node.type) {
   case LET_STATEMENT:
-    //
+    // i put ; in this but what if the user didnt put them huhhhh
     {
       LetStatement statement = *((LetStatement *)node.data);
-      str_stmt = arena_string_fmt(          //
-          arena,                            //
-          "%s %s = %s;",                    //
-          statement.token.literal.str,      //
-          statement.name.value.str,         //
-          statement.value.token.literal.str //
+      String expression_string =
+          stringify_expression(arena, node, statement.value);
+      str_stmt = arena_string_fmt(     //
+          arena,                       //
+          "%s %s = %s;",               //
+          statement.token.literal.str, //
+          statement.name.value.str,    //
+          expression_string.str        //
       );
       break;
     }
@@ -427,9 +488,11 @@ String arena_stringify_statement(Arena *arena, Node node) {
     //
     {
       ReturnStatement statement = *((ReturnStatement *)node.data);
-      str_stmt = arena_string_fmt(arena, "%s %s;",                         //
-                                  statement.token.literal.str,             //
-                                  statement.return_value.token.literal.str //
+      String expression_string =
+          stringify_expression(arena, node, statement.value);
+      str_stmt = arena_string_fmt(arena, "%s %s;",             //
+                                  statement.token.literal.str, //
+                                  expression_string.str        //
       );
       break;
     }
@@ -437,10 +500,11 @@ String arena_stringify_statement(Arena *arena, Node node) {
     //
     {
       ExpressionStatement statement = *((ExpressionStatement *)node.data);
-      str_stmt =
-          arena_string_fmt(arena, "%s;",                                //
-                           statement.expression_value.token.literal.str //
-          );
+      String expression_string =
+          stringify_expression(arena, node, statement.value);
+      str_stmt = arena_string_fmt(arena, "%s;",         //
+                                  expression_string.str //
+      );
       break;
     }
   default:
@@ -455,51 +519,9 @@ String arena_stringify_statement(Arena *arena, Node node) {
   return str_stmt;
 }
 
-void print_statement(Node node) {
-  char out[1024];
-  switch (node.type) {
-  case LET_STATEMENT:
-    //
-    {
-      LetStatement statement = *((LetStatement *)node.data);
-      sprintf(                              //
-          out, "%s %s = %s;",               //
-          statement.token.literal.str,      //
-          statement.name.value.str,         //
-          statement.value.token.literal.str //
-      );
-      break;
-    }
-  case RETURN_STATEMENT:
-    //
-    {
-      ReturnStatement statement = *((ReturnStatement *)node.data);
-      sprintf(                                     //
-          out, "%s %s;",                           //
-          statement.token.literal.str,             //
-          statement.return_value.token.literal.str //
-      );
-      break;
-    }
-  case EXPRESSION_STATEMENT:
-    //
-    {
-      ExpressionStatement statement = *((ExpressionStatement *)node.data);
-      sprintf(                                         //
-          out, "%s;",                                  //
-          statement.expression_value.token.literal.str //
-      );
-      break;
-    }
-  default:
-    //
-    {
-      sprintf(                                                        //
-          out, "ILLEGAL STUFF IDUNNO BRO THERE IS NOT THAT STATEMENT" //
-      );
-    }
-  }
-  printf("%s\n", out);
+void print_statement(Arena *arena, Node node) {
+  String statement = arena_stringify_statement(arena, node);
+  printf("%s\n", statement.str);
 }
 
 #endif /* ifndef _PARSER_H */
