@@ -137,6 +137,16 @@ const char *get_token_literal(TokenType token_type) {
   }
 }
 
+bool token_equals(Token this, Token that) {
+  if (this.type != that.type) {
+    return false;
+  }
+  if (!string_equals(this.literal,that.literal)) {
+    return false;
+  }
+  return true;
+}
+
 void print_token(const char *title, Token token) {
   const char *token_literal = get_token_literal(token.type);
   printf("%s:\n"

@@ -1,8 +1,79 @@
+```c
+p *(IntLiteral *)(((InfixExpression *)resulting_exp.exp_bytes)->left)->exp_bytes
+p *(Identifier *)(((expres *)resulting_exp.exp_bytes)->left)->exp_bytes
+p *(IntLiteral *)(((InfixExpression *)resulting_exp.exp_bytes)->right)->exp_bytes
+p (((InfixExpression *)resulting_exp.exp_bytes)->operator) 
+```
+
+ctrl shift 1 changes to that tab in that buffer idk
+# doc for cool stuff
+
+
+La razon por la que lo hacemos con el peek_token en evez de avanzar el token directamente
+   y usar el current_token es porque, el peeking token podria no tener ninguna funcion de 
+   infix por lo que pues se entra al if, y hemos leido un token que no nos correspondia
+   por ejemplo este:
+
+```c
+let x = 1 + 2 [ 3;
+```
+   este el [ no tiene una funcion de parseo, pero como en ese aproach se avanzo
+   con el parser para checar esta parte, pues no es hasta en este punto que sabemos
+   que no se puede parsear como parte de una expresion,
+   por lo que retornamos, pero habiendo consumido ese token, por eso, siempre
+   intentamos hacerlo mejor con el peek token
+   puesto que no tiene este problema y es literalmente el mismo codigo
+
+# OLD
+
+```c
+ast_parse_expression() fn 466
+...
+  while (!peek_token_is(parser, SEMICOLON) && precedence < peek_precedence(parser)) {
+    ast_next_token(arena, parser); // <-
+
+    infix_parse_fn infix =
+        get_infix_fn_from_hm(PARSING_FUNCTIONS, parser->current_token.type);
+
+    if (!infix) {
+      return left_value;
+    }
+
+    left_value = infix(arena, parser, left_value);
+  }
+```
+                                            VS
+# BOOK
+```c
+  while (!peek_token_is(parser, SEMICOLON) && precedence < peek_precedence(parser)) {
+    infix_parse_fn infix =
+        get_infix_fn_from_hm(PARSING_FUNCTIONS, parser->peek_token.type);
+
+    if (!infix) {
+      return left_value;
+    }
+
+    ast_next_token(arena, parser); // <-
+    left_value = infix(arena, parser, left_value);
+  }
+```
 # TODO
 
-make the functions inprefix and prefix hashmap to be a macro like making the macro that takes the name of the enum variable
+```
+p (((((Array_Header *)program.statements) - 1))->length)
+```
+
+[x]make the functions inprefix and prefix hashmap to be a macro like making the macro that takes the name of the enum variable
 and then it makes also an array of strings with that name (this is achieved with xmacros)
 so i can access the array within just the enum value 
+
+[] refactor 
+
+    statement -> let_statement || return_statement || expression_statement
+      then the statement has different things for each one of its kind
+    a let statement has a token (the let token), a Identifier, which is a token with the name of the thing we are declaring and a Expression with the value we wanna store in that variable
+    the problem is it is kinda hard to navigate through all this structs and remembering the stuff each one has, and how we wanna operate this thing
+
 
 
 

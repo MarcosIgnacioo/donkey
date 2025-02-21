@@ -196,7 +196,7 @@ String arena_string_fmt(Arena *arena, const char *fmt, ...) {
   va_list arg_ptr;
   va_start(arg_ptr, fmt);
   char token[1024];
-  String res = arena_new_empty_string_with_cap(arena, 256);
+  String res = arena_new_empty_string_with_cap(arena, 4);
   int k = 0;
   for (int i = 0; fmt[i] != '\0'; i++) {
     token[k++] = fmt[i];

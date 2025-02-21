@@ -7,8 +7,13 @@
 #define color(C) "\033[0;3" #C "m"
 #define end_color "\033[0m"
 #define SYNTAX_ERROR color(3) "[SYNTAX ERROR] : " end_color
+#define PARSING_ERROR color(3) "[PARSING ERROR] : " end_color
+#define cast_statement(STMNT, TYPE) *(TYPE *)STMNT.data
+#define cast(THIS, TYPE) *(TYPE *)THIS
 typedef long long I64;
 
+// TODO: Refactor all void * fields in structs to be named `data` or raw_bytes
+// or just bytes, cause it makes everything more comfortable
 typedef enum {
   NIL_STATEMENT,
   LET_STATEMENT,
@@ -17,19 +22,27 @@ typedef enum {
   // expressions
   IDENTIFIER_EXP,
   INTEGER_LIT_EXP,
+  PREFIX_EXP,
+  INFIX_EXP,
 } NodeType;
 
+// When we are parsing an expression we dont know the Precedence we have with it
+// but when we are at certains tokens we KNOW which is,
+// for example when we are parsing a prefix thing we know it has a precedence of
+// PREFIX_PREC
 typedef enum {
   NIL_PREC,
   LOWEST_PREC,
-  EQUALS_PREC,      // ==
-  LESSGREATER_PREC, // > or <
-  SUM_PREC,         // +
-  PRODUCT_PREC,     // *
-  PREFIX_PREC,      // -X or !X
-  CALL_PREC,        // myFunction(X)
+  EQUALS_PREC,       // ==
+  LESS_GREATER_PREC, // > or <
+  SUM_PREC,          // +
+  PRODUCT_PREC,      // *
+  PREFIX_PREC,       // -X or !X
+  CALL_PREC,         // myFunction(X)
 } Precedence;
 
+// Individual parts of expressions
+//
 // TODO: ver como puedo en vez de tener que usar un void * poder tener toda la
 // informacion aqui en discovery kids, porque, no me gusta tener o sea si, es
 // una arena collected language, pero aun asi, queria mantener la menor cantidad
@@ -51,27 +64,45 @@ typedef struct {
   String value;
 } Identifier;
 
-typedef struct {
-  Token token;
-  Identifier name; // removed *
-  Expression value;
-} LetStatement;
-
-typedef struct {
-  Token token;
-  Expression value;
-} ReturnStatement;
-
-typedef struct {
-  Token token; // first token of the expression
-  Expression value;
-} ExpressionStatement;
-
+// statements
 typedef struct {
   Token token;
   NodeType type;
   void *data;
 } Node;
+
+typedef struct {
+  Token token;
+  Identifier name; // removed *
+  Expression expression_value;
+} LetStatement;
+
+typedef struct {
+  Token token;
+  Expression expression_value;
+} ReturnStatement;
+
+typedef struct {
+  Token token;
+  String operator;
+  Expression right;
+} PrefixExpression;
+
+typedef struct {
+  Token token;
+  Expression left;
+  String operator;
+  Expression right;
+} InfixExpression;
+
+// TODO:
+// maybe i should just remove this to only
+// be the Expression struct because it confuses me
+// a LOT
+typedef struct {
+  Token token; // first token of the expression
+  Expression expression_value;
+} ExpressionStatement;
 
 typedef struct {
   Node *statements;
@@ -95,7 +126,7 @@ typedef struct {
 } KeyValue_PrefixFNS;
 
 typedef Expression (*prefix_parse_fn)(Arena *, Parser *);
-typedef Expression (*infix_parse_fn)(Arena *, Parser *, Node *, Node *);
+typedef Expression (*infix_parse_fn)(Arena *, Parser *, Expression);
 
 #define kv_p(K, V)                                                             \
   (KeyValue_PrefixFNS) { .key = K, .value = V, .is_occupied = true }
@@ -110,6 +141,12 @@ typedef struct {
   ParsingFunctions value;
   bool is_occupied;
 } KeyValue_PF;
+
+typedef struct {
+  TokenType key;
+  Precedence value;
+  bool is_occupied;
+} KeyValue_PRC;
 
 bool compare_token_type_keys(void *a, void *b) {
   KeyValue_PF a_key = *(KeyValue_PF *)a;
@@ -142,6 +179,9 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression ast_parse_identifier(Arena *arena, Parser *parser);
 Expression ast_parse_int(Arena *arena, Parser *parser);
+Expression ast_parse_prefix_expression(Arena *arena, Parser *parser);
+Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
+                                      Expression left);
 Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
 // utility
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
@@ -154,25 +194,33 @@ String stringify_expression(Arena *arena, Node node, Expression expression);
 
 #define ast_token_literal(NODE) (((Token *)NODE)->literal)
 
-#define prs_fn(INFIX, PREFIX)                                                  \
-  (ParsingFunctions) { .prefix_fn = INFIX, .infix_fn = PREFIX }
+#define prs_fn(PREFIX, INFIX)                                                  \
+  (ParsingFunctions) { .prefix_fn = PREFIX, .infix_fn = INFIX }
 KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, ILLEGAL, prs_fn(NULL, NULL)), // parsing stuff
     kv(KeyValue_PF, EOF_, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, IDENTIFIER, prs_fn(&ast_parse_identifier, NULL)), //
-    kv(KeyValue_PF, INT, prs_fn(&ast_parse_int, NULL)),               //
-    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                      //
-    kv(KeyValue_PF, MINUS, prs_fn(NULL, NULL)),                       //
-    kv(KeyValue_PF, PLUS, prs_fn(NULL, NULL)),                        //
-    kv(KeyValue_PF, ASTERISK, prs_fn(NULL, NULL)),                    //
-    kv(KeyValue_PF, SLASH, prs_fn(NULL, NULL)),                       //
-    kv(KeyValue_PF, EQUALS, prs_fn(NULL, NULL)),                      //
-    kv(KeyValue_PF, BANG, prs_fn(NULL, NULL)),                        //
-    kv(KeyValue_PF, NOT_EQUALS, prs_fn(NULL, NULL)),                  //
-    kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),                          //
-    kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),                          //
-    kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),                    //
-    kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                    //
+    kv(KeyValue_PF, IDENTIFIER,
+       prs_fn(&ast_parse_identifier, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, INT, prs_fn(&ast_parse_int, NULL)),             //
+    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                    //
+    kv(KeyValue_PF, MINUS,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, PLUS,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, ASTERISK,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, SLASH,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, EQUALS,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, NOT_EQUALS,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, BANG,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),                               //
+    kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),                               //
+    kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),                         //
+    kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
     kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
     kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)),   //
@@ -198,8 +246,47 @@ HashTable PARSING_FUNCTIONS = (HashTable){
     .are_values_equals = &compare_parsing_fns_values //
 };
 
+KeyValue_PRC PRECEDENCES_ARR[] = {
+    kv(KeyValue_PRC, EQUALS, EQUALS_PREC),     //
+    kv(KeyValue_PRC, NOT_EQUALS, EQUALS_PREC), //
+    kv(KeyValue_PRC, LT, LESS_GREATER_PREC),   //
+    kv(KeyValue_PRC, GT, LESS_GREATER_PREC),   //
+    kv(KeyValue_PRC, MINUS, SUM_PREC),         //
+    kv(KeyValue_PRC, PLUS, SUM_PREC),          //
+    kv(KeyValue_PRC, ASTERISK, PRODUCT_PREC),  //
+    kv(KeyValue_PRC, SLASH, PRODUCT_PREC),     //
+};
+
+#define new_hash_table(KV_TYPE, ARR, KEYS_EQ_FN, VALS_EQ_FN)                   \
+  (HashTable) {                                                                \
+    .len = array_len(ARR), .item_size = sizeof(KV_TYPE),                       \
+    .capacity = array_len(ARR), .items = ARR, .are_keys_equals = KEYS_EQ_FN,   \
+    .are_values_equals = VALS_EQ_FN                                            \
+  }
+
+HashTable PRECENDENCES = new_hash_table(KeyValue_PRC,             //
+                                        PRECEDENCES_ARR,          //
+                                        &compare_token_type_keys, //
+                                        NULL                      //
+);
+
+Precedence get_precedence_from_hm(HashTable table, TokenType key) {
+  KeyValue_PRC *kv = hash_table_find_item(table, &key);
+  if (kv) {
+    return kv->value;
+  } else {
+    return LOWEST_PREC;
+  }
+}
+
+#define peek_precedence(PARSER)                                                \
+  get_precedence_from_hm(PRECENDENCES, PARSER->peek_token.type)
+
+#define curr_precedence(PARSER)                                                \
+  get_precedence_from_hm(PRECENDENCES, PARSER->curr_token.type)
+
 prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key) {
-  KeyValue_PF *kv = hash_table_find_item(PARSING_FUNCTIONS, &key);
+  KeyValue_PF *kv = hash_table_find_item(table, &key);
   if (kv) {
     return kv->value.prefix_fn;
   } else {
@@ -208,7 +295,7 @@ prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key) {
 }
 
 infix_parse_fn get_infix_fn_from_hm(HashTable table, TokenType key) {
-  KeyValue_PF *kv = hash_table_find_item(PARSING_FUNCTIONS, &key);
+  KeyValue_PF *kv = hash_table_find_item(table, &key);
   if (kv) {
     return kv->value.infix_fn;
   } else {
@@ -235,8 +322,8 @@ void ast_next_token(Arena *arena, Parser *parser) {
   parser->peek_token = lexer_next_token(arena, parser->lexer);
 }
 
-#define peek_token_is(P, E) P->peek_token.type == E
-#define curr_token_is(P, E) P->curr_token.type == E
+#define peek_token_is(P, E) (P->peek_token.type == E)
+#define curr_token_is(P, E) (P->curr_token.type == E)
 
 // read the next token if it is the expected one
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
@@ -286,6 +373,7 @@ statement->data = let_statement;
 let_statement->token = parser->curr_token;
 */
 
+// LET_STATEMENT
 Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
   LetStatement *let_statement = arena_alloc(arena, sizeof(LetStatement));
@@ -309,7 +397,8 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
 
   // TODO: PARSE EXPRESSIONS (this is just for a test, i gotta make this really
   // work later)
-  let_statement->value = ast_parse_expression(arena, parser, LOWEST_PREC);
+  let_statement->expression_value =
+      ast_parse_expression(arena, parser, LOWEST_PREC);
   while (!(curr_token_is(parser, SEMICOLON))) {
     ast_next_token(arena, parser);
   }
@@ -332,6 +421,7 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
+// IDENTIFIER_LIT_EXP
 Expression ast_parse_int(Arena *arena, Parser *parser) {
   IntLiteral *integer_literal = arena_alloc(arena, sizeof(IntLiteral));
   integer_literal->token = parser->curr_token;
@@ -346,9 +436,36 @@ Expression ast_parse_int(Arena *arena, Parser *parser) {
 Expression ast_parse_identifier(Arena *arena, Parser *parser) {
   (void)arena;
   (void)parser;
-  return (Expression){.type = IDENTIFIER_EXP,
-                      .exp_bytes =
-                          (void *)arena_token_clone(arena, parser->curr_token)};
+  Identifier *identifier = arena_alloc(arena, sizeof(Identifier));
+  identifier->token = parser->curr_token;
+  identifier->value = parser->curr_token.literal;
+  return (Expression){.type = IDENTIFIER_EXP, .exp_bytes = (void *)identifier};
+}
+
+// ALL THE OTHER EXPRESSIONS
+
+Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
+                                      Expression left) {
+  InfixExpression *infix_exp = arena_alloc(arena, sizeof(InfixExpression));
+  infix_exp->token = parser->curr_token;
+  infix_exp->operator= parser->curr_token.literal;
+  ast_next_token(arena, parser);
+  infix_exp->left = left;
+  Precedence precedence =
+      get_precedence_from_hm(PRECENDENCES, parser->curr_token.type);
+  infix_exp->right = ast_parse_expression(arena, parser, precedence);
+  Expression resulting_exp =
+      (Expression){.type = INFIX_EXP, .exp_bytes = (void *)infix_exp};
+  return resulting_exp;
+}
+
+Expression ast_parse_prefix_expression(Arena *arena, Parser *parser) {
+  PrefixExpression *prefix_exp = arena_alloc(arena, sizeof(PrefixExpression));
+  prefix_exp->token = parser->curr_token;
+  prefix_exp->operator= parser->curr_token.literal;
+  ast_next_token(arena, parser);
+  prefix_exp->right = ast_parse_expression(arena, parser, PREFIX_PREC);
+  return (Expression){.type = PREFIX_EXP, .exp_bytes = (void *)prefix_exp};
 }
 
 // TODO:
@@ -359,26 +476,53 @@ Expression ast_parse_identifier(Arena *arena, Parser *parser) {
 // maybe a expression nil or something like that
 // like the one randys did in the game dev videos
 Expression ast_parse_expression(Arena *arena, Parser *parser,
-                                Precedence prece) {
+                                Precedence precedence) {
   prefix_parse_fn prefix =
       get_prefix_fn_from_hm(PARSING_FUNCTIONS, parser->curr_token.type);
   if (!prefix) {
+    String error = arena_string_fmt(
+        arena, PARSING_ERROR "Not prefix function found for: %s",
+        parser->curr_token.literal.str,
+        get_token_literal(parser->curr_token.type));
+    ast_parser_error_append(parser, error);
     return (Expression){0};
   }
   Expression left_value = prefix(arena, parser);
+  // esto es super cool, el left_value no se pierde o se borra porque
+  // siempre me lo paso al infix, y ahi lo asigno como left_value
+  // que chido no
+  while (!peek_token_is(parser, SEMICOLON) &&
+         precedence < peek_precedence(parser)) {
+    infix_parse_fn infix =
+        get_infix_fn_from_hm(PARSING_FUNCTIONS, parser->peek_token.type);
+    if (!infix) {
+      return left_value;
+    }
+
+    ast_next_token(arena, parser);
+    left_value = infix(arena, parser, left_value);
+  }
   return left_value;
 }
 
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
+  Token initial_token = parser->curr_token;
+
   ExpressionStatement *expr_statement =
       arena_alloc(arena, sizeof(ExpressionStatement));
-  expr_statement->value = ast_parse_expression(arena, parser, LOWEST_PREC);
+
+  expr_statement->expression_value =
+      ast_parse_expression(arena, parser, LOWEST_PREC);
+
+  statement->token = initial_token;
   statement->type = EXPRESSION_STATEMENT;
   statement->data = expr_statement;
+
   if (peek_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
   }
+
   return statement;
 }
 
@@ -424,8 +568,17 @@ String ast_init(Program *program) {
 }
 
 void print_program(Arena *arena, Program *program) {
+  printf(color(5)"[PROGRAM] \n\t"end_color);
   for (size_t i = 0; i < len(program->statements); i++) {
     print_statement(arena, program->statements[i]);
+  }
+  printf("\n");
+}
+
+void print_parser_errors(Parser parser) {
+  for (size_t i = 0; i < len(parser.errors); i++) {
+    Error err = parser.errors[i];
+    printfln("%S\n", err.error);
   }
 }
 
@@ -445,12 +598,32 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
   switch (expression.type) {
   case IDENTIFIER_EXP: {
     Identifier parsed_identifier = *(Identifier *)expression.exp_bytes;
-    exp_string = arena_string_fmt(arena, "%s", parsed_identifier.token.literal);
+    exp_string =
+        arena_string_fmt(arena, "%s", parsed_identifier.token.literal.str);
     break;
   }
   case INTEGER_LIT_EXP: {
     IntLiteral parsed_int = *(IntLiteral *)expression.exp_bytes;
+    // shit explodes here huhu it overwrites the bang memory for some reason
+    // good luck!
     exp_string = arena_string_fmt(arena, "%d", parsed_int);
+    /*exp_string = string("5");*/
+    break;
+  }
+  case PREFIX_EXP: {
+    PrefixExpression prefix = cast(expression.exp_bytes, PrefixExpression);
+    String operator= prefix.operator;
+    String right = stringify_expression(arena, node, prefix.right);
+    exp_string = arena_string_fmt(arena, "(%s%s)", operator.str, right.str);
+    break;
+  }
+  case INFIX_EXP: {
+    InfixExpression infix = cast(expression.exp_bytes, InfixExpression);
+    String left = stringify_expression(arena, node, infix.left);
+    String operator= infix.operator;
+    String right = stringify_expression(arena, node, infix.right);
+    exp_string = arena_string_fmt(arena, "(%s %s %s)", left.str, operator.str,
+                                  right.str);
     break;
   }
   default: {
@@ -469,28 +642,26 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
 String arena_stringify_statement(Arena *arena, Node node) {
   String str_stmt;
   switch (node.type) {
-  case LET_STATEMENT:
-    // i put ; in this but what if the user didnt put them huhhhh
-    {
-      LetStatement statement = *((LetStatement *)node.data);
-      String expression_string =
-          stringify_expression(arena, node, statement.value);
-      str_stmt = arena_string_fmt(     //
-          arena,                       //
-          "%s %s = %s;",               //
-          statement.token.literal.str, //
-          statement.name.value.str,    //
-          expression_string.str        //
-      );
-      break;
-    }
+  case LET_STATEMENT: {
+    LetStatement statement = *((LetStatement *)node.data);
+    String expression_string =
+        stringify_expression(arena, node, statement.expression_value);
+    str_stmt = arena_string_fmt(     //
+        arena,                       //
+        "%s %s = %s",                //
+        statement.token.literal.str, //
+        statement.name.value.str,    //
+        expression_string.str        //
+    );
+    break;
+  }
   case RETURN_STATEMENT:
     //
     {
       ReturnStatement statement = *((ReturnStatement *)node.data);
       String expression_string =
-          stringify_expression(arena, node, statement.value);
-      str_stmt = arena_string_fmt(arena, "%s %s;",             //
+          stringify_expression(arena, node, statement.expression_value);
+      str_stmt = arena_string_fmt(arena, "%s %s",              //
                                   statement.token.literal.str, //
                                   expression_string.str        //
       );
@@ -501,8 +672,8 @@ String arena_stringify_statement(Arena *arena, Node node) {
     {
       ExpressionStatement statement = *((ExpressionStatement *)node.data);
       String expression_string =
-          stringify_expression(arena, node, statement.value);
-      str_stmt = arena_string_fmt(arena, "%s;",         //
+          stringify_expression(arena, node, statement.expression_value);
+      str_stmt = arena_string_fmt(arena, "%s",          //
                                   expression_string.str //
       );
       break;
