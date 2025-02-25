@@ -1,87 +1,4 @@
-#include "./parser/ast.c"
-#include "array.c"
-#include "lexer.c"
-#include "repl.c"
-#include "token.c"
-#include <assert.h>
-#include <stdio.h>
-
-#define NUMARGS(...) (sizeof((int[]){__VA_ARGS__}) / sizeof(int))
-#define end_program goto exit_program
-
-#define ENUM_TO_STRING(ENUM_NAME, ...)                                         \
-  enum ENUM_NAME { __VA_ARGS__ };                                              \
-  char ENUM_NAME##_strings[] = #__VA_ARGS__;                                   \
-  long ENUM_NAME##strings_indices[NUMARGS(__VA_ARGS__)];                       \
-  char *ENUM_NAME##_to_string(enum ENUM_NAME value) {                          \
-    static int init = 0;                                                       \
-    if (init == 0) {                                                           \
-      int n = 0;                                                               \
-      ENUM_NAME##strings_indices[n++] = 0;                                     \
-      char *curr_pos = strchr(ENUM_NAME##_strings, ',');                       \
-      while (curr_pos) {                                                       \
-        *curr_pos = '\0';                                                      \
-        ENUM_NAME##strings_indices[n++] = (++curr_pos - ENUM_NAME##_strings);  \
-        curr_pos = strchr(curr_pos, ',');                                      \
-      }                                                                        \
-      init++;                                                                  \
-    }                                                                          \
-    return (char *)ENUM_NAME##_strings + ENUM_NAME##strings_indices[value];    \
-  }
-
-#define color(C) "\033[0;3" #C "m"
-#define stringify(VAR) #VAR
-#define end_color "\033[0m"
-#define LOG_ERROR color(3) "[TEST ERROR] : " end_color
-#define LOG_SUCCESS color(2) "[SUCCESS] : " end_color
-
-// Very small test helpers
-int failed = 0;
-#define TEST(name) void name()
-#define RUN_TEST(name)                                                         \
-  printf("\n\033[1m%s\n\033[0m", #name);                                       \
-  name()
-#define ASSERT(expr)                                                           \
-  if (!(expr)) {                                                               \
-    failed = 1;                                                                \
-    printf("\033[0;31mFAIL: %s\n\033[0m", #expr);                              \
-  } else {                                                                     \
-    printf("\033[0;32mPASS: %s\n\033[0m", #expr);                              \
-  }
-
-#define ASSERT_TYPES(TOK, EXPECTED_TYPE, TYPE)                                 \
-  if (EXPECTED_TYPE == TYPE) {                                                 \
-    printf("\033[0;32mPASS: %s == %s\n\033[0m", TOK.literal.str,               \
-           get_token_literal(expected_type));                                  \
-  } else {                                                                     \
-    failed = 1;                                                                \
-    printf("\033[0;31mFAIL: %s != %s\n\033[0m", TOK.literal.str,               \
-           (const char *)TYPES_ARR[EXPECTED_TYPE].key);                        \
-  }
-
-#define ASSERT_STR_EQ(str1, str2)                                              \
-  if (string_equals(str1, str2)) {                                             \
-    printf("\033[0;32mPASS: %s == %s\n\033[0m", str1.str, str2.str);           \
-  } else {                                                                     \
-    failed = 1;                                                                \
-    printf("\033[0;31mFAIL: %s != %s\n\033[0m", str1.str, str2.str);           \
-  }
-#define MACRO
-// End of test helpers
-
-TEST(test_string_assert) {
-  ASSERT_STR_EQ(string("hello"), string("helloasdf"));
-}
-
-/*
-FAIL: let != let
-PASS: five == five
-PASS: = == =
-FAIL: (null) != 5
-FAIL: 5 != ;
-FAIL:  !=
- * */
-
+#include "./test.h"
 TEST(test_tokens) {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
   String input = arena_new_string(&arena, "++(){},;");
@@ -306,60 +223,6 @@ typedef struct {
   int y[128];
 } Fuzz;
 
-bool test_let_statement(Node statement, String expected_name) {
-  // TODO: make this to give the token type in string, it now spits out what the
-  // user typed `TokenType`
-  if (statement.type != LET_STATEMENT) {
-    printf(
-        color(1) "ERROR:" end_color //
-            color(4) "\n\tthe statement token is " color(
-                1) "NOT" end_color
-                   " a " end_color color(6) "`let statement` " end_color color(
-                       7) "\n\tgot: `%s`\n" end_color,
-        statement.token.literal.str);
-    return false;
-  }
-
-  LetStatement let_stmt = *(LetStatement *)statement.data;
-  if (!string_equals(let_stmt.name.value, expected_name)) {
-    printf(
-        color(1) "ERROR:" end_color //
-            color(
-                4) "\n\tthe *EXPECTED* let_stmt.name.value name and the *GOT* "
-                   "one" color(1) "\n\tARENT THE SAME" end_color
-                       color(6) "\n\texpected : `%s`" end_color color(
-                           7) "\tgot:`%s`\n" end_color,
-        expected_name.str, let_stmt.name.value.str);
-    return false;
-  }
-
-  if (!string_equals(let_stmt.name.token.literal, expected_name)) {
-    printf(color(1) "ERROR:" end_color //
-               color(4) "\n\tthe *EXPECTED* let_stmt.name.token.literal name "
-                        "and the *GOT* "
-                        "one" color(1) "\n\tARENT THE SAME" end_color
-                            color(6) "\n\texpected : `%s`" end_color color(
-                                7) "\tgot:`%s`\n" end_color,
-           expected_name.str, let_stmt.name.token.literal.str);
-    return false;
-  }
-  return true;
-}
-
-bool test_return_statement(Node statement) {
-  if (statement.type != RETURN_STATEMENT) {
-    printf(
-        color(1) "ERROR:" end_color //
-            color(4) "\n\tthe statement token is " color(
-                1) "NOT" end_color
-                   " a " end_color color(6) "`let statement` " end_color color(
-                       7) "\n\tgot: `%s`\n" end_color,
-        statement.token.literal.str);
-    return false;
-  }
-  return true;
-}
-
 void test_check_parser_errors(Parser *parser) {
   Error *errors = parser->errors;
   U64 err_len = len(errors);
@@ -395,7 +258,8 @@ TEST(test_parser_let_statement) {
 
   for (int i = 0; i < array_len(expected_identifiers); i++) {
     Node curr_statement = program.statements[i];
-    failed = !test_let_statement(curr_statement, expected_identifiers[i]);
+    failed =
+        !test_let_statement(curr_statement, expected_identifiers[i], "foo");
   }
   print_program(&arena, &program);
   arena_free(&arena);
@@ -460,17 +324,41 @@ exit_program:
     printf(LOG_ERROR "%s type is not a %s\n", #THIS, #TYPE);                   \
   }
 
+bool test_identifier(Expression expression, String value) {
+  if (expression.type != IDENTIFIER_EXP) {
+    print_error("Expression type is not IDENTIFIER\n");
+    return false;
+  }
+  Identifier exp_ident = cast(expression.exp_bytes, Identifier);
+  if (!string_equals(exp_ident.value, value)) {
+    print_error(
+        "Identifiers values are not the same \n\tgot: %s\n\texpected: %s\n",
+        exp_ident.value.str, value.str);
+    return false;
+  }
+  if (!string_equals(exp_ident.token.literal, value)) {
+    print_error("Token literal in expression identifier and value are not the "
+                "same \n\tgot: %s\n\texpected: %s\n",
+                exp_ident.value.str, value.str);
+    return false;
+  }
+  return true;
+}
 // TOFIX: STOP with these
 // with these what
 // ahhh the exit_program tag yeah kinda
-bool test_integer_literal(Arena *arena, Expression exp, I64 value) {
+bool test_integer_literal(Expression exp, I64 value) {
   test_type(exp, INTEGER_LIT_EXP);
   IntLiteral int_exp = cast(exp.exp_bytes, IntLiteral);
   if (int_exp.value != value) {
     printf(LOG_ERROR "%lld != %lld\n", int_exp.value, value);
     return false;
   }
-  String lit = arena_string_fmt(arena, "%d", value);
+  // sprintf is easier bro
+  char buf[1024];
+  /*String lit = arena_string_fmt(arena, "%d", value);*/
+  sprintf(buf, "%lld", value);
+  String lit = string(buf);
   Token tmp_tok = NEW_TOKEN(INT, lit);
   if (!token_equals(int_exp.token, tmp_tok)) {
     printf(LOG_ERROR "tokens are not the same\n");
@@ -479,6 +367,83 @@ bool test_integer_literal(Arena *arena, Expression exp, I64 value) {
     return false;
   }
   return true;
+}
+
+bool test_bool_literal(Expression exp, bool value) {
+  test_type(exp, BOOLEAN_EXP);
+  Boolean bool_exp = cast(exp.exp_bytes, Boolean);
+  if (bool_exp.value != value) {
+    printf(LOG_ERROR "%d != %d\n", bool_exp.value, value);
+    return false;
+  }
+  // sprintf is easier bro
+  char buf[1024];
+  /*String lit = arena_string_fmt(arena, "%d", value);*/
+  sprintf(buf, "%s", "true");
+  String lit = string(buf);
+  TokenType type = (value) ? TRUE : FALSE;
+  Token tmp_tok = NEW_TOKEN(type, lit);
+  if (!token_equals(bool_exp.token, tmp_tok)) {
+    printf(LOG_ERROR "Tokens are not the same\n");
+    print_token(LOG_INFO "bool exp checking", bool_exp.token);
+    print_token(LOG_INFO "tmp token created", tmp_tok);
+    return false;
+  }
+
+  return true;
+}
+
+bool test_literal_expression(Expression exp, void *value) {
+  switch (exp.type) {
+  case IDENTIFIER_EXP:
+    //
+    {
+      return test_identifier(exp, string(value));
+      break;
+    }
+  case INTEGER_LIT_EXP:
+    //
+    {
+      return test_integer_literal(exp, cast(value, I64));
+      break;
+    }
+  case BOOLEAN_EXP:
+    //
+    {
+      return test_bool_literal(exp, cast(value, bool));
+      break;
+    }
+  default:
+    //
+    {
+      print_error("There is no helper function to this expression type\nIm so "
+                  "sorry for that");
+      return false;
+      break;
+    }
+  }
+}
+
+bool test_infix_expression(Expression expression, void *left,
+                           const char *operator, void * right) {
+  if (expression.type != INFIX_EXP) {
+    print_error("Expression type is not INFIX_EXP\n");
+  }
+  InfixExpression infix_exp = cast(expression.exp_bytes, InfixExpression);
+
+  bool left_test = test_literal_expression(infix_exp.left, left);
+
+  bool right_test = test_literal_expression(infix_exp.right, right);
+
+  bool operator_test;
+
+  if (c_string_equals(infix_exp.operator.str, operator)) {
+    operator_test = false;
+  } else {
+    operator_test = true;
+  }
+
+  return !left_test && !right_test && !operator_test;
 }
 
 int test_infix_expressions() {
@@ -518,8 +483,8 @@ int test_infix_expressions() {
              prefix_exp.operator.str, test.operator.str);
     }
     print_program(&arena, &program);
-    test_integer_literal(&arena, prefix_exp.right, test.right_value);
-    test_integer_literal(&arena, prefix_exp.left, test.left_value);
+    test_integer_literal(prefix_exp.right, test.right_value);
+    test_integer_literal(prefix_exp.left, test.left_value);
   }
 
   end_program;
@@ -629,10 +594,10 @@ int test_infix_expressions_harder() {
         printf(color(4) "^" end_color);
       }
       printf("\n\tyours\t\texpected\n");
-    }else {
+    } else {
       printf(color(2) "[SUCCESS]" end_color "\n");
     }
-    printf(color(4)"[INPUT]\n"end_color);
+    printf(color(4) "[INPUT]\n" end_color);
     printf("%s\n", input.str);
     print_program(&arena, &program);
     printf("\n");
@@ -642,6 +607,48 @@ int test_infix_expressions_harder() {
 exit_program:
   arena_free(&arena);
   failed = 0;
+  return failed;
+}
+
+int test_foo() {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+
+  typedef struct {
+    String name;
+    bool value;
+  } Expected;
+
+  typedef struct {
+    String input;
+    Expected expected;
+  } Test;
+
+  Test expected_identifiers[] = {{.input = string("true"),
+                                  .expected = (Expected){
+                                      .name = string("x"),
+                                      .value = true,
+                                  }}};
+
+  for (int i = 0; i < array_len(expected_identifiers); i++) {
+    failed = 0;
+    Test test = expected_identifiers[i];
+    String input = test.input;
+    Lexer lexer = lexer_new_lexer(input);
+    Parser parser = ast_new_parser(&arena, &lexer);
+    Program program = ast_parse_program(&arena, &parser);
+    print_parser_errors(parser);
+    /*test_type(program.statements[0], EXPRESSION_STATEMENT);*/
+    /*failed = !test_let_statement(program.statements[0], test.expected.name,*/
+    /*                             &test.expected.value);*/
+    ExpressionStatement exp_stmnt = cast(program.statements[0].data, ExpressionStatement);
+    failed =
+        !test_literal_expression(exp_stmnt.expression_value, &test.expected.value);
+    if (!failed) {
+      printf(LOG_SUCCESS "There are not parsing errors!\n");
+    }
+  }
+
+  arena_free(&arena);
   return failed;
 }
 
@@ -686,7 +693,7 @@ int test_prefix_expressions() {
     }
 
     print_program(&arena, &program);
-    test_integer_literal(&arena, prefix_exp.right, test.value);
+    test_integer_literal(prefix_exp.right, test.value);
 
     /*if (!string_equals(prefix_exp.input, test.input)) {*/
     /*  printf(LOG_ERROR "prefix_exp.input %s != test.input %s\n",*/
@@ -783,6 +790,62 @@ exit_program:
   return failed;
 }
 
+bool test_let_statement(Node statement, String expected_name,
+                        void *expected_value) {
+  // TODO: make this to give the token type in string, it now spits out what the
+  // user typed `TokenType`
+  if (statement.type != LET_STATEMENT) {
+    printf(
+        color(1) "ERROR:" end_color //
+            color(4) "\n\tthe statement token is " color(
+                1) "NOT" end_color
+                   " a " end_color color(6) "`let statement` " end_color color(
+                       7) "\n\tgot: `%s`\n" end_color,
+        statement.token.literal.str);
+    return false;
+  }
+
+  LetStatement let_stmt = *(LetStatement *)statement.data;
+  if (!string_equals(let_stmt.name.value, expected_name)) {
+    printf(
+        color(1) "ERROR:" end_color //
+            color(
+                4) "\n\tthe *EXPECTED* let_stmt.name.value name and the *GOT* "
+                   "one" color(1) "\n\tARENT THE SAME" end_color
+                       color(6) "\n\texpected : `%s`" end_color color(
+                           7) "\tgot:`%s`\n" end_color,
+        expected_name.str, let_stmt.name.value.str);
+    return false;
+  }
+
+  if (!string_equals(let_stmt.name.token.literal, expected_name)) {
+    printf(color(1) "ERROR:" end_color //
+               color(4) "\n\tthe *EXPECTED* let_stmt.name.token.literal name "
+                        "and the *GOT* "
+                        "one" color(1) "\n\tARENT THE SAME" end_color
+                            color(6) "\n\texpected : `%s`" end_color color(
+                                7) "\tgot:`%s`\n" end_color,
+           expected_name.str, let_stmt.name.token.literal.str);
+    return false;
+  }
+
+  return test_literal_expression(let_stmt.expression_value, expected_value);
+}
+
+bool test_return_statement(Node statement) {
+  if (statement.type != RETURN_STATEMENT) {
+    printf(
+        color(1) "ERROR:" end_color //
+            color(4) "\n\tthe statement token is " color(
+                1) "NOT" end_color
+                   " a " end_color color(6) "`let statement` " end_color color(
+                       7) "\n\tgot: `%s`\n" end_color,
+        statement.token.literal.str);
+    return false;
+  }
+  return true;
+}
+
 int main() {
   /*Arena arena = (Arena){.begin = NULL, .end = NULL};*/
   /*TokenType type = get_token_type("ILLEGAL");*/
@@ -792,6 +855,7 @@ int main() {
   /*test_expressions();*/
   /*test_expressions_integer_literals();*/
   /*test_prefix_expressions();*/
-  test_infix_expressions_harder();
+  /*test_infix_expressions_harder();*/
+  test_foo();
   return failed;
 }

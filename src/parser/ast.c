@@ -23,6 +23,7 @@ typedef enum {
   // expressions
   IDENTIFIER_EXP,
   INTEGER_LIT_EXP,
+  BOOLEAN_EXP,
   PREFIX_EXP,
   INFIX_EXP,
 } NodeType;
@@ -64,6 +65,11 @@ typedef struct {
   Token token;
   String value;
 } Identifier;
+
+typedef struct {
+  Token token;
+  bool value;
+} Boolean;
 
 // statements
 typedef struct {
@@ -179,6 +185,7 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 Node *ast_parse_return_statement(Arena *arena, Parser *parser);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression ast_parse_identifier(Arena *arena, Parser *parser);
+Expression ast_parse_boolean(Arena *arena, Parser *parser);
 Expression ast_parse_int(Arena *arena, Parser *parser);
 Expression ast_parse_prefix_expression(Arena *arena, Parser *parser);
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
@@ -236,9 +243,11 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),       //
     kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),        //
     kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),      //
-    kv(KeyValue_PF, TRUE, prs_fn(NULL, NULL)),      //
-    kv(KeyValue_PF, FALSE, prs_fn(NULL, NULL)),     //
-    kv(KeyValue_PF, RETURN, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, TRUE,
+       prs_fn(&ast_parse_boolean, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, FALSE,
+       prs_fn(&ast_parse_boolean, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, RETURN, prs_fn(NULL, NULL)),                 //
 }; //
 
 #define PARSING_FUNCTIONS_LEN (sizeof FUNCTIONS_ARR / sizeof FUNCTIONS_ARR[0])
@@ -327,6 +336,7 @@ void ast_next_token(Arena *arena, Parser *parser) {
   parser->peek_token = lexer_next_token(arena, parser->lexer);
 }
 
+// E es de Expected xd
 #define peek_token_is(P, E) (P->peek_token.type == E)
 #define curr_token_is(P, E) (P->curr_token.type == E)
 
@@ -445,6 +455,15 @@ Expression ast_parse_identifier(Arena *arena, Parser *parser) {
   identifier->token = parser->curr_token;
   identifier->value = parser->curr_token.literal;
   return (Expression){.type = IDENTIFIER_EXP, .exp_bytes = (void *)identifier};
+}
+
+Expression ast_parse_boolean(Arena *arena, Parser *parser) {
+  (void)arena;
+  (void)parser;
+  Boolean *boolean = arena_alloc(arena, sizeof(Boolean));
+  boolean->token = parser->curr_token;
+  boolean->value = curr_token_is(parser, TRUE);
+  return (Expression){.type = BOOLEAN_EXP, .exp_bytes = (void *)boolean};
 }
 
 // ALL THE OTHER EXPRESSIONS
@@ -710,4 +729,3 @@ void print_statement(Arena *arena, Node node) {
 /*}*/
 
 #endif /* ifndef _PARSER_H */
-
