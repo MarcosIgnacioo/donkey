@@ -1,3 +1,4 @@
+#include <stdio.h>
 #ifndef _PARSER_H
 #include "../arena.c"
 #include "../arena_strings.c"
@@ -31,14 +32,14 @@ typedef enum {
 // for example when we are parsing a prefix thing we know it has a precedence of
 // PREFIX_PREC
 typedef enum {
-  NIL_PREC,
-  LOWEST_PREC,
-  EQUALS_PREC,       // ==
-  LESS_GREATER_PREC, // > or <
-  SUM_PREC,          // +
-  PRODUCT_PREC,      // *
-  PREFIX_PREC,       // -X or !X
-  CALL_PREC,         // myFunction(X)
+  NIL_PREC,          // 0
+  LOWEST_PREC,       // 1
+  EQUALS_PREC,       // == 2
+  LESS_GREATER_PREC, // > or < 3
+  SUM_PREC,          // + 4
+  PRODUCT_PREC,      // * 5
+  PREFIX_PREC,       // -X or !X 6
+  CALL_PREC,         // myFunction(X) 7
 } Precedence;
 
 // Individual parts of expressions
@@ -216,6 +217,10 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, NOT_EQUALS,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, BANG,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, LT,
+       prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, GT,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),                               //
     kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),                               //
@@ -449,10 +454,10 @@ Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
   InfixExpression *infix_exp = arena_alloc(arena, sizeof(InfixExpression));
   infix_exp->token = parser->curr_token;
   infix_exp->operator= parser->curr_token.literal;
-  ast_next_token(arena, parser);
   infix_exp->left = left;
   Precedence precedence =
       get_precedence_from_hm(PRECENDENCES, parser->curr_token.type);
+  ast_next_token(arena, parser);
   infix_exp->right = ast_parse_expression(arena, parser, precedence);
   Expression resulting_exp =
       (Expression){.type = INFIX_EXP, .exp_bytes = (void *)infix_exp};
@@ -475,6 +480,9 @@ Expression ast_parse_prefix_expression(Arena *arena, Parser *parser) {
 // we are divorced, an empty struct will do the trick
 // maybe a expression nil or something like that
 // like the one randys did in the game dev videos
+// esto es super cool, el left_value no se pierde o se borra porque
+// siempre me lo paso al infix, y ahi lo asigno como left_value
+// que chido no
 Expression ast_parse_expression(Arena *arena, Parser *parser,
                                 Precedence precedence) {
   prefix_parse_fn prefix =
@@ -487,14 +495,14 @@ Expression ast_parse_expression(Arena *arena, Parser *parser,
     ast_parser_error_append(parser, error);
     return (Expression){0};
   }
+
   Expression left_value = prefix(arena, parser);
-  // esto es super cool, el left_value no se pierde o se borra porque
-  // siempre me lo paso al infix, y ahi lo asigno como left_value
-  // que chido no
+
   while (!peek_token_is(parser, SEMICOLON) &&
          precedence < peek_precedence(parser)) {
     infix_parse_fn infix =
         get_infix_fn_from_hm(PARSING_FUNCTIONS, parser->peek_token.type);
+
     if (!infix) {
       return left_value;
     }
@@ -502,6 +510,7 @@ Expression ast_parse_expression(Arena *arena, Parser *parser,
     ast_next_token(arena, parser);
     left_value = infix(arena, parser, left_value);
   }
+
   return left_value;
 }
 
@@ -568,11 +577,10 @@ String ast_init(Program *program) {
 }
 
 void print_program(Arena *arena, Program *program) {
-  printf(color(5)"[PROGRAM] \n\t"end_color);
+  printf(color(6) "[PROGRAM] \n" end_color);
   for (size_t i = 0; i < len(program->statements); i++) {
     print_statement(arena, program->statements[i]);
   }
-  printf("\n");
 }
 
 void print_parser_errors(Parser parser) {
@@ -695,4 +703,11 @@ void print_statement(Arena *arena, Node node) {
   printf("%s\n", statement.str);
 }
 
+/*void print_expression(Expression expression) {*/
+/*  switch (expression.type) {*/
+/*    case :*/
+/*  }*/
+/*}*/
+
 #endif /* ifndef _PARSER_H */
+

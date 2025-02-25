@@ -538,32 +538,104 @@ int test_infix_expressions_harder() {
   } infix_test;
 
   infix_test expected_identifiers[] = {
-      //
-      (infix_test)                                                      //
-      {.input = string("a + b + c"), .output = string("((a + b) + c)")} //
+      {
+          .input = string("-a * b"),
+          .output = string("((-a) * b)"),
+      },
+      {
+          .input = string("a + b * c * d"),       //
+          .output = string("(a + ((b * c) * d))") //
+      },                                          //
+      {
+          .input = string("a * b + c"),     //
+          .output = string("((a * b) + c)") //
+      },                                    //
+      {
+          .input = string("a + b * c"),     //
+          .output = string("(a + (b * c))") //
+      },                                    //
+      {
+          .input = string("!-a"),
+          .output = string("(!(-a))"),
+      },
+      {
+          .input = string("a + b + c"),
+          .output = string("((a + b) + c)"),
+      },
+      {
+          .input = string("a + b - c"),
+          .output = string("((a + b) - c)"),
+      },
+      {
+          .input = string("a * b * c"),
+          .output = string("((a * b) * c)"),
+      },
+      {
+          .input = string("a * b / c"),
+          .output = string("((a * b) / c)"),
+      },
+      {
+          .input = string("a + b / c"),
+          .output = string("(a + (b / c))"),
+      },
+      {
+          .input = string("a + b * c + d / e - f"),
+          .output = string("(((a + (b * c)) + (d / e)) - f)"),
+      },
+      {
+          .input = string("3 + 4; -5 * 5"),
+          .output = string("(3 + 4)((-5) * 5)"),
+      },
+      {
+          .input = string("5 > 4 == 3 < 4"),
+          .output = string("((5 > 4) == (3 < 4))"),
+      },
+      {
+          .input = string("5 < 4 != 3 > 4"),
+          .output = string("((5 < 4) != (3 > 4))"),
+      },
+      {
+          .input = string("3 + 4 * 5 == 3 * 1 + 4 * 5"),
+          .output = string("((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+      },
   };
 
   for (int i = 0; i < array_len(expected_identifiers); i++) {
+    failed = 0;
     infix_test test = expected_identifiers[i];
     String input = test.input;
     Lexer lexer = lexer_new_lexer(input);
     Parser parser = ast_new_parser(&arena, &lexer);
     Program program = ast_parse_program(&arena, &parser);
     print_parser_errors(parser);
-    test_n_of_statements(1);
     test_type(program.statements[0], EXPRESSION_STATEMENT);
     ExpressionStatement expr =
         cast_statement(program.statements[0], ExpressionStatement);
-    test_type(expr.expression_value, INFIX_EXP);
+    /*test_type(expr.expression_value, INFIX_EXP);*/
     InfixExpression prefix_exp =
         cast(expr.expression_value.exp_bytes, InfixExpression);
     (void)prefix_exp;
     String program_str = stringify_program(&arena, &program);
     if (!string_equals(program_str, test.output)) {
-      printf(LOG_ERROR "\n\t%s != %s\n", program_str.str, test.output.str);
+      printf(color(1) "[FAILED]" end_color "\n");
+      failed = 1;
+      printf(LOG_ERROR "\n\t%s != %s", program_str.str, test.output.str);
+      printf("\n\t");
+      for (int i = 0; i < program_str.len; i++) {
+        printf(color(6) "^" end_color);
+      }
+      printf("    ");
+      for (int i = 0; i < test.output.len; i++) {
+        printf(color(4) "^" end_color);
+      }
+      printf("\n\tyours\t\texpected\n");
+    }else {
+      printf(color(2) "[SUCCESS]" end_color "\n");
     }
-    printf("\n");
+    printf(color(4)"[INPUT]\n"end_color);
+    printf("%s\n", input.str);
     print_program(&arena, &program);
+    printf("\n");
   }
 
   end_program;

@@ -1,9 +1,69 @@
+creo que la manera de lograr conseguir interfaces en c es la siguiente
+```c
+typedef struct {
+  ExpressionType type;
+  union {
+    LetStatement let_statement;
+    ReturnStatement return_statement;
+    ExpressionStatement expression_statement;
+  } data;
+} Expression;
+```
+
+en codigo puedo acceder a los campos con un switch case
+
+dependiendo del tipo que sea pues se hacen las operaciones con cada tipo de Expression
+
 ```c
 p *(IntLiteral *)(((InfixExpression *)resulting_exp.exp_bytes)->left)->exp_bytes
 p *(Identifier *)(((expres *)resulting_exp.exp_bytes)->left)->exp_bytes
 p *(IntLiteral *)(((InfixExpression *)resulting_exp.exp_bytes)->right)->exp_bytes
 p (((InfixExpression *)resulting_exp.exp_bytes)->operator) 
 ```
+
+a + b * c
+
+lef
+
+```c
+  prefix_parse_fn prefix =
+      get_prefix_fn_from_hm(PARSING_FUNCTIONS, parser->curr_token.type);
+  if (!prefix) {
+    String error = arena_string_fmt(
+        arena, PARSING_ERROR "Not prefix function found for: %s",
+        parser->curr_token.literal.str,
+        get_token_literal(parser->curr_token.type));
+    ast_parser_error_append(parser, error);
+    return (Expression){0};
+  }
+
+  Expression left_value = prefix(arena, parser);
+    left_value => .exp_bytes*Identifier("a");
+    precedence => LOWEST_PRECEDENCE;
+
+  while (!peek_token_is(parser, SEMICOLON) &&
+         precedence < peek_precedence(parser)) {
+
+    {
+      i = 1 {
+        peek_precedence(parser) => SUM_PRECEDENCE;
+      },
+    }
+
+    infix_parse_fn infix =
+        get_infix_fn_from_hm(PARSING_FUNCTIONS, parser->peek_token.type);
+
+    if (!infix) {
+      return left_value;
+    }
+
+    ast_next_token(arena, parser);
+    left_value = infix(arena, parser, left_value);
+  }
+
+  return left_value;
+```
+
 
 ctrl shift 1 changes to that tab in that buffer idk
 # doc for cool stuff
