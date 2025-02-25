@@ -1,4 +1,108 @@
+```c
+bool generic_test_literal_expression(Expression exp, va_list args) {
+  switch (exp.type) {
+  case IDENTIFIER_EXP:
+    //
+    {
+      String expected = va_arg(args, String);
+
+      return test_identifier(exp, expected);
+      break;
+    }
+  case INTEGER_LIT_EXP:
+    //
+    {
+      I64 expected = va_arg(args, I64);
+
+      return test_integer_literal(exp, expected);
+      break;
+    }
+  case BOOLEAN_EXP:
+    //
+    {
+      bool expected = va_arg(args, bool);
+
+      return test_bool_literal(exp, expected);
+      break;
+    }
+  default:
+    //
+    {
+      print_error("There is no helper function to this expression type\nIm so "
+                  "sorry for that\n");
+      return false;
+      break;
+    }
+  }
+}
+int test_foo() {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+
+  typedef struct {
+    union {
+      String token_literal;
+      bool value;
+    } data;
+  } Expected;
+
+  typedef struct {
+    String input;
+    Expected expected;
+  } Test;
+
+  Test expected_identifiers[] = {
+      //
+      {
+          .input = string("let x = true;"),
+          .expected =
+              (Expected){
+                  .token_literal = string("true"),
+                  .value = true,
+              },
+      },
+      //
+      {
+          .input = string("let x = true;"),
+          .expected =.args = {"x", true},
+          (Expected){
+              .token_literal = string("true"),
+              .value = true,
+          },
+      },
+      //
+  };
+
+  for (int i = 0; i < array_len(expected_identifiers); i++) {
+    failed = 0;
+    Test test = expected_identifiers[i];
+    String input = test.input;
+    Lexer lexer = lexer_new_lexer(input);
+    Parser parser = ast_new_parser(&arena, &lexer);
+    Program program = ast_parse_program(&arena, &parser);
+    print_parser_errors(parser);
+    failed = !test_statement(program.statements[0], &test.expected.value);
+    /*failed = !test_literal_expression(exp_stmnt.expression_value,*/
+    /*                                  &test.expected.value);*/
+    if (!failed) {
+      printf(LOG_SUCCESS "There are not parsing errors!\n");
+    }
+  }
+
+  arena_free(&arena);
+  return failed;
+}
+```
+fix this token illegal that i forgot to change when parsing a boolean it is not that important tho
+```c
+p *(ExpressionStatement *)statement.data
+$7 = {token = {type = ILLEGAL, literal = {str = 0x0, len = 0, cap = 0}}, 
+  expression_value = {type = BOOLEAN_EXP, exp_bytes = 0x55555556e358}}
+```
+
+maybe making all the test use __va_args__ makes the making of tests less boring and shitty and poop
+
 creo que la manera de lograr conseguir interfaces en c es la siguiente
+
 ```c
 typedef struct {
   ExpressionType type;

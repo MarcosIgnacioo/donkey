@@ -1,4 +1,5 @@
 #include "./test.h"
+#include <stdarg.h>
 TEST(test_tokens) {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
   String input = arena_new_string(&arena, "++(){},;");
@@ -379,7 +380,11 @@ bool test_bool_literal(Expression exp, bool value) {
   // sprintf is easier bro
   char buf[1024];
   /*String lit = arena_string_fmt(arena, "%d", value);*/
-  sprintf(buf, "%s", "true");
+  if (value) {
+    sprintf(buf, "%s", "true");
+  } else {
+    sprintf(buf, "%s", "false");
+  }
   String lit = string(buf);
   TokenType type = (value) ? TRUE : FALSE;
   Token tmp_tok = NEW_TOKEN(type, lit);
@@ -393,12 +398,73 @@ bool test_bool_literal(Expression exp, bool value) {
   return true;
 }
 
+typedef struct {
+  String expected_name;
+  void *expected_value;
+} TestIdentifierARGS;
+
+#define test_statement(STMNT, ...) _test_statement(STMNT, 1, __VA_ARGS__)
+
+bool _test_statement(Node statement, int n, ...) {
+  switch (statement.type) {
+  case LET_STATEMENT:
+    //
+    {
+      String expected_name;
+      void *expected_value;
+      n = 2;
+
+      va_list args;
+      va_start(args, n);
+      expected_name = va_arg(args, String);
+      expected_value = va_arg(args, void *);
+      va_end(args);
+
+      return test_let_statement(statement, expected_name, expected_value);
+      break;
+    }
+  case RETURN_STATEMENT:
+    //
+    {
+      // refactor this to use a macro were i do this
+      // get_args_from_list(expected_name,expected_value);
+      // using a helper macro and x macro will do the job i think
+      // and typeof but that one aint portable i think
+      void *expected_value;
+      n = 1;
+
+      va_list args;
+      va_start(args, n);
+      expected_value = va_arg(args, void *);
+      va_end(args);
+
+      return test_return_statement(statement, expected_value);
+      break;
+    }
+  default:
+    //
+    {
+      void *expected_value;
+      n = 1;
+
+      va_list args;
+      va_start(args, n);
+      expected_value = va_arg(args, void *);
+      va_end(args);
+      ExpressionStatement exp_stmnt = cast(statement.data, ExpressionStatement);
+      Expression exp = exp_stmnt.expression_value;
+      return test_literal_expression(exp, expected_value);
+      break;
+    }
+  }
+}
+
 bool test_literal_expression(Expression exp, void *value) {
   switch (exp.type) {
   case IDENTIFIER_EXP:
     //
     {
-      return test_identifier(exp, string(value));
+      return test_identifier(exp, cast(value, String));
       break;
     }
   case INTEGER_LIT_EXP:
@@ -417,7 +483,7 @@ bool test_literal_expression(Expression exp, void *value) {
     //
     {
       print_error("There is no helper function to this expression type\nIm so "
-                  "sorry for that");
+                  "sorry for that\n");
       return false;
       break;
     }
@@ -504,6 +570,10 @@ int test_infix_expressions_harder() {
 
   infix_test expected_identifiers[] = {
       {
+          .input = string("a * b / c"),
+          .output = string("((a * b) / c)"),
+      },
+      {
           .input = string("-a * b"),
           .output = string("((-a) * b)"),
       },
@@ -536,10 +606,6 @@ int test_infix_expressions_harder() {
           .output = string("((a * b) * c)"),
       },
       {
-          .input = string("a * b / c"),
-          .output = string("((a * b) / c)"),
-      },
-      {
           .input = string("a + b / c"),
           .output = string("(a + (b / c))"),
       },
@@ -562,6 +628,26 @@ int test_infix_expressions_harder() {
       {
           .input = string("3 + 4 * 5 == 3 * 1 + 4 * 5"),
           .output = string("((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+      },
+      {
+          .input = string("true"),
+          .output = string("true"),
+      },
+      {
+          .input = string("false"),
+          .output = string("false"),
+      },
+      {
+          .input = string("3 > 5 == false"),
+          .output = string("((3 > 5) == false)"),
+      },
+      {
+          .input = string("3 < 5 == true"),
+          .output = string("((3 < 5) == true)"),
+      },
+      {
+          .input = string("(1 + 2) * 3"),
+          .output = string("((1 + 2) * 3)"),
       },
   };
 
@@ -607,48 +693,6 @@ int test_infix_expressions_harder() {
 exit_program:
   arena_free(&arena);
   failed = 0;
-  return failed;
-}
-
-int test_foo() {
-  Arena arena = (Arena){.begin = NULL, .end = NULL};
-
-  typedef struct {
-    String name;
-    bool value;
-  } Expected;
-
-  typedef struct {
-    String input;
-    Expected expected;
-  } Test;
-
-  Test expected_identifiers[] = {{.input = string("true"),
-                                  .expected = (Expected){
-                                      .name = string("x"),
-                                      .value = true,
-                                  }}};
-
-  for (int i = 0; i < array_len(expected_identifiers); i++) {
-    failed = 0;
-    Test test = expected_identifiers[i];
-    String input = test.input;
-    Lexer lexer = lexer_new_lexer(input);
-    Parser parser = ast_new_parser(&arena, &lexer);
-    Program program = ast_parse_program(&arena, &parser);
-    print_parser_errors(parser);
-    /*test_type(program.statements[0], EXPRESSION_STATEMENT);*/
-    /*failed = !test_let_statement(program.statements[0], test.expected.name,*/
-    /*                             &test.expected.value);*/
-    ExpressionStatement exp_stmnt = cast(program.statements[0].data, ExpressionStatement);
-    failed =
-        !test_literal_expression(exp_stmnt.expression_value, &test.expected.value);
-    if (!failed) {
-      printf(LOG_SUCCESS "There are not parsing errors!\n");
-    }
-  }
-
-  arena_free(&arena);
   return failed;
 }
 
@@ -832,7 +876,8 @@ bool test_let_statement(Node statement, String expected_name,
   return test_literal_expression(let_stmt.expression_value, expected_value);
 }
 
-bool test_return_statement(Node statement) {
+bool test_return_statement(Node statement, void *expected_value) {
+  ReturnStatement ret_stmt = *(ReturnStatement *)statement.data;
   if (statement.type != RETURN_STATEMENT) {
     printf(
         color(1) "ERROR:" end_color //
@@ -843,19 +888,76 @@ bool test_return_statement(Node statement) {
         statement.token.literal.str);
     return false;
   }
-  return true;
+  return test_literal_expression(ret_stmt.expression_value, expected_value);
+}
+
+bool generic_test_infix_expression( //
+    Expression expression,          //
+    void *left,                     //
+    const char *operator,           //
+    void * right)                   //
+{
+  if (expression.type != INFIX_EXP) {
+    print_error("Expression type is not INFIX_EXP\n");
+  }
+  InfixExpression infix_exp = cast(expression.exp_bytes, InfixExpression);
+
+  bool left_test = test_literal_expression(infix_exp.left, left);
+
+  bool right_test = test_literal_expression(infix_exp.right, right);
+
+  bool operator_test;
+
+  if (!c_string_equals(infix_exp.operator.str, operator)) {
+    operator_test = false;
+  } else {
+    operator_test = true;
+  }
+
+  return left_test && right_test && operator_test;
+}
+
+int test_booleans() {
+  Arena arena = (Arena){.begin = NULL, .end = NULL};
+  bool t = true;
+  bool f = false;
+
+  typedef struct {
+    String input;
+    void *left_value;
+    String operator;
+    void *right_value;
+  } Test;
+
+  Test expected_identifiers[] = {
+      {string("true == true"), &t, string("=="), &t},
+      {string("true != false"), &t, string("!="), &f},
+      {string("false == false"), &f, string("=="), &f},
+  };
+
+  for (int i = 0; i < array_len(expected_identifiers); i++) {
+    failed = 0;
+    Test test = expected_identifiers[i];
+    String input = test.input;
+    Lexer lexer = lexer_new_lexer(input);
+    Parser parser = ast_new_parser(&arena, &lexer);
+    Program program = ast_parse_program(&arena, &parser);
+    print_parser_errors(parser);
+    ExpressionStatement exp_stmnt =
+        cast(program.statements[0].data, ExpressionStatement);
+    failed = !generic_test_infix_expression(exp_stmnt.expression_value,
+                                            test.left_value, test.operator.str,
+                                            test.right_value);
+    if (!failed) {
+      printf(LOG_SUCCESS "There are not parsing errors!\n");
+    }
+  }
+
+  arena_free(&arena);
+  return failed;
 }
 
 int main() {
-  /*Arena arena = (Arena){.begin = NULL, .end = NULL};*/
-  /*TokenType type = get_token_type("ILLEGAL");*/
-  /*test_more_more_tokens();*/
-  /*test_more_more_tokens();*/
-  /*prefix_parse_fn fnptr = (prefix_parse_fn)get_ arena_free(&arena);*/
-  /*test_expressions();*/
-  /*test_expressions_integer_literals();*/
-  /*test_prefix_expressions();*/
-  /*test_infix_expressions_harder();*/
-  test_foo();
-  return failed;
+  test_infix_expressions_harder();
+  return 0;
 }

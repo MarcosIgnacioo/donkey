@@ -40,7 +40,8 @@ typedef enum {
   SUM_PREC,          // + 4
   PRODUCT_PREC,      // * 5
   PREFIX_PREC,       // -X or !X 6
-  CALL_PREC,         // myFunction(X) 7
+  PAREN_PREC,        // () 7
+  CALL_PREC,         // myFunction(X) 8
 } Precedence;
 
 // Individual parts of expressions
@@ -229,20 +230,18 @@ KeyValue_PF FUNCTIONS_ARR[] = {
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, GT,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
-    kv(KeyValue_PF, LT, prs_fn(NULL, NULL)),                               //
-    kv(KeyValue_PF, GT, prs_fn(NULL, NULL)),                               //
     kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
     kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
-    kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),   //
-    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),  //
-    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),       //
-    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),        //
-    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),      //
+    kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)), //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)), //
+    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                        //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                        //
+    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),                       //
+    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                            //
+    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),                             //
+    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                           //
     kv(KeyValue_PF, TRUE,
        prs_fn(&ast_parse_boolean, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, FALSE,
@@ -269,6 +268,8 @@ KeyValue_PRC PRECEDENCES_ARR[] = {
     kv(KeyValue_PRC, PLUS, SUM_PREC),          //
     kv(KeyValue_PRC, ASTERISK, PRODUCT_PREC),  //
     kv(KeyValue_PRC, SLASH, PRODUCT_PREC),     //
+    /*kv(KeyValue_PRC, L_PAREN, PAREN_PREC),     //*/
+    /*kv(KeyValue_PRC, R_PAREN, PAREN_PREC),     //*/
 };
 
 #define new_hash_table(KV_TYPE, ARR, KEYS_EQ_FN, VALS_EQ_FN)                   \
@@ -609,14 +610,20 @@ void print_parser_errors(Parser parser) {
   }
 }
 
+// todo append also a
 String stringify_program(Arena *arena, Program *program) {
   String result = arena_new_empty_string_with_cap(arena, 256);
+  /*String new_line = string("\n\t");*/
   for (size_t i = 0; i < len(program->statements); i++) {
     string_concat_resize(
         arena, &result,
         arena_stringify_statement(arena, program->statements[i]));
   }
   return result;
+}
+
+void print_expression() {
+  // TOOD PLEASE SDOMETHING THAT WORKS INSIDE THE DEBUGGER
 }
 
 String stringify_expression(Arena *arena, Node node, Expression expression) {
@@ -637,6 +644,11 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     /*exp_string = string("5");*/
     break;
   }
+  case BOOLEAN_EXP: {
+    Boolean parsed_bool = *(Boolean *)expression.exp_bytes;
+    exp_string = arena_string_fmt(arena, "%b", parsed_bool);
+    break;
+  }
   case PREFIX_EXP: {
     PrefixExpression prefix = cast(expression.exp_bytes, PrefixExpression);
     String operator= prefix.operator;
@@ -654,6 +666,7 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     break;
   }
   default: {
+
     // TODO:
     // make the stupid macro that makes string representations
     // for enums too please
@@ -666,6 +679,7 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
   return exp_string;
 }
 
+// todo
 String arena_stringify_statement(Arena *arena, Node node) {
   String str_stmt;
   switch (node.type) {

@@ -18,9 +18,9 @@ int test_foo();
 int test_prefix_expressions();
 int test_expressions_integer_literals();
 int test_expressions_beta();
-bool test_let_statement(Node statement, String expected_name, void *expected_value);
-bool test_return_statement(Node statement);
-
+bool test_let_statement(Node statement, String expected_name,
+                        void *expected_value);
+bool test_return_statement(Node statement, void *value);
 
 #define NUMARGS(...) (sizeof((int[]){__VA_ARGS__}) / sizeof(int))
 #define end_program goto exit_program
