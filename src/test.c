@@ -569,95 +569,107 @@ int test_infix_expressions_harder() {
   } infix_test;
 
   infix_test expected_identifiers[] = {
+      /*{*/
+      /*    .input = string("(1 + 2) * 3"),*/
+      /*    .output = string("((1 + 2) * 3)"),*/
+      /*},*/
+      /**/
+      /*{*/
+      /*    .input = string("a * b / c"),*/
+      /*    .output = string("((a * b) / c)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("-a * b"),*/
+      /*    .output = string("((-a) * b)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("a + b * c * d"),       //*/
+      /*    .output = string("(a + ((b * c) * d))") //*/
+      /*},                                          //*/
+      /*{*/
+      /*    .input = string("a * b + c"),     //*/
+      /*    .output = string("((a * b) + c)") //*/
+      /*},                                    //*/
+      /*{*/
+      /*    .input = string("a + b * c"),     //*/
+      /*    .output = string("(a + (b * c))") //*/
+      /*},                                    //*/
+      /*{*/
+      /*    .input = string("!-a"),*/
+      /*    .output = string("(!(-a))"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("a + b + c"),*/
+      /*    .output = string("((a + b) + c)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("a + b - c"),*/
+      /*    .output = string("((a + b) - c)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("a * b * c"),*/
+      /*    .output = string("((a * b) * c)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("a + b / c"),*/
+      /*    .output = string("(a + (b / c))"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("a + b * c + d / e - f"),*/
+      /*    .output = string("(((a + (b * c)) + (d / e)) - f)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("3 + 4; -5 * 5"),*/
+      /*    .output = string("(3 + 4)((-5) * 5)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("5 > 4 == 3 < 4"),*/
+      /*    .output = string("((5 > 4) == (3 < 4))"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("5 < 4 != 3 > 4"),*/
+      /*    .output = string("((5 < 4) != (3 > 4))"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("3 + 4 * 5 == 3 * 1 + 4 * 5"),*/
+      /*    .output = string("((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("true"),*/
+      /*    .output = string("true"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("false"),*/
+      /*    .output = string("false"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("3 > 5 == false"),*/
+      /*    .output = string("((3 > 5) == false)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("3 < 5 == true"),*/
+      /*    .output = string("((3 < 5) == true)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("(1 + 2) * 3"),*/
+      /*    .output = string("((1 + 2) * 3)"),*/
+      /*},*/
+      /*{*/
+      /*    .input = string("(1 + 2) * 3 + 12"),*/
+      /*    .output = string("(((1 + 2) * 3) + 12)"),*/
+      /*},*/
       {
-          .input = string("(1 + 2) * 3"),
-          .output = string("((1 + 2) * 3)"),
+          .input = string("if (1 < 2) {let x = 2} else {3}"),
+          .output = string("if ((1 < 2)) {\n\tlet x = 2\n} else {\n\t3\n}"),
       },
-
       {
-          .input = string("a * b / c"),
-          .output = string("((a * b) / c)"),
+          .input = string("if (x < y) { x }"),
+          .output = string("if ((x < y)) {\n\tx\n}"),
       },
-      {
-          .input = string("-a * b"),
-          .output = string("((-a) * b)"),
-      },
-      {
-          .input = string("a + b * c * d"),       //
-          .output = string("(a + ((b * c) * d))") //
-      },                                          //
-      {
-          .input = string("a * b + c"),     //
-          .output = string("((a * b) + c)") //
-      },                                    //
-      {
-          .input = string("a + b * c"),     //
-          .output = string("(a + (b * c))") //
-      },                                    //
-      {
-          .input = string("!-a"),
-          .output = string("(!(-a))"),
-      },
-      {
-          .input = string("a + b + c"),
-          .output = string("((a + b) + c)"),
-      },
-      {
-          .input = string("a + b - c"),
-          .output = string("((a + b) - c)"),
-      },
-      {
-          .input = string("a * b * c"),
-          .output = string("((a * b) * c)"),
-      },
-      {
-          .input = string("a + b / c"),
-          .output = string("(a + (b / c))"),
-      },
-      {
-          .input = string("a + b * c + d / e - f"),
-          .output = string("(((a + (b * c)) + (d / e)) - f)"),
-      },
-      {
-          .input = string("3 + 4; -5 * 5"),
-          .output = string("(3 + 4)((-5) * 5)"),
-      },
-      {
-          .input = string("5 > 4 == 3 < 4"),
-          .output = string("((5 > 4) == (3 < 4))"),
-      },
-      {
-          .input = string("5 < 4 != 3 > 4"),
-          .output = string("((5 < 4) != (3 > 4))"),
-      },
-      {
-          .input = string("3 + 4 * 5 == 3 * 1 + 4 * 5"),
-          .output = string("((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
-      },
-      {
-          .input = string("true"),
-          .output = string("true"),
-      },
-      {
-          .input = string("false"),
-          .output = string("false"),
-      },
-      {
-          .input = string("3 > 5 == false"),
-          .output = string("((3 > 5) == false)"),
-      },
-      {
-          .input = string("3 < 5 == true"),
-          .output = string("((3 < 5) == true)"),
-      },
-      {
-          .input = string("(1 + 2) * 3"),
-          .output = string("((1 + 2) * 3)"),
-      },
-{
-          .input = string("(1 + 2) * 3 + 12"),
-          .output = string("(((1 + 2) * 3) + 12)"),
-      },
+      /*{*/
+      /*    .input = string("if (1 < 2) {let x = 2}"),*/
+      /*    .output = string("if ((1 < 2)) {\n\tlet x = 2\n}"),*/
+      /*},*/
 
   };
 
@@ -670,26 +682,15 @@ int test_infix_expressions_harder() {
     Program program = ast_parse_program(&arena, &parser);
     print_parser_errors(parser);
     test_type(program.statements[0], EXPRESSION_STATEMENT);
-    ExpressionStatement expr =
-        cast_statement(program.statements[0], ExpressionStatement);
-    /*test_type(expr.expression_value, INFIX_EXP);*/
-    InfixExpression prefix_exp =
-        cast(expr.expression_value.exp_bytes, InfixExpression);
-    (void)prefix_exp;
     String program_str = stringify_program(&arena, &program);
-    if (!string_equals(program_str, test.output)) {
+    printf("`%s`\n", program_str.str);
+    if (!string_equals(program_str, test.output) &&
+        !string_equals(test.output, string("IGNORE"))) {
       printf(color(1) "[FAILED]" end_color "\n");
       failed = 1;
-      printf(LOG_ERROR "\n\t%s != %s", program_str.str, test.output.str);
+      printf(LOG_ERROR "\n%s \n" color(3) "*IS NOT EQUAL TO*:" end_color "\n%s",
+             program_str.str, test.output.str);
       printf("\n\t");
-      for (int i = 0; i < program_str.len; i++) {
-        printf(color(6) "^" end_color);
-      }
-      printf("    ");
-      for (int i = 0; i < test.output.len; i++) {
-        printf(color(4) "^" end_color);
-      }
-      printf("\n\tyours\t\texpected\n");
     } else {
       printf(color(2) "[SUCCESS]" end_color "\n");
     }

@@ -203,6 +203,7 @@ String arena_stringify_statement(Arena *arena, Node node);
 // parsing stuff
 Parser ast_new_parser(Arena *arena, Lexer *lexer);
 Program ast_parse_program(Arena *arena, Parser *parser);
+BlockStatement ast_parse_block_statement(Arena *arena, Parser *parser);
 
 Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
@@ -212,6 +213,7 @@ Expression ast_parse_identifier(Arena *arena, Parser *parser);
 Expression ast_parse_boolean(Arena *arena, Parser *parser);
 Expression ast_parse_int(Arena *arena, Parser *parser);
 Expression ast_parse_grouped_expression(Arena *arena, Parser *parser);
+Expression ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression ast_parse_prefix_expression(Arena *arena, Parser *parser);
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
                                       Expression left);
@@ -220,6 +222,10 @@ Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
 void ast_parser_peek_error(Arena *arena, Parser *parser,
+                           TokenType expected_type);
+bool ast_expect_curr_token(Arena *arena, Parser *parser,
+                           TokenType expected_type);
+void ast_parser_curr_error(Arena *arena, Parser *parser,
                            TokenType expected_type);
 prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key);
 infix_parse_fn get_infix_fn_from_hm(HashTable table, TokenType key);
@@ -264,7 +270,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                          //
     kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                              //
-    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),                               //
+    kv(KeyValue_PF, IF, prs_fn(&ast_parse_if_expression, NULL)),           //
     kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                             //
     kv(KeyValue_PF, TRUE,
        prs_fn(&ast_parse_boolean, &ast_parse_infix_expression)), //
@@ -377,6 +383,17 @@ bool ast_expect_peek_token(Arena *arena, Parser *parser,
   }
 }
 
+bool ast_expect_curr_token(Arena *arena, Parser *parser,
+                           TokenType expected_type) {
+  if (curr_token_is(parser, expected_type)) {
+    ast_next_token(arena, parser);
+    return true;
+  } else {
+    ast_parser_curr_error(arena, parser, expected_type);
+    return false;
+  }
+}
+
 #define error(MSG)                                                             \
   (Error) { .error = MSG }
 
@@ -389,9 +406,21 @@ void ast_parser_peek_error(Arena *arena, Parser *parser,
   char tmp_buf[1024];
   const char *expected_type_c_string = get_token_literal(expected_type);
   sprintf(tmp_buf,
-          SYNTAX_ERROR "expected token to be : " color(
+          SYNTAX_ERROR "expected peek token to be : " color(
               6) "`%s`" end_color " got instead : " color(3) "`%s`" end_color,
           expected_type_c_string, parser->peek_token.literal.str);
+  String error_msg = arena_new_string(arena, tmp_buf);
+  append(parser->errors, error(error_msg));
+}
+
+void ast_parser_curr_error(Arena *arena, Parser *parser,
+                           TokenType expected_type) {
+  char tmp_buf[1024];
+  const char *expected_type_c_string = get_token_literal(expected_type);
+  sprintf(tmp_buf,
+          SYNTAX_ERROR "expected curr token to be : " color(
+              6) "`%s`" end_color " got instead : " color(3) "`%s`" end_color,
+          expected_type_c_string, parser->curr_token.literal.str);
   String error_msg = arena_new_string(arena, tmp_buf);
   append(parser->errors, error(error_msg));
 }
@@ -439,9 +468,9 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   // work later)
   let_statement->expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
-  while (!(curr_token_is(parser, SEMICOLON))) {
-    ast_next_token(arena, parser);
-  }
+  /*while (!(curr_token_is(parser, SEMICOLON))) {*/
+  /*  ast_next_token(arena, parser);*/
+  /*}*/
   return statement;
 }
 
@@ -512,6 +541,72 @@ Expression ast_parse_grouped_expression(Arena *arena, Parser *parser) {
     return (Expression){0};
   }
   return exp;
+}
+
+/*
+when starting fn
+if (1)
+^  ^
+   peek
+curr
+
+ast_expect_peek_token(arena, parser, L_PAREN)
+(1
+^^
+ peek
+curr
+
+ast_next_token(arena,parser); // makes
+1
+^
+peek
+*/
+Expression ast_parse_if_expression(Arena *arena, Parser *parser) {
+  Token if_token = parser->curr_token;
+  Expression condition;
+  BlockStatement consequence, alternative;
+  consequence = (BlockStatement){.statements = NULL};
+  alternative = (BlockStatement){.statements = NULL};
+
+  if (!ast_expect_peek_token(arena, parser, L_PAREN)) {
+    return (Expression){0};
+  }
+
+  ast_next_token(arena, parser); // reads to the next token,
+                                 // from ( to the condition_exp
+  condition = ast_parse_expression(arena, parser, LOWEST_PREC);
+
+  if (!ast_expect_peek_token(arena, parser, R_PAREN)) {
+    return (Expression){0};
+  }
+
+  if (!ast_expect_peek_token(arena, parser, L_BRACE)) {
+    return (Expression){0};
+  }
+
+  consequence = ast_parse_block_statement(arena, parser);
+
+  if (peek_token_is(parser, ELSE)) {
+    ast_next_token(arena, parser);
+
+    if (!ast_expect_peek_token(arena, parser, L_BRACE)) {
+      return (Expression){0};
+    }
+    alternative = ast_parse_block_statement(arena, parser);
+  } else {
+    alternative = (BlockStatement){.statements = NULL};
+  }
+  // why we dont do right brace parsing check hereee!!!!???? like whyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+  IfExpression *if_expression = arena_alloc(arena, sizeof(IfExpression));
+  *if_expression = (IfExpression){
+      .token = if_token,
+      .condition = condition,
+      .consequence = consequence,
+      .alternative = alternative,
+  };
+
+  return (Expression){.type = IF_EXP, .exp_bytes = (void *)if_expression};
 }
 
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
@@ -600,6 +695,7 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
   return statement;
 }
 
+// make other stuff return null if something fails i thnk
 Node *ast_parse_statement(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
   switch (curr_token.type) {
@@ -619,6 +715,33 @@ Node *ast_parse_statement(Arena *arena, Parser *parser) {
       return ast_parse_expression_statement(arena, parser);
     }
   }
+}
+
+Node *ast_parse_statements(Arena *arena, Parser *parser, TokenType delimiter) {
+  Node *statements = arena_array(arena, Node);
+  while (parser->curr_token.type != delimiter &&
+         parser->curr_token.type != EOF_) {
+    Node *stmnt = ast_parse_statement(arena, parser);
+    if (stmnt) {
+      append(statements, *stmnt);
+    }
+    ast_next_token(arena, parser);
+  }
+  return statements;
+}
+
+BlockStatement ast_parse_block_statement(Arena *arena, Parser *parser) {
+  Node *statements = arena_array(arena, Node);
+  ast_next_token(arena, parser);
+  while (parser->curr_token.type != R_BRACE &&
+         parser->curr_token.type != EOF_) {
+    Node *stmnt = ast_parse_statement(arena, parser);
+    if (stmnt) {
+      append(statements, *stmnt);
+    }
+    ast_next_token(arena, parser);
+  }
+  return (BlockStatement){.statements = statements};
 }
 
 Program ast_parse_program(Arena *arena, Parser *parser) {
@@ -710,6 +833,30 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     exp_string = arena_string_fmt(arena, "(%s%s)", operator.str, right.str);
     break;
   }
+  case IF_EXP: {
+    IfExpression if_expression = cast(expression.exp_bytes, IfExpression);
+    String condition, consequence, alternative;
+
+    condition = stringify_expression(arena, node, if_expression.condition);
+
+    consequence =
+        stringify_statements(arena, if_expression.consequence.statements);
+
+    if (if_expression.alternative.statements) {
+      alternative =
+          stringify_statements(arena, if_expression.alternative.statements);
+      exp_string = arena_string_fmt(arena, "if (%s) {\n\t%s\n} else {\n\t%s\n}",
+                                    condition.str,   //
+                                    consequence.str, //
+                                    alternative.str);
+    } else {
+      exp_string = arena_string_fmt(arena, "if (%s) {\n\t%s\n}",
+                                    condition.str, //
+                                    consequence.str);
+    }
+
+    break;
+  }
   case INFIX_EXP: {
     InfixExpression infix = cast(expression.exp_bytes, InfixExpression);
     String left = stringify_expression(arena, node, infix.left);
@@ -719,20 +866,6 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
                                   right.str);
     break;
   }
-  case IF_EXP: {
-    IfExpression if_expression = cast(expression.exp_bytes, IfExpression);
-    String condition =
-        stringify_expression(arena, node, if_expression.condition);
-    String consequence =
-        stringify_statements(arena, if_expression.consequence.statements);
-    String alternative =
-        stringify_statements(arena, if_expression.alternative.statements);
-    exp_string = arena_string_fmt(arena, "(%s %s %s)",
-                                  condition.str,   //
-                                  consequence.str, //
-                                  alternative.str);
-    break;
-  }
   default: {
 
     // TODO:
@@ -740,7 +873,7 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     // for enums too please
     exp_string = arena_string_fmt(
         arena,
-        "There has not been a expression string for this expression type: %d",
+        "There has not been a EXPRESSION STRING for this expression type: %d\n",
         expression.type);
   }
   }
