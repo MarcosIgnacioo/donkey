@@ -188,6 +188,7 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression ast_parse_identifier(Arena *arena, Parser *parser);
 Expression ast_parse_boolean(Arena *arena, Parser *parser);
 Expression ast_parse_int(Arena *arena, Parser *parser);
+Expression ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression ast_parse_prefix_expression(Arena *arena, Parser *parser);
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
                                       Expression left);
@@ -234,14 +235,14 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
     kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
-    kv(KeyValue_PF, L_PAREN, prs_fn(NULL, NULL)), //
-    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)), //
-    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                        //
-    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                        //
-    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),                       //
-    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                            //
-    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),                             //
-    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                           //
+    kv(KeyValue_PF, L_PAREN, prs_fn(&ast_parse_grouped_expression, NULL)), //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),                          //
+    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                          //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                          //
+    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),                         //
+    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                              //
+    kv(KeyValue_PF, IF, prs_fn(NULL, NULL)),                               //
+    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                             //
     kv(KeyValue_PF, TRUE,
        prs_fn(&ast_parse_boolean, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, FALSE,
@@ -468,6 +469,27 @@ Expression ast_parse_boolean(Arena *arena, Parser *parser) {
 }
 
 // ALL THE OTHER EXPRESSIONS
+
+// TODO: debug this to completly understand it
+// basically when we parse an expression we get the parse_prefix_fn
+// and parse the left value with that one, corresponding to specific tokens
+// the `+` makes a PrefixExpression which is a {operator='+', right_value='1'};
+// and the `(` makes a whole expression, with just the straight forward 
+// ast_parse_expression function, which will stop when it finds the ) because
+// it doenst have precedence so it will have a 0 precedence, which will make everything
+// bubble up until it gets to the outest caller of that where checks LOWEST_PREC < LOWEST_PREC 
+// which aint true so it just goes back up here and then we expect token read if it is )
+// if not return empty expression
+// idk if returning empty is correct because it might loose the error msg but who knows 
+//
+Expression ast_parse_grouped_expression(Arena *arena, Parser *parser) {
+  ast_next_token(arena, parser);
+  Expression exp = ast_parse_expression(arena, parser, LOWEST_PREC);
+  if (!ast_expect_peek_token(arena,parser, R_PAREN)) {
+    return (Expression){0};
+  }
+  return exp;
+}
 
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
                                       Expression left) {

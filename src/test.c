@@ -570,6 +570,11 @@ int test_infix_expressions_harder() {
 
   infix_test expected_identifiers[] = {
       {
+          .input = string("(1 + 2) * 3"),
+          .output = string("((1 + 2) * 3)"),
+      },
+
+      {
           .input = string("a * b / c"),
           .output = string("((a * b) / c)"),
       },
@@ -649,6 +654,11 @@ int test_infix_expressions_harder() {
           .input = string("(1 + 2) * 3"),
           .output = string("((1 + 2) * 3)"),
       },
+{
+          .input = string("(1 + 2) * 3 + 12"),
+          .output = string("(((1 + 2) * 3) + 12)"),
+      },
+
   };
 
   for (int i = 0; i < array_len(expected_identifiers); i++) {
