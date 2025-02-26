@@ -26,6 +26,7 @@ typedef enum {
   BOOLEAN_EXP,
   PREFIX_EXP,
   INFIX_EXP,
+  IF_EXP,
 } NodeType;
 
 // When we are parsing an expression we dont know the Precedence we have with it
@@ -102,6 +103,28 @@ typedef struct {
   String operator;
   Expression right;
 } InfixExpression;
+
+typedef struct {
+  Node *statements;
+} BlockStatement;
+
+typedef struct {
+  Token token; // the if bro
+  Expression condition;
+  BlockStatement consequence;
+  BlockStatement alternative;
+} IfExpression;
+
+typedef struct {
+  NodeType type;
+  union {
+    InfixExpression infix_exp;
+    PrefixExpression prefix_exp;
+    Identifier identifier;
+    IntLiteral integer;
+    Boolean ident;
+  };
+} Expression_T; // REFACTOR: incoming object oriented programming into c
 
 // TODO:
 // maybe i should just remove this to only
@@ -474,18 +497,18 @@ Expression ast_parse_boolean(Arena *arena, Parser *parser) {
 // basically when we parse an expression we get the parse_prefix_fn
 // and parse the left value with that one, corresponding to specific tokens
 // the `+` makes a PrefixExpression which is a {operator='+', right_value='1'};
-// and the `(` makes a whole expression, with just the straight forward 
+// and the `(` makes a whole expression, with just the straight forward
 // ast_parse_expression function, which will stop when it finds the ) because
-// it doenst have precedence so it will have a 0 precedence, which will make everything
-// bubble up until it gets to the outest caller of that where checks LOWEST_PREC < LOWEST_PREC 
-// which aint true so it just goes back up here and then we expect token read if it is )
-// if not return empty expression
-// idk if returning empty is correct because it might loose the error msg but who knows 
+// it doenst have precedence so it will have a 0 precedence, which will make
+// everything bubble up until it gets to the outest caller of that where checks
+// LOWEST_PREC < LOWEST_PREC which aint true so it just goes back up here and
+// then we expect token read if it is ) if not return empty expression idk if
+// returning empty is correct because it might loose the error msg but who knows
 //
 Expression ast_parse_grouped_expression(Arena *arena, Parser *parser) {
   ast_next_token(arena, parser);
   Expression exp = ast_parse_expression(arena, parser, LOWEST_PREC);
-  if (!ast_expect_peek_token(arena,parser, R_PAREN)) {
+  if (!ast_expect_peek_token(arena, parser, R_PAREN)) {
     return (Expression){0};
   }
   return exp;
@@ -632,7 +655,16 @@ void print_parser_errors(Parser parser) {
   }
 }
 
-// todo append also a
+String stringify_statements(Arena *arena, Node *statements) {
+  String result = arena_new_empty_string_with_cap(arena, 256);
+  for (size_t i = 0; i < len(statements); i++) {
+    string_concat_resize(arena, &result,
+                         arena_stringify_statement(arena, statements[i]));
+  }
+  return result;
+}
+
+// todo append also a NO DO NOT APPEND A NEW LINE BRO
 String stringify_program(Arena *arena, Program *program) {
   String result = arena_new_empty_string_with_cap(arena, 256);
   /*String new_line = string("\n\t");*/
@@ -685,6 +717,20 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     String right = stringify_expression(arena, node, infix.right);
     exp_string = arena_string_fmt(arena, "(%s %s %s)", left.str, operator.str,
                                   right.str);
+    break;
+  }
+  case IF_EXP: {
+    IfExpression if_expression = cast(expression.exp_bytes, IfExpression);
+    String condition =
+        stringify_expression(arena, node, if_expression.condition);
+    String consequence =
+        stringify_statements(arena, if_expression.consequence.statements);
+    String alternative =
+        stringify_statements(arena, if_expression.alternative.statements);
+    exp_string = arena_string_fmt(arena, "(%s %s %s)",
+                                  condition.str,   //
+                                  consequence.str, //
+                                  alternative.str);
     break;
   }
   default: {
