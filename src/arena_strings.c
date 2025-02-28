@@ -48,6 +48,7 @@ void string_trim_space_left(String *trimming);
 void string_trim_space_right(String *trimming);
 void string_trim_space(String *trimming);
 void string_concat(String *dest, String source);
+void arena_string_concat(Arena *arena, String *dest, String source);
 void arena_c_string_concat(Arena *arena, String *dest, const char *source);
 
 void string_trim_predicator_right(String *trimming,
@@ -122,7 +123,7 @@ String arena_string_slice(Arena *arena, String chopping, U64 start, U64 end) {
   return (String){.str = chopping.str + start, .len = end - start};
 }
 
-//  TODO: WEEKEND IMPLEMENT my String sprintf ASAP after that, modify the 
+//  TODO: WEEKEND IMPLEMENT my String sprintf ASAP after that, modify the
 //  parts of the code that use fmt_buffer and String.str so it is String only
 int fmt_buffer(char *buffer, char *token, va_list arg_ptr, const char *fmt,
                int i, int k) {
@@ -210,7 +211,8 @@ String arena_string_fmt(Arena *arena, const char *fmt, ...) {
   return res;
 }
 
-String arena_string_append(Arena *arena, String body, String appending) {
+String arena_string_append(Arena *arena, String body,
+                                      String appending) {
   U64 total_size = body.len + appending.len;
   byte *new_str = arena_alloc_zero(arena, total_size);
   memory_copy(new_str, body.str, body.len);
@@ -416,7 +418,7 @@ void string_concat(String *dest, String source) {
   dest->len = total_size;
 }
 
-void string_concat_resize(Arena *arena, String *dest, String source) {
+void arena_string_concat(Arena *arena, String *dest, String source) {
   U64 total_size = dest->len + source.len;
   U64 n_bytes = source.len;
   if (total_size >= dest->cap) {

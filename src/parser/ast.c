@@ -27,6 +27,8 @@ typedef enum {
   PREFIX_EXP,
   INFIX_EXP,
   IF_EXP,
+  FUNCTION_DECLARATION_EXP,
+  FUNCTION_CALL_EXP,
 } NodeType;
 
 // When we are parsing an expression we dont know the Precedence we have with it
@@ -114,6 +116,20 @@ typedef struct {
   BlockStatement consequence;
   BlockStatement alternative;
 } IfExpression;
+
+typedef struct {
+  Token token; // the fn bro
+  Identifier name;
+  Identifier *arguments_names;
+  BlockStatement content;
+} FunctionLiteral;
+
+typedef struct {
+  Token token; // the fn bro
+  Identifier name;
+  Expression *expression_arguments;
+  BlockStatement content;
+} FunctionCall;
 
 typedef struct {
   NodeType type;
@@ -208,16 +224,18 @@ BlockStatement ast_parse_block_statement(Arena *arena, Parser *parser);
 Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 Node *ast_parse_return_statement(Arena *arena, Parser *parser);
+Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression ast_parse_identifier(Arena *arena, Parser *parser);
 Expression ast_parse_boolean(Arena *arena, Parser *parser);
 Expression ast_parse_int(Arena *arena, Parser *parser);
 Expression ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression ast_parse_if_expression(Arena *arena, Parser *parser);
+Expression ast_parse_function_literal(Arena *arena, Parser *parser);
+Expression ast_parse_function_call_expression(Arena *arena, Parser *parser);
 Expression ast_parse_prefix_expression(Arena *arena, Parser *parser);
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
                                       Expression left);
-Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
 // utility
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
@@ -268,7 +286,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),                          //
     kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                          //
     kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                          //
-    kv(KeyValue_PF, FUNCTION, prs_fn(NULL, NULL)),                         //
+    kv(KeyValue_PF, FUNCTION, prs_fn(&ast_parse_function_literal, NULL)),  //
     kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                              //
     kv(KeyValue_PF, IF, prs_fn(&ast_parse_if_expression, NULL)),           //
     kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                             //
@@ -329,6 +347,11 @@ Precedence get_precedence_from_hm(HashTable table, TokenType key) {
 
 #define curr_precedence(PARSER)                                                \
   get_precedence_from_hm(PRECENDENCES, PARSER->curr_token.type)
+
+#define new_identifier(parser)                                                 \
+  (Identifier) {                                                               \
+    .token = parser->curr_token, .value = parser->curr_token.literal,          \
+  }
 
 prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key) {
   KeyValue_PF *kv = hash_table_find_item(table, &key);
@@ -468,25 +491,27 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   // work later)
   let_statement->expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
-  /*while (!(curr_token_is(parser, SEMICOLON))) {*/
-  /*  ast_next_token(arena, parser);*/
-  /*}*/
+  if (curr_token_is(parser, SEMICOLON)) {
+    ast_next_token(arena, parser);
+  }
   return statement;
 }
 
 Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
-  ReturnStatement *let_statement = arena_alloc(arena, sizeof(ReturnStatement));
+  ReturnStatement *return_statement =
+      arena_alloc(arena, sizeof(ReturnStatement));
+
   statement->type = RETURN_STATEMENT;
-  statement->data = let_statement;
-  let_statement->token = parser->curr_token;
+  statement->data = return_statement;
 
-  // TODO: PARSE EXPRESSIONS
-
-  while (!(curr_token_is(parser, SEMICOLON))) {
+  return_statement->token = parser->curr_token;
+  ast_next_token(arena, parser);
+  return_statement->expression_value =
+      ast_parse_expression(arena, parser, LOWEST_PREC);
+  if (curr_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
   }
-
   return statement;
 }
 
@@ -596,7 +621,8 @@ Expression ast_parse_if_expression(Arena *arena, Parser *parser) {
   } else {
     alternative = (BlockStatement){.statements = NULL};
   }
-  // why we dont do right brace parsing check hereee!!!!???? like whyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+  // why we dont do right brace parsing check hereee!!!!???? like
+  // whyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 
   IfExpression *if_expression = arena_alloc(arena, sizeof(IfExpression));
   *if_expression = (IfExpression){
@@ -607,6 +633,55 @@ Expression ast_parse_if_expression(Arena *arena, Parser *parser) {
   };
 
   return (Expression){.type = IF_EXP, .exp_bytes = (void *)if_expression};
+}
+
+Expression ast_parse_function_literal(Arena *arena, Parser *parser) {
+  Token function_token = parser->curr_token;
+  BlockStatement content;
+  Identifier tmp_arg = (Identifier){0};
+  Identifier *arguments_names = arena_array(arena, Identifier);
+  content = (BlockStatement){.statements = NULL};
+
+  ast_next_token(arena, parser);
+
+  Identifier name = new_identifier(parser);
+
+  if (!ast_expect_peek_token(arena, parser, L_PAREN)) {
+    return (Expression){0};
+  }
+
+  // probably make a custom type for arguments in a
+  // function literal
+  while (!curr_token_is(parser, R_PAREN)) {
+    ast_next_token(arena, parser);
+    tmp_arg = new_identifier(parser);
+    append(arguments_names, tmp_arg);
+    ast_next_token(arena, parser);
+  }
+
+  if (!ast_expect_curr_token(arena, parser, R_PAREN)) {
+    return (Expression){0};
+  }
+
+  if (!curr_token_is(parser, L_BRACE)) {
+    return (Expression){0};
+  }
+
+  content = ast_parse_block_statement(arena, parser);
+
+  // why we dont do right brace parsing check hereee!!!!???? like
+  // whyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+  FunctionLiteral *function_literal =
+      arena_alloc(arena, sizeof(FunctionLiteral));
+
+  function_literal->token = function_token;
+  function_literal->name = name;
+  function_literal->arguments_names = arguments_names;
+  function_literal->content = content;
+
+  return (Expression){.type = FUNCTION_DECLARATION_EXP,
+                      .exp_bytes = (void *)function_literal};
 }
 
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
@@ -709,6 +784,9 @@ Node *ast_parse_statement(Arena *arena, Parser *parser) {
     {
       return ast_parse_return_statement(arena, parser);
     }
+    case SEMICOLON: {
+      return NULL;
+    }
   default:
     //
     {
@@ -730,6 +808,7 @@ Node *ast_parse_statements(Arena *arena, Parser *parser, TokenType delimiter) {
   return statements;
 }
 
+// reads before anything
 BlockStatement ast_parse_block_statement(Arena *arena, Parser *parser) {
   Node *statements = arena_array(arena, Node);
   ast_next_token(arena, parser);
@@ -781,8 +860,9 @@ void print_parser_errors(Parser parser) {
 String stringify_statements(Arena *arena, Node *statements) {
   String result = arena_new_empty_string_with_cap(arena, 256);
   for (size_t i = 0; i < len(statements); i++) {
-    string_concat_resize(arena, &result,
-                         arena_stringify_statement(arena, statements[i]));
+    arena_string_concat(arena, &result,
+                        arena_stringify_statement(arena, statements[i]));
+    arena_string_concat(arena, &result, string(";"));
   }
   return result;
 }
@@ -792,7 +872,7 @@ String stringify_program(Arena *arena, Program *program) {
   String result = arena_new_empty_string_with_cap(arena, 256);
   /*String new_line = string("\n\t");*/
   for (size_t i = 0; i < len(program->statements); i++) {
-    string_concat_resize(
+    arena_string_concat(
         arena, &result,
         arena_stringify_statement(arena, program->statements[i]));
   }
@@ -845,14 +925,53 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     if (if_expression.alternative.statements) {
       alternative =
           stringify_statements(arena, if_expression.alternative.statements);
-      exp_string = arena_string_fmt(arena, "if (%s) {\n\t%s\n} else {\n\t%s\n}",
+      exp_string = arena_string_fmt(arena, "if (%s) {%s} else {%s}",
                                     condition.str,   //
                                     consequence.str, //
                                     alternative.str);
     } else {
-      exp_string = arena_string_fmt(arena, "if (%s) {\n\t%s\n}",
+      exp_string = arena_string_fmt(arena, "if (%s) {%s}",
                                     condition.str, //
                                     consequence.str);
+    }
+
+    break;
+  }
+  case FUNCTION_DECLARATION_EXP: {
+    FunctionLiteral function = cast(expression.exp_bytes, FunctionLiteral);
+    String content, arguments_names_str, token, name;
+    Identifier *arguments_names;
+
+    arguments_names_str = arena_new_empty_string_with_cap(arena, 128);
+    token = function.token.literal;
+    name = function.name.value;
+    arguments_names = function.arguments_names;
+
+    // TODO: put this in another function if still feels annoying to see
+    // this is also something useful to put in a function cause function calls
+    // also have arguments to stringify so yeah
+    for (I64 i = 0; i < len(arguments_names); i++) {
+      if (i > 0) {
+          // TODO: remove trailing space just put it here because is pretty
+          // for now
+        arena_string_concat(arena, &arguments_names_str, string(", "));
+      }
+      String arg = arguments_names[i].value;
+      string_concat(&arguments_names_str, arg);
+    }
+
+    if (function.content.statements) {
+      content = stringify_statements(arena, function.content.statements);
+      exp_string = arena_string_fmt(arena, "%s %s(%s) {%s}",
+                                    token.str,               //
+                                    name.str,                //
+                                    arguments_names_str.str, //
+                                    content.str);
+    } else {
+      exp_string = arena_string_fmt(arena, "%s (%s)",
+                                    token.str, //
+                                    name.str,  //
+                                    content.str);
     }
 
     break;
