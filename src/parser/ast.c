@@ -120,15 +120,15 @@ typedef struct {
 typedef struct {
   Token token; // the fn bro
   Identifier name;
-  Identifier *arguments_names;
-  BlockStatement content;
+  Identifier *parameters;
+  BlockStatement body;
 } FunctionLiteral;
 
 typedef struct {
   Token token; // the fn bro
   Identifier name;
-  Expression *expression_arguments;
-  BlockStatement content;
+  Expression *arguments;
+  BlockStatement body;
 } FunctionCall;
 
 typedef struct {
@@ -637,10 +637,10 @@ Expression ast_parse_if_expression(Arena *arena, Parser *parser) {
 
 Expression ast_parse_function_literal(Arena *arena, Parser *parser) {
   Token function_token = parser->curr_token;
-  BlockStatement content;
+  BlockStatement body;
   Identifier tmp_arg = (Identifier){0};
   Identifier *arguments_names = arena_array(arena, Identifier);
-  content = (BlockStatement){.statements = NULL};
+  body = (BlockStatement){.statements = NULL};
 
   ast_next_token(arena, parser);
 
@@ -667,7 +667,7 @@ Expression ast_parse_function_literal(Arena *arena, Parser *parser) {
     return (Expression){0};
   }
 
-  content = ast_parse_block_statement(arena, parser);
+  body = ast_parse_block_statement(arena, parser);
 
   // why we dont do right brace parsing check hereee!!!!???? like
   // whyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
@@ -677,8 +677,8 @@ Expression ast_parse_function_literal(Arena *arena, Parser *parser) {
 
   function_literal->token = function_token;
   function_literal->name = name;
-  function_literal->arguments_names = arguments_names;
-  function_literal->content = content;
+  function_literal->parameters = arguments_names;
+  function_literal->body = body;
 
   return (Expression){.type = FUNCTION_DECLARATION_EXP,
                       .exp_bytes = (void *)function_literal};
@@ -945,7 +945,7 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     arguments_names_str = arena_new_empty_string_with_cap(arena, 128);
     token = function.token.literal;
     name = function.name.value;
-    arguments_names = function.arguments_names;
+    arguments_names = function.parameters;
 
     // TODO: put this in another function if still feels annoying to see
     // this is also something useful to put in a function cause function calls
@@ -960,8 +960,8 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
       string_concat(&arguments_names_str, arg);
     }
 
-    if (function.content.statements) {
-      content = stringify_statements(arena, function.content.statements);
+    if (function.body.statements) {
+      content = stringify_statements(arena, function.body.statements);
       exp_string = arena_string_fmt(arena, "%s %s(%s) {%s}",
                                     token.str,               //
                                     name.str,                //

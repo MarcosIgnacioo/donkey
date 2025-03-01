@@ -667,8 +667,15 @@ int test_infix_expressions_harder() {
           .output = string("if ((x < y)) {x;}"),
       },
       {
-          .input = string("fn poop(x, XD,hello , world, yeahhh, boy) { let x = foo; let skibidi = rizz; return x + z; }"),
-          .output = string("fn poop(x, XD, hello, world, yeahhh, boy) {let x = foo;let skibidi = rizz;return (x + z);}"),
+          .input = string("fn poop(x, XD,hello , world, yeahhh, boy) { let x = "
+                          "foo; let skibidi = rizz; return x + z; }"),
+          .output = string("fn poop(x, XD, hello, world, yeahhh, boy) {let x = "
+                           "foo;let skibidi = rizz;return (x + z);}"),
+      },
+      {
+          .input = string(
+              "fn poop(foo) { let x = foo; let skibidi = rizz; return x + z; }"),
+          .output = string("fn poop(foo) {let x = " "foo;let skibidi = rizz;return (x + z);}"),
       },
       {
           .input = string("if (1 < 2) {let x = 2}"),
