@@ -115,6 +115,7 @@ String arena_new_empty_string_with_cap(Arena *arena, U64 capacity) {
   return new_string;
 }
 
+
 int min(int a, int b) { return (a < b) ? a : b; }
 
 String arena_string_slice(Arena *arena, String chopping, U64 start, U64 end) {
@@ -211,8 +212,7 @@ String arena_string_fmt(Arena *arena, const char *fmt, ...) {
   return res;
 }
 
-String arena_string_append(Arena *arena, String body,
-                                      String appending) {
+String arena_string_append(Arena *arena, String body, String appending) {
   U64 total_size = body.len + appending.len;
   byte *new_str = arena_alloc_zero(arena, total_size);
   memory_copy(new_str, body.str, body.len);

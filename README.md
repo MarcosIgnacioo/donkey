@@ -1,4 +1,44 @@
+
+todo: saturday
+
+[ ] finish parsing chapter
+[ ] start odin book
+[ ] if i did both take a look at 4coders
+[ ] compiler.nvim please 
+[ ] better command mode
+[ ] flash.nvim
+[ ] the thing to go to definitions in other window withput bein anoyyin
+
+todo: sunday
+
+[ ] how to make good tests in c
+[ ] which may imply to refactor a lot of stuff to 
+    unions instead of void *
+[ ] start remaking classmoods
+
 ```c
+
+  ast_next_token();
+  while (!ast_expect_curr_token(parser, R_PAREN)) {
+    ident = ast_parse_identifier(arena, parser, LOWEST_PREC);
+    append()
+    ast_next_token(arena, parser); // reads to the next token,
+  }
+
+  why this NOT?
+    cause fn foo()
+
+  because here the curr_token would be (
+  and when we entered the loop we would advance to
+  the next one ) and try to parse it as an identifier
+  which well is not an identifier!!!!
+
+  and in the next one this doenst happen
+  while (!ast_expect_curr_token(parser, R_PAREN)) {
+    ast_next_token();
+    ident = ast_parse_identifier(arena, parser, LOWEST_PREC);
+    append()
+  }
 bool generic_test_literal_expression(Expression exp, va_list args) {
   switch (exp.type) {
   case IDENTIFIER_EXP:

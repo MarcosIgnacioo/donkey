@@ -1,4 +1,8 @@
 // source
+// btw NEVER pass dynamic arrays as arguments IF i want the function to append to it
+// in that case it should be passed as a reference, 
+// cause the appending macro changes the pointer in case of 
+// resizing
 // https://bytesbeneath.com/articles/dynamic-arrays-in-c
 #ifndef _ARRAY_H
 #define _ARRAY_H

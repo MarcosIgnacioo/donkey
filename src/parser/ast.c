@@ -125,11 +125,10 @@ typedef struct {
 } FunctionLiteral;
 
 typedef struct {
-  Token token; // the fn bro
-  Identifier name;
+  Token token; // the ( token
   Expression *arguments;
-  BlockStatement body;
-} FunctionCall;
+  Expression function;
+} FunctionCallExpression;
 
 typedef struct {
   NodeType type;
@@ -232,11 +231,19 @@ Expression ast_parse_int(Arena *arena, Parser *parser);
 Expression ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression ast_parse_function_literal(Arena *arena, Parser *parser);
-Expression ast_parse_function_call_expression(Arena *arena, Parser *parser);
+Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser);
+Expression *ast_parse_call_function_arguments(Arena *arena, Parser *parser);
+
+Expression ast_parse_function_call_expression(Arena *arena, Parser *parser,
+                                              Expression expression);
 Expression ast_parse_prefix_expression(Arena *arena, Parser *parser);
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
                                       Expression left);
 // utility
+String arena_join_identifier_array(Arena *arena, Identifier *identifiers,
+                                   String separator);
+String join_expression_caster(Arena *arena, void *data);
+String join_argument_caster(Arena *arena, void *data);
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type);
 void ast_parser_peek_error(Arena *arena, Parser *parser,
@@ -282,14 +289,16 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
     kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
-    kv(KeyValue_PF, L_PAREN, prs_fn(&ast_parse_grouped_expression, NULL)), //
-    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),                          //
-    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                          //
-    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                          //
-    kv(KeyValue_PF, FUNCTION, prs_fn(&ast_parse_function_literal, NULL)),  //
-    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                              //
-    kv(KeyValue_PF, IF, prs_fn(&ast_parse_if_expression, NULL)),           //
-    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                             //
+    kv(KeyValue_PF, L_PAREN,
+       prs_fn(&ast_parse_grouped_expression,
+              &ast_parse_function_call_expression)),                      //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),                         //
+    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                         //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                         //
+    kv(KeyValue_PF, FUNCTION, prs_fn(&ast_parse_function_literal, NULL)), //
+    kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                             //
+    kv(KeyValue_PF, IF, prs_fn(&ast_parse_if_expression, NULL)),          //
+    kv(KeyValue_PF, ELSE, prs_fn(NULL, NULL)),                            //
     kv(KeyValue_PF, TRUE,
        prs_fn(&ast_parse_boolean, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, FALSE,
@@ -316,7 +325,7 @@ KeyValue_PRC PRECEDENCES_ARR[] = {
     kv(KeyValue_PRC, PLUS, SUM_PREC),          //
     kv(KeyValue_PRC, ASTERISK, PRODUCT_PREC),  //
     kv(KeyValue_PRC, SLASH, PRODUCT_PREC),     //
-    /*kv(KeyValue_PRC, L_PAREN, PAREN_PREC),     //*/
+    kv(KeyValue_PRC, L_PAREN, CALL_PREC),      //
     /*kv(KeyValue_PRC, R_PAREN, PAREN_PREC),     //*/
 };
 
@@ -394,6 +403,33 @@ void ast_next_token(Arena *arena, Parser *parser) {
 #define peek_token_is(P, E) (P->peek_token.type == E)
 #define curr_token_is(P, E) (P->curr_token.type == E)
 
+// expects dynamic array
+String arena_join_identifier_array(Arena *arena, Identifier *identifiers,
+                                   String separator) {
+  String join = arena_new_empty_string_with_cap(arena, 512);
+  for (I64 i = 0; i < len(identifiers); i++) {
+    if (i > 0) {
+      arena_string_concat(arena, &join, string(", "));
+    }
+    String arg = identifiers[i].value;
+    string_concat(&join, arg);
+  }
+  return join;
+}
+
+String arena_join_expression_array(Arena *arena, Expression *expressions,
+                                   String separator) {
+  String join = arena_new_empty_string_with_cap(arena, 512);
+  for (I64 i = 0; i < len(expressions); i++) {
+    if (i > 0) {
+      arena_string_concat(arena, &join, string(", "));
+    }
+    String arg = stringify_expression(arena, (Node){0}, expressions[i]);
+    string_concat(&join, arg);
+  }
+  return join;
+}
+
 // read the next token if it is the expected one
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
                            TokenType expected_type) {
@@ -429,7 +465,7 @@ void ast_parser_peek_error(Arena *arena, Parser *parser,
   char tmp_buf[1024];
   const char *expected_type_c_string = get_token_literal(expected_type);
   sprintf(tmp_buf,
-          SYNTAX_ERROR "expected peek token to be : " color(
+          SYNTAX_ERROR "expected PEEK token to be : " color(
               6) "`%s`" end_color " got instead : " color(3) "`%s`" end_color,
           expected_type_c_string, parser->peek_token.literal.str);
   String error_msg = arena_new_string(arena, tmp_buf);
@@ -441,7 +477,7 @@ void ast_parser_curr_error(Arena *arena, Parser *parser,
   char tmp_buf[1024];
   const char *expected_type_c_string = get_token_literal(expected_type);
   sprintf(tmp_buf,
-          SYNTAX_ERROR "expected curr token to be : " color(
+          SYNTAX_ERROR "expected CURR token to be : " color(
               6) "`%s`" end_color " got instead : " color(3) "`%s`" end_color,
           expected_type_c_string, parser->curr_token.literal.str);
   String error_msg = arena_new_string(arena, tmp_buf);
@@ -491,7 +527,8 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   // work later)
   let_statement->expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
-  if (curr_token_is(parser, SEMICOLON)) {
+
+  if (peek_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
   }
   return statement;
@@ -509,7 +546,7 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   ast_next_token(arena, parser);
   return_statement->expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
-  if (curr_token_is(parser, SEMICOLON)) {
+  if (peek_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
   }
   return statement;
@@ -635,53 +672,138 @@ Expression ast_parse_if_expression(Arena *arena, Parser *parser) {
   return (Expression){.type = IF_EXP, .exp_bytes = (void *)if_expression};
 }
 
+Identifier *mine_ast_parse_function_parameters(Arena *arena, Parser *parser) {
+  Identifier *parameters = arena_array_with_cap(arena, Identifier, 16);
+
+  if (peek_token_is(parser, R_PAREN)) {
+    ast_next_token(arena, parser);
+    return parameters;
+  }
+
+  Identifier tmp = (Identifier){0};
+
+  // here we are like this at the beginin
+  // (foo,bar)
+  // ^
+  // (foo,fuzz,bar)
+  //  ^
+  //  append(parameters,foo)
+  //
+  do {
+    ast_next_token(arena, parser);
+    tmp = new_identifier(parser);
+    append(parameters, tmp);
+    ast_next_token(arena, parser);
+  } while (curr_token_is(parser, COMMA));
+
+  ast_expect_curr_token(arena, parser, R_PAREN);
+
+  return parameters;
+  // this would always end the parser with the curr token being R_PAREN
+}
+
+Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser) {
+  Identifier *parameters = arena_array_with_cap(arena, Identifier, 16);
+
+  if (peek_token_is(parser, R_PAREN)) {
+    ast_next_token(arena, parser);
+    return parameters;
+  }
+
+  ast_next_token(arena, parser);
+  Identifier tmp = new_identifier(parser);
+  append(parameters, tmp);
+
+  while (peek_token_is(parser, COMMA)) {
+    ast_next_token(arena, parser);
+    ast_next_token(arena, parser);
+
+    tmp = new_identifier(parser);
+    append(parameters, tmp);
+  }
+
+  ast_expect_peek_token(arena, parser, R_PAREN);
+
+  return parameters;
+  // this would always end the parser with the curr token being R_PAREN
+}
+
 Expression ast_parse_function_literal(Arena *arena, Parser *parser) {
   Token function_token = parser->curr_token;
   BlockStatement body;
-  Identifier tmp_arg = (Identifier){0};
-  Identifier *arguments_names = arena_array(arena, Identifier);
+  Identifier *parameters;
   body = (BlockStatement){.statements = NULL};
+  /*fn(x, y) { return x + y; };*/
+
+  ast_expect_peek_token(arena, parser, L_PAREN);
+
+  parameters = ast_parse_function_parameters(arena, parser);
 
   ast_next_token(arena, parser);
 
-  Identifier name = new_identifier(parser);
-
-  if (!ast_expect_peek_token(arena, parser, L_PAREN)) {
-    return (Expression){0};
-  }
-
-  // probably make a custom type for arguments in a
-  // function literal
-  while (!curr_token_is(parser, R_PAREN)) {
-    ast_next_token(arena, parser);
-    tmp_arg = new_identifier(parser);
-    append(arguments_names, tmp_arg);
-    ast_next_token(arena, parser);
-  }
-
-  if (!ast_expect_curr_token(arena, parser, R_PAREN)) {
-    return (Expression){0};
-  }
-
-  if (!curr_token_is(parser, L_BRACE)) {
-    return (Expression){0};
-  }
-
   body = ast_parse_block_statement(arena, parser);
-
-  // why we dont do right brace parsing check hereee!!!!???? like
-  // whyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 
   FunctionLiteral *function_literal =
       arena_alloc(arena, sizeof(FunctionLiteral));
 
+  /* TODO:
+     function_literal->name = new_identifier();
+  */
   function_literal->token = function_token;
-  function_literal->name = name;
-  function_literal->parameters = arguments_names;
+
+  function_literal->name = (Identifier){
+      .token =
+          (Token){
+              .type = ILLEGAL,
+              .literal = string("nya"),
+          },
+      .value = string("nya"),
+  };
+
+  function_literal->parameters = parameters;
   function_literal->body = body;
 
   return (Expression){.type = FUNCTION_DECLARATION_EXP,
                       .exp_bytes = (void *)function_literal};
+}
+
+/*foo()*/
+/*  infix_fn(arena, parser, left_value()== foo)*/
+/*infix func*/
+Expression ast_parse_function_call_expression(Arena *arena, Parser *parser,
+                                              Expression function) {
+
+  FunctionCallExpression *function_call_exp =
+      arena_alloc(arena, sizeof(FunctionCallExpression));
+  function_call_exp->token = parser->curr_token; // the ( token
+  function_call_exp->function = function;
+  function_call_exp->arguments =
+      ast_parse_call_function_arguments(arena, parser);
+
+  return (Expression){.type = FUNCTION_CALL_EXP,
+                      .exp_bytes = (void *)function_call_exp};
+}
+
+Expression *ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
+
+  Expression *arguments = arena_array_with_cap(arena, Expression, 16);
+  Expression tmp = {0};
+
+  ast_next_token(arena, parser);
+  tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
+  append(arguments, tmp);
+
+  while (peek_token_is(parser, COMMA)) {
+    ast_next_token(arena, parser);
+    ast_next_token(arena, parser);
+
+    tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
+    append(arguments, tmp);
+  }
+
+  ast_expect_peek_token(arena, parser, R_PAREN);
+
+  return arguments;
 }
 
 Expression ast_parse_infix_expression(Arena *arena, Parser *parser,
@@ -784,9 +906,6 @@ Node *ast_parse_statement(Arena *arena, Parser *parser) {
     {
       return ast_parse_return_statement(arena, parser);
     }
-    case SEMICOLON: {
-      return NULL;
-    }
   default:
     //
     {
@@ -883,6 +1002,9 @@ void print_expression() {
   // TOOD PLEASE SDOMETHING THAT WORKS INSIDE THE DEBUGGER
 }
 
+// TODO: remove node from args
+//       remove .str from Strings when formatting, i can use the %S format
+//       specifier to print them, forgot i implemented it XD
 String stringify_expression(Arena *arena, Node node, Expression expression) {
   (void)node;
   String exp_string = {0};
@@ -952,8 +1074,8 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     // also have arguments to stringify so yeah
     for (I64 i = 0; i < len(arguments_names); i++) {
       if (i > 0) {
-          // TODO: remove trailing space just put it here because is pretty
-          // for now
+        // TODO: remove trailing space just put it here because is pretty
+        // for now
         arena_string_concat(arena, &arguments_names_str, string(", "));
       }
       String arg = arguments_names[i].value;
@@ -974,6 +1096,20 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
                                     content.str);
     }
 
+    break;
+  }
+  case FUNCTION_CALL_EXP: {
+    FunctionCallExpression function =
+        cast(expression.exp_bytes, FunctionCallExpression);
+    String function_name, joined_args;
+    Expression *arguments;
+
+    function_name = stringify_expression(arena, node, function.function);
+    arguments = function.arguments;
+
+    joined_args = arena_join_expression_array(arena, arguments, string(", "));
+    exp_string = arena_string_fmt(arena, "%s(%s)", function_name.str,
+                                  joined_args.str);
     break;
   }
   case INFIX_EXP: {
