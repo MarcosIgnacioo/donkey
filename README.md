@@ -16,6 +16,13 @@ todo: sunday
     unions instead of void *
 [ ] start remaking classmoods
 
+todo: eventually
+why the output of the program when parsing numbers is different when compiled with clang and gcc 
+```sh
+input : 1 + 9 + 123
+clang : DONKEY >>return ((1 + 9) + 123) yay
+gcc   : DONKEY >>return ((1 + 1) + 3)   not much yay
+```
 ```c
 
   ast_next_token();

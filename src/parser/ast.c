@@ -1,10 +1,51 @@
-#include <stdio.h>
 #ifndef _PARSER_H
+#define _PARSER_H
+char BURRO[38][213] = {
+    "                                                                       ",
+    "                     #############     ###########                     ",
+    "                    ######        ###         ######                   ",
+    "                    ### ########        #######  ###                   ",
+    "                   ### ####                  #### ###                  ",
+    "                   ## ##                       ### ##                  ",
+    "                   ## # ######   #    ##  ###### # ##                  ",
+    "                   ######   ##  #      # ###   # # ##                  ",
+    "                  ## # # #### # ##    ## # #### # ###                  ",
+    "                   #   ####    ###    ###  # ####  ##                  ",
+    "                   ###    # #####      ##### # ##  ##                  ",
+    "                   ############         #############                  ",
+    "                  ###########           #  ###########                 ",
+    "                 ### ##                          ## ###                ",
+    "                ####           ##########           ####               ",
+    "                ###        ##################        ###               ",
+    "               ###       ####   ##       ######       ##               ",
+    "               ###      ##                    ##      ###              ",
+    "               ##      #                        #     ###              ",
+    "               ##        #######       ########  #     ##              ",
+    "              ###       #######    ##    #######       ###             ",
+    "              ##       #                  #     #      ###             ",
+    "             ###                         #      #       ##             ",
+    "             ###      #        ##      ##               ##             ",
+    "             ###                   ##                   ###            ",
+    "             ###   #                                    ###            ",
+    "             ###                                        ###            ",
+    "             ###   ##                             ###   ##             ",
+    "              ###  ###                            ###   ##             ",
+    "              ### #####                          ##### ###             ",
+    "               ###################################### ###              ",
+    "                ##    ###     ###########      ###  # ##               ",
+    "                  #        ########   #######                          ",
+    "                          ####################                         ",
+    "                             ######     ##                             ",
+    "                                                                       ",
+    "                   ###                             ##                  ",
+    "                                                                       "};
+
 #include "../arena.c"
 #include "../arena_strings.c"
 #include "../array.c"
 #include "../lexer.c"
 #include "../token.c"
+#include <stdio.h>
 #define color(C) "\033[0;3" #C "m"
 #define end_color "\033[0m"
 #define SYNTAX_ERROR color(3) "[SYNTAX ERROR] : " end_color
@@ -970,6 +1011,12 @@ void print_program(Arena *arena, Program *program) {
 }
 
 void print_parser_errors(Parser parser) {
+  if (len(parser.errors)) {
+    printf("Tal vez no funciona en burros\n");
+    for (size_t i = 0; i < array_len(BURRO); i++) {
+      printf("%s\n", BURRO[i]);
+    }
+  }
   for (size_t i = 0; i < len(parser.errors); i++) {
     Error err = parser.errors[i];
     printfln("%S\n", err.error);
@@ -1108,8 +1155,8 @@ String stringify_expression(Arena *arena, Node node, Expression expression) {
     arguments = function.arguments;
 
     joined_args = arena_join_expression_array(arena, arguments, string(", "));
-    exp_string = arena_string_fmt(arena, "%s(%s)", function_name.str,
-                                  joined_args.str);
+    exp_string =
+        arena_string_fmt(arena, "%s(%s)", function_name.str, joined_args.str);
     break;
   }
   case INFIX_EXP: {

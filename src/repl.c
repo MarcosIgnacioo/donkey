@@ -1,5 +1,6 @@
 #ifndef _REPL_H
 #define _REPL_H
+#include "./parser/ast.c"
 #include "arena.c"
 #include "arena_strings.c"
 #include "lexer.c"
@@ -21,17 +22,23 @@ String get_line_stdin(Arena *arena) {
 }
 
 void donkey_repl(Arena *arena) {
-  String input = (String){0};
-  Token tok = (Token){0};
+  String input = {0};
   Lexer lexi = (Lexer){0};
+  Parser parser = {0};
+  Program program = {0};
+  String program_str;
   do {
     input = get_line_stdin(arena);
     lexi = lexer_new_lexer(input);
-    tok = lexer_next_token(arena, &lexi);
-    while (tok.type != EOF_) {
-      print_token(color(4) "DONKEY >>" end_color, tok);
-      tok = lexer_next_token(arena, &lexi);
+    parser = ast_new_parser(arena, &lexi);
+    program = ast_parse_program(arena, &parser);
+    program_str = stringify_program(arena, &program);
+    if (len(parser.errors)) {
+      print_parser_errors(parser);
+    } else if (program_str.len) {
+      printfln(color(4) "DONKEY >>" end_color "%S", program_str);
     }
+    /*arena_reset(arena);*/
   } while (input.len);
 }
 

@@ -61,6 +61,7 @@ void string_copy(String *to, String from);
 
 bool is_lower_case(char c) { return c >= 'a' && c <= 'z'; }
 bool is_space(char c) { return c == ' ' || c == '\t' || c == '\n'; };
+bool is_digit(char c) { return c >= '0' && c <= '9'; };
 bool memory_cmp(byte *this, byte *that, U64 length);
 bool string_equals(String this, String that);
 
@@ -114,7 +115,6 @@ String arena_new_empty_string_with_cap(Arena *arena, U64 capacity) {
   new_string.str = arena_str;
   return new_string;
 }
-
 
 int min(int a, int b) { return (a < b) ? a : b; }
 
@@ -563,6 +563,7 @@ int printfln(const char *str, ...) {
           char buf[512];
           memory_set(buf, 512, 0);
           U64 index, i;
+          (void)i;
           for (index = 0, i = 0; index < string.len; index++) {
             printf("%c", string.str[index]);
             // tofix this please

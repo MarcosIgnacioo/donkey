@@ -569,126 +569,18 @@ int test_infix_expressions_harder() {
   } infix_test;
 
   infix_test expected_identifiers[] = {
-      { // TEST THIS
-          .input = string("let foo = 123 + 3 / 3;"),
-          .output = string("let foo = (123 + (3 / 3))"),
-      },
-      {
-          .input = string("(1 + 2) * 3"),
-          .output = string("((1 + 2) * 3)"),
-      },
-
-      {
-          .input = string("a * b / c"),
-          .output = string("((a * b) / c)"),
-      },
-      {
-          .input = string("-a * b"),
-          .output = string("((-a) * b)"),
-      },
-      {
-          .input = string("a + b * c * d"),       //
-          .output = string("(a + ((b * c) * d))") //
-      },                                          //
-      {
-          .input = string("a * b + c"),     //
-          .output = string("((a * b) + c)") //
-      },                                    //
-      {
-          .input = string("a + b * c"),     //
-          .output = string("(a + (b * c))") //
-      },                                    //
-      {
-          .input = string("!-a"),
-          .output = string("(!(-a))"),
-      },
-      {
-          .input = string("a + b + c"),
-          .output = string("((a + b) + c)"),
-      },
-      {
-          .input = string("a + b - c"),
-          .output = string("((a + b) - c)"),
-      },
-      {
-          .input = string("a * b * c"),
-          .output = string("((a * b) * c)"),
-      },
-      {
-          .input = string("a + b / c"),
-          .output = string("(a + (b / c))"),
-      },
-      {
-          .input = string("a + b * c + d / e - f"),
-          .output = string("(((a + (b * c)) + (d / e)) - f)"),
-      },
-      {
-          .input = string("3 + 4; -5 * 5"),
-          .output = string("(3 + 4)((-5) * 5)"),
-      },
-      {
-          .input = string("5 > 4 == 3 < 4"),
-          .output = string("((5 > 4) == (3 < 4))"),
-      },
-      {
-          .input = string("5 < 4 != 3 > 4"),
-          .output = string("((5 < 4) != (3 > 4))"),
-      },
-      {
-          .input = string("3 + 4 * 5 == 3 * 1 + 4 * 5"),
-          .output = string("((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
-      },
-      {
-          .input = string("true"),
-          .output = string("true"),
-      },
-      {
-          .input = string("false"),
-          .output = string("false"),
-      },
-      {
-          .input = string("3 > 5 == false"),
-          .output = string("((3 > 5) == false)"),
-      },
-      {
-          .input = string("3 < 5 == true"),
-          .output = string("((3 < 5) == true)"),
-      },
-      {
-          .input = string("(1 + 2) * 3"),
-          .output = string("((1 + 2) * 3)"),
-      },
-      {
-          .input = string("(1 + 2) * 3 + 12"),
-          .output = string("(((1 + 2) * 3) + 12)"),
-      },
-      {
-          .input = string("if (1 < 2) {let x = 2;} else {3}"),
-          .output = string("if ((1 < 2)) {let x = 2;} else {3;}"),
-      },
-      {
-          .input = string("if (x < y) { x }"),
-          .output = string("if ((x < y)) {x;}"),
-      },
-      {
-          .input = string("return foo + 123;"),
-          .output = string("return (foo + 123)"),
-      },
-      {
-          .input = string("fn () { let fuzz = 1 }"),
-          .output = string("IGNORE"),
-      },
-      /*{.input = string("fn() {};"), .output = string("IGNORE")},*/
-      /*{.input = string("fn(x) {};"), .output = string("IGNORE")},*/
-      /*{.input = string("fn(x, y, z) {};"), .output = string("IGNORE")},*/
-      /*{.input = string("foo(x, y, z)"), .output = string("IGNORE")},*/
-
-      /*    .input = string"if (1 < 2) {let x = 2}",*/
-      /*    .output = string("if ((1 < 2)) {let x = 2;}"),*/
-      /*},*/
+      {//
+       .input = string("let x = 1 * 2 * 3 * 4 * 5"),
+       .output = string("let x = ((((1 * 2) * 3) * 4) * 5)")},
+      //
+      {.input = string("x * y / 2 + 3 * 8 - 123"),
+       .output = string("((((x * y) / 2) + (3 * 8)) - 123)")},
+      //
+      {.input = string("true == false"), .output = string("(true == false)")},
+      {.input = string("let fii = asdf + 23"), .output = string("IGNORE")},
   };
 
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < array_len(expected_identifiers); i++) {
     failed = 0;
     infix_test test = expected_identifiers[i];
     String input = test.input;
@@ -709,6 +601,8 @@ int test_infix_expressions_harder() {
     }
     printf(color(4) "[INPUT]\n" end_color);
     printf("%s\n", input.str);
+    printfln("S: %S", program_str);
+    printf("s: %s\n", program_str.str);
     print_program(&arena, &program);
     print_parser_errors(parser);
     printf("\n");
