@@ -93,10 +93,10 @@ typedef enum {
 // TODO: ver como puedo en vez de tener que usar un void * poder tener toda la
 // informacion aqui en discovery kids, porque, no me gusta tener o sea si, es
 // una arena collected language, pero aun asi, queria mantener la menor cantidad
-typedef struct {
-  NodeType type;
-  void *exp_bytes;
-} Expression;
+/*typedef struct {*/
+/*  NodeType type;*/
+/*  void *exp_bytes;*/
+/*} Expression;*/
 
 typedef struct {
   Token token;
@@ -123,29 +123,18 @@ typedef struct {
   void *data;
 } Node;
 
+typedef struct Expression Expression;
+
 typedef struct {
   Token token;
   Identifier name; // removed *
-  Expression expression_value;
+  Expression *expression_value;
 } LetStatement;
 
 typedef struct {
   Token token;
-  Expression expression_value;
+  Expression *expression_value;
 } ReturnStatement;
-
-typedef struct {
-  Token token;
-  String operator;
-  Expression right;
-} PrefixExpression;
-
-typedef struct {
-  Token token;
-  Expression left;
-  String operator;
-  Expression right;
-} InfixExpression;
 
 typedef struct {
   Node *statements;
@@ -153,7 +142,7 @@ typedef struct {
 
 typedef struct {
   Token token; // the if bro
-  Expression condition;
+  Expression *condition;
   BlockStatement consequence;
   BlockStatement alternative;
 } IfExpression;
@@ -168,19 +157,33 @@ typedef struct {
 typedef struct {
   Token token; // the ( token
   Expression *arguments;
-  Expression function;
+  Expression *function;
 } FunctionCallExpression;
 
 typedef struct {
+  Token token;
+  String operator;
+  Expression *right;
+} PrefixExpression;
+
+typedef struct {
+  Token token;
+  Expression *left;
+  String operator;
+  Expression *right;
+} InfixExpression;
+
+struct Expression {
   NodeType type;
   union {
-    InfixExpression infix_exp;
-    PrefixExpression prefix_exp;
+    InfixExpression infix;
+    PrefixExpression prefix;
     Identifier identifier;
-    IntLiteral integer;
-    Boolean ident;
+    IntLiteral integer_literal;
+    Boolean boolean;
   };
-} Expression_T; // REFACTOR: incoming object oriented programming into c
+};
+// REFACTOR: incoming object oriented programming into c
 
 // TODO:
 // maybe i should just remove this to only
@@ -188,7 +191,7 @@ typedef struct {
 // a LOT
 typedef struct {
   Token token; // first token of the expression
-  Expression expression_value;
+  Expression *expression_value;
 } ExpressionStatement;
 
 typedef struct {
@@ -264,7 +267,8 @@ BlockStatement ast_parse_block_statement(Arena *arena, Parser *parser);
 Node *ast_parse_statement(Arena *arena, Parser *parser);
 Node *ast_parse_let_statement(Arena *arena, Parser *parser);
 Node *ast_parse_return_statement(Arena *arena, Parser *parser);
-Expression ast_parse_expression(Arena *arena, Parser *parser, Precedence prece);
+Expression *ast_parse_expression(Arena *arena, Parser *parser,
+                                 Precedence prece);
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression ast_parse_identifier(Arena *arena, Parser *parser);
 Expression ast_parse_boolean(Arena *arena, Parser *parser);
@@ -595,23 +599,25 @@ Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
 
 // IDENTIFIER_LIT_EXP
 Expression ast_parse_int(Arena *arena, Parser *parser) {
-  IntLiteral *integer_literal = arena_alloc(arena, sizeof(IntLiteral));
-  integer_literal->token = parser->curr_token;
+  (void)arena;
+  (void)parser;
+  IntLiteral integer_literal = (IntLiteral){0};
+  integer_literal.token = parser->curr_token;
   // TODO: add error handling to this function cause it
   // may fail so yeah but right now we dont care!
   // Result<Int,Error>
-  integer_literal->value = string_to_integer_64(parser->curr_token.literal);
+  integer_literal.value = string_to_integer_64(parser->curr_token.literal);
   return (Expression){.type = INTEGER_LIT_EXP,
-                      .exp_bytes = (void *)integer_literal};
+                      .integer_literal = integer_literal};
 }
 
 Expression ast_parse_identifier(Arena *arena, Parser *parser) {
   (void)arena;
   (void)parser;
-  Identifier *identifier = arena_alloc(arena, sizeof(Identifier));
-  identifier->token = parser->curr_token;
-  identifier->value = parser->curr_token.literal;
-  return (Expression){.type = IDENTIFIER_EXP, .exp_bytes = (void *)identifier};
+  Identifier identifier = (Identifier){0};
+  identifier.token = parser->curr_token;
+  identifier.value = parser->curr_token.literal;
+  return (Expression){.type = IDENTIFIER_EXP, .identifier = identifier};
 }
 
 Expression ast_parse_boolean(Arena *arena, Parser *parser) {
@@ -881,8 +887,8 @@ Expression ast_parse_prefix_expression(Arena *arena, Parser *parser) {
 // esto es super cool, el left_value no se pierde o se borra porque
 // siempre me lo paso al infix, y ahi lo asigno como left_value
 // que chido no
-Expression ast_parse_expression(Arena *arena, Parser *parser,
-                                Precedence precedence) {
+Expression *ast_parse_expression(Arena *arena, Parser *parser,
+                                 Precedence precedence) {
   prefix_parse_fn prefix =
       get_prefix_fn_from_hm(PARSING_FUNCTIONS, parser->curr_token.type);
   if (!prefix) {
@@ -909,7 +915,9 @@ Expression ast_parse_expression(Arena *arena, Parser *parser,
     left_value = infix(arena, parser, left_value);
   }
 
-  return left_value;
+  Expression *final_exp = arena_alloc(arena, sizeof(Expression));
+  *final_exp = left_value;
+  return final_exp;
 }
 
 Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
@@ -1014,7 +1022,7 @@ void print_parser_errors(Parser parser) {
   if (len(parser.errors)) {
     printf("Tal vez no funciona en burros\n");
     for (size_t i = 0; i < array_len(BURRO); i++) {
-    printf("%s\n", BURRO[i]);
+      printf("%s\n", BURRO[i]);
     }
   }
   for (size_t i = 0; i < len(parser.errors); i++) {
