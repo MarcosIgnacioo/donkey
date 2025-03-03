@@ -1,7 +1,9 @@
 TODO monday tuesday
-[ ] how to make good tests in c
-[ ] which may imply to refactor a lot of stuff to 
+
+[x] which may imply to refactor a lot of stuff to 
     unions instead of void *
+[ ] start second refactor where i change the expressions array in the function calls to be an Expressions ** so i dont need to copy data and just pass the pointers of the already existing expressions
+[ ] start hallucinating the testing api i wanna have so testing aint as tedius
 [ ] start remaking classmoods
 
 todo: eventually

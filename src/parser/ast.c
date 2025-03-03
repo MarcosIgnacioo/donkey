@@ -166,7 +166,7 @@ typedef struct {
 
 typedef struct {
   Token token; // the ( token
-  Expression *arguments;
+  Expression **arguments;
   Expression *function;
 } FunctionCallExpression;
 
@@ -281,7 +281,7 @@ Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
 Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser);
-Expression *ast_parse_call_function_arguments(Arena *arena, Parser *parser);
+Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser);
 
 Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
                                                Expression *expression);
@@ -466,7 +466,7 @@ String arena_join_identifier_array(Arena *arena, Identifier *identifiers,
   return join;
 }
 
-String arena_join_expression_array(Arena *arena, Expression *expressions,
+String arena_join_expression_array(Arena *arena, Expression **expressions,
                                    String separator) {
   String join = arena_new_empty_string_with_cap(arena, 512);
   for (I64 i = 0; i < len(expressions); i++) {
@@ -475,7 +475,7 @@ String arena_join_expression_array(Arena *arena, Expression *expressions,
     }
     // TODO after REFACTOR 2 here i wont need to ampersand cause it will be a
     // pointers array
-    String arg = stringify_expression(arena, NULL, &expressions[i]);
+    String arg = stringify_expression(arena, NULL, expressions[i]);
     string_concat(&join, arg);
   }
   return join;
@@ -852,9 +852,9 @@ Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
   return expression;
 }
 
-Expression *ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
+Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
 
-  Expression *arguments = arena_array_with_cap(arena, Expression, 16);
+  Expression **arguments = arena_array_with_cap(arena, Expression *, 16);
   Expression *tmp = NULL;
 
   ast_next_token(arena, parser);
@@ -862,14 +862,14 @@ Expression *ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
   // TODO after REFACTOR make this a ** cause this is kinda uwu owo lazyyyy
   // but maybe making this rn could make the initial refactor even worse!
   // making a memory bongus here btw
-  append(arguments, *tmp);
+  append(arguments, tmp);
 
   while (peek_token_is(parser, COMMA)) {
     ast_next_token(arena, parser);
     ast_next_token(arena, parser);
 
     tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-    append(arguments, *tmp);
+    append(arguments, tmp);
   }
 
   ast_expect_peek_token(arena, parser, R_PAREN);
@@ -1191,7 +1191,7 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
   case FUNCTION_CALL_EXP: {
     FunctionCallExpression function = expression->function_call;
     String function_name, joined_args;
-    Expression *arguments;
+    Expression **arguments;
 
     function_name = stringify_expression(arena, node, function.function);
     arguments = function.arguments;
