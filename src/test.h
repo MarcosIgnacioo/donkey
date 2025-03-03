@@ -7,10 +7,10 @@
 #include <stdio.h>
 void test_check_parser_errors(Parser *parser);
 int test_expressions();
-bool test_identifier(Expression expression, String value);
-bool test_integer_literal(Expression exp, I64 value);
-bool test_literal_expression(Expression exp, void *value);
-bool test_infix_expression(Expression expression, void *left,
+bool test_identifier(Expression *expression, String value);
+bool test_integer_literal(Expression *exp, I64 value);
+bool test_literal_expression(Expression *exp, void *value);
+bool test_infix_expression(Expression *expression, void *left,
                            const char *operator, void * right);
 int test_infix_expressions();
 int test_infix_expressions_harder();
@@ -18,9 +18,9 @@ int test_foo();
 int test_prefix_expressions();
 int test_expressions_integer_literals();
 int test_expressions_beta();
-bool test_let_statement(Node statement, String expected_name,
+bool test_let_statement(Node *statement, String expected_name,
                         void *expected_value);
-bool test_return_statement(Node statement, void *value);
+bool test_return_statement(Node *statement, void *value);
 
 #define NUMARGS(...) (sizeof((int[]){__VA_ARGS__}) / sizeof(int))
 #define end_program goto exit_program

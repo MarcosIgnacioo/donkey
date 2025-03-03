@@ -260,8 +260,8 @@ bool compare_parsing_fns_values(void *a, void *b) {
 void ast_next_token(Arena *arena, Parser *parser);
 
 void print_program(Arena *arena, Program *program);
-void print_statement(Arena *arena, Node node);
-String arena_stringify_statement(Arena *arena, Node node);
+void print_statement(Arena *arena, Node *node);
+String arena_stringify_statement(Arena *arena, Node *node);
 
 // parsing stuff
 Parser ast_new_parser(Arena *arena, Lexer *lexer);
@@ -303,7 +303,7 @@ void ast_parser_curr_error(Arena *arena, Parser *parser,
                            TokenType expected_type);
 prefix_parse_fn get_prefix_fn_from_hm(HashTable table, TokenType key);
 infix_parse_fn get_infix_fn_from_hm(HashTable table, TokenType key);
-String stringify_expression(Arena *arena, Node node, Expression *expression);
+String stringify_expression(Arena *arena, Node *node, Expression *expression);
 
 #define ast_token_literal(NODE) (((Token *)NODE)->literal)
 
@@ -475,7 +475,7 @@ String arena_join_expression_array(Arena *arena, Expression *expressions,
     }
     // TODO after REFACTOR 2 here i wont need to ampersand cause it will be a
     // pointers array
-    String arg = stringify_expression(arena, (Node){0}, &expressions[i]);
+    String arg = stringify_expression(arena, NULL, &expressions[i]);
     string_concat(&join, arg);
   }
   return join;
@@ -796,10 +796,17 @@ Expression *ast_parse_function_literal(Arena *arena, Parser *parser) {
   Token function_token = parser->curr_token;
   BlockStatement body;
   Identifier *parameters;
+  Identifier name = (Identifier){0};
   body = (BlockStatement){.statements = NULL};
   /*fn(x, y) { return x + y; };*/
 
-  ast_expect_peek_token(arena, parser, L_PAREN);
+  if (peek_token_is(parser, L_PAREN)) {
+    ast_next_token(arena, parser);
+  } else if (ast_expect_peek_token(arena, parser, IDENTIFIER)) {
+    name.token = parser->curr_token;
+    name.value = parser->curr_token.literal;
+    ast_expect_peek_token(arena, parser, L_PAREN);
+  }
 
   parameters = ast_parse_function_parameters(arena, parser);
 
@@ -814,14 +821,7 @@ Expression *ast_parse_function_literal(Arena *arena, Parser *parser) {
   */
   function_literal.token = function_token;
 
-  function_literal.name = (Identifier){
-      .token =
-          (Token){
-              .type = ILLEGAL,
-              .literal = string("nya"),
-          },
-      .value = string("nya"),
-  };
+  function_literal.name = name;
 
   function_literal.parameters = parameters;
   function_literal.body = body;
@@ -955,15 +955,14 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
   Token initial_token = parser->curr_token;
 
-  ExpressionStatement *expr_statement =
-      arena_alloc(arena, sizeof(ExpressionStatement));
+  ExpressionStatement expression_statement = (ExpressionStatement){0};
 
-  expr_statement->expression_value =
+  expression_statement.expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
 
   statement->token = initial_token;
   statement->type = EXPRESSION_STATEMENT;
-  statement->data = expr_statement;
+  statement->expression_statement = expression_statement;
 
   if (peek_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
@@ -1045,7 +1044,7 @@ String ast_init(Program *program) {
 void print_program(Arena *arena, Program *program) {
   printf(color(6) "[PROGRAM] \n" end_color);
   for (size_t i = 0; i < len(program->statements); i++) {
-    print_statement(arena, program->statements[i]);
+    print_statement(arena, &program->statements[i]);
   }
 }
 
@@ -1055,6 +1054,8 @@ void print_parser_errors(Parser parser) {
     for (size_t i = 0; i < array_len(BURRO); i++) {
       printf("%s\n", BURRO[i]);
     }
+  } else {
+    printf("There are not parsing errors\n");
   }
   for (size_t i = 0; i < len(parser.errors); i++) {
     Error err = parser.errors[i];
@@ -1066,7 +1067,7 @@ String stringify_statements(Arena *arena, Node *statements) {
   String result = arena_new_empty_string_with_cap(arena, 256);
   for (size_t i = 0; i < len(statements); i++) {
     arena_string_concat(arena, &result,
-                        arena_stringify_statement(arena, statements[i]));
+                        arena_stringify_statement(arena, &statements[i]));
     arena_string_concat(arena, &result, string(";"));
   }
   return result;
@@ -1079,7 +1080,7 @@ String stringify_program(Arena *arena, Program *program) {
   for (size_t i = 0; i < len(program->statements); i++) {
     arena_string_concat(
         arena, &result,
-        arena_stringify_statement(arena, program->statements[i]));
+        arena_stringify_statement(arena, &program->statements[i]));
   }
   return result;
 }
@@ -1091,9 +1092,12 @@ void print_expression() {
 // TODO: remove node from args
 //       remove .str from Strings when formatting, i can use the %S format
 //       specifier to print them, forgot i implemented it XD
-String stringify_expression(Arena *arena, Node node, Expression *expression) {
+String stringify_expression(Arena *arena, Node *node, Expression *expression) {
   (void)node;
   String exp_string = {0};
+  if (!expression) {
+    return string("(null)");
+  }
   switch (expression->type) {
   case IDENTIFIER_EXP: {
     Identifier parsed_identifier = expression->identifier;
@@ -1221,11 +1225,11 @@ String stringify_expression(Arena *arena, Node node, Expression *expression) {
 }
 
 // todo
-String arena_stringify_statement(Arena *arena, Node node) {
+String arena_stringify_statement(Arena *arena, Node *node) {
   String str_stmt;
-  switch (node.type) {
+  switch (node->type) {
   case LET_STATEMENT: {
-    LetStatement statement = *((LetStatement *)node.data);
+    LetStatement statement = node->let_statement;
     String expression_string =
         stringify_expression(arena, node, statement.expression_value);
     str_stmt = arena_string_fmt(     //
@@ -1240,7 +1244,7 @@ String arena_stringify_statement(Arena *arena, Node node) {
   case RETURN_STATEMENT:
     //
     {
-      ReturnStatement statement = *((ReturnStatement *)node.data);
+      ReturnStatement statement = node->return_statement;
       String expression_string =
           stringify_expression(arena, node, statement.expression_value);
       str_stmt = arena_string_fmt(arena, "%s %s",              //
@@ -1252,7 +1256,7 @@ String arena_stringify_statement(Arena *arena, Node node) {
   case EXPRESSION_STATEMENT:
     //
     {
-      ExpressionStatement statement = *((ExpressionStatement *)node.data);
+      ExpressionStatement statement = node->expression_statement;
       String expression_string =
           stringify_expression(arena, node, statement.expression_value);
       str_stmt = arena_string_fmt(arena, "%s",          //
@@ -1272,7 +1276,7 @@ String arena_stringify_statement(Arena *arena, Node node) {
   return str_stmt;
 }
 
-void print_statement(Arena *arena, Node node) {
+void print_statement(Arena *arena, Node *node) {
   String statement = arena_stringify_statement(arena, node);
   printf("%s\n", statement.str);
 }

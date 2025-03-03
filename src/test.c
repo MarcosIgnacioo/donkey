@@ -261,7 +261,7 @@ TEST(test_parser_let_statement) {
   for (int i = 0; i < array_len(expected_identifiers); i++) {
     Node curr_statement = program.statements[i];
     failed =
-        !test_let_statement(curr_statement, expected_identifiers[i], "foo");
+        !test_let_statement(&curr_statement, expected_identifiers[i], "foo");
   }
   print_program(&arena, &program);
   arena_free(&arena);
@@ -289,23 +289,23 @@ int test_expressions() {
     end_program;
   }
 
-  ExpressionStatement expr = *(ExpressionStatement *)program.statements[0].data;
-  Token identifier_exp = *(Token *)expr.expression_value.exp_bytes;
+  ExpressionStatement expr = program.statements[0].expression_statement;
+  Identifier identifier_exp = expr.expression_value->identifier;
 
-  if (expr.expression_value.type != IDENTIFIER_EXP) {
+  if (expr.expression_value->type != IDENTIFIER_EXP) {
     printf(LOG_ERROR "The expression type is not a IDENTIFIER_EXP\n");
     end_program;
   }
 
-  if (identifier_exp.type != IDENTIFIER) {
+  if (identifier_exp.token.type != IDENTIFIER) {
     printf(LOG_ERROR "The token type is not a IDENTIFIER\n");
     end_program;
   }
 
   test_check_parser_errors(&parser);
-  if (!string_equals(identifier_exp.literal, expected_identifiers[0])) {
+  if (!string_equals(identifier_exp.value, expected_identifiers[0])) {
     printfln(LOG_ERROR "The expression literal: `%S` is not: `%S`\n",
-             identifier_exp.literal, expected_identifiers[0]);
+             identifier_exp.value, expected_identifiers[0]);
     arena_free(&arena);
   }
   print_program(&arena, &program);
@@ -322,16 +322,16 @@ exit_program:
            len(program.statements));                                           \
   }
 #define test_type(THIS, TYPE)                                                  \
-  if ((THIS).type != TYPE) {                                                   \
+  if ((THIS)->type != TYPE) {                                                  \
     printf(LOG_ERROR "%s type is not a %s\n", #THIS, #TYPE);                   \
   }
 
-bool test_identifier(Expression expression, String value) {
-  if (expression.type != IDENTIFIER_EXP) {
+bool test_identifier(Expression *expression, String value) {
+  if (expression->type != IDENTIFIER_EXP) {
     print_error("Expression type is not IDENTIFIER\n");
     return false;
   }
-  Identifier exp_ident = cast(expression.exp_bytes, Identifier);
+  Identifier exp_ident = expression->identifier;
   if (!string_equals(exp_ident.value, value)) {
     print_error(
         "Identifiers values are not the same \n\tgot: %s\n\texpected: %s\n",
@@ -349,9 +349,9 @@ bool test_identifier(Expression expression, String value) {
 // TOFIX: STOP with these
 // with these what
 // ahhh the exit_program tag yeah kinda
-bool test_integer_literal(Expression exp, I64 value) {
+bool test_integer_literal(Expression *exp, I64 value) {
   test_type(exp, INTEGER_LIT_EXP);
-  IntLiteral int_exp = cast(exp.exp_bytes, IntLiteral);
+  IntLiteral int_exp = exp->integer_literal;
   if (int_exp.value != value) {
     printf(LOG_ERROR "%lld != %lld\n", int_exp.value, value);
     return false;
@@ -371,9 +371,9 @@ bool test_integer_literal(Expression exp, I64 value) {
   return true;
 }
 
-bool test_bool_literal(Expression exp, bool value) {
+bool test_bool_literal(Expression *exp, bool value) {
   test_type(exp, BOOLEAN_EXP);
-  Boolean bool_exp = cast(exp.exp_bytes, Boolean);
+  Boolean bool_exp = exp->boolean;
   if (bool_exp.value != value) {
     printf(LOG_ERROR "%d != %d\n", bool_exp.value, value);
     return false;
@@ -406,8 +406,8 @@ typedef struct {
 
 #define test_statement(STMNT, ...) _test_statement(STMNT, 1, __VA_ARGS__)
 
-bool _test_statement(Node statement, int n, ...) {
-  switch (statement.type) {
+bool _test_statement(Node *statement, int n, ...) {
+  switch (statement->type) {
   case LET_STATEMENT:
     //
     {
@@ -452,16 +452,18 @@ bool _test_statement(Node statement, int n, ...) {
       va_start(args, n);
       expected_value = va_arg(args, void *);
       va_end(args);
-      ExpressionStatement exp_stmnt = cast(statement.data, ExpressionStatement);
-      Expression exp = exp_stmnt.expression_value;
+      ExpressionStatement exp_stmnt = statement->expression_statement;
+      Expression *exp = exp_stmnt.expression_value;
       return test_literal_expression(exp, expected_value);
       break;
     }
   }
 }
 
-bool test_literal_expression(Expression exp, void *value) {
-  switch (exp.type) {
+// TOREFACTOR 3 : make this to use a union instead so yeah i dont have to use
+// void * which is annoying !!!!
+bool test_literal_expression(Expression *exp, void *value) {
+  switch (exp->type) {
   case IDENTIFIER_EXP:
     //
     {
@@ -491,12 +493,12 @@ bool test_literal_expression(Expression exp, void *value) {
   }
 }
 
-bool test_infix_expression(Expression expression, void *left,
+bool test_infix_expression(Expression *expression, void *left,
                            const char *operator, void * right) {
-  if (expression.type != INFIX_EXP) {
+  if (expression->type != INFIX_EXP) {
     print_error("Expression type is not INFIX_EXP\n");
   }
-  InfixExpression infix_exp = cast(expression.exp_bytes, InfixExpression);
+  InfixExpression infix_exp = expression->infix;
 
   bool left_test = test_literal_expression(infix_exp.left, left);
 
@@ -525,7 +527,7 @@ int test_infix_expressions() {
 
   infix_test expected_identifiers[] = {//
                                        (infix_test){
-                                           .input = string("a + b"),
+                                           .input = string("1 + 2"),
                                            .operator= string("+"),
                                            .left_value = 1,
                                            .right_value = 2,
@@ -539,12 +541,12 @@ int test_infix_expressions() {
     Program program = ast_parse_program(&arena, &parser);
     print_parser_errors(parser);
     test_n_of_statements(1);
-    test_type(program.statements[0], EXPRESSION_STATEMENT);
-    ExpressionStatement expr =
-        cast_statement(program.statements[0], ExpressionStatement);
+    if (program.statements[0].type != EXPRESSION_STATEMENT) {
+      printf("program.statements[0].type != EXPRESSION_STATEMENT\n");
+    }
+    ExpressionStatement expr = program.statements[0].expression_statement;
     test_type(expr.expression_value, INFIX_EXP);
-    InfixExpression prefix_exp =
-        cast(expr.expression_value.exp_bytes, InfixExpression);
+    InfixExpression prefix_exp = expr.expression_value->infix;
     if (!string_equals(prefix_exp.operator, test.operator)) {
       printf(LOG_ERROR "prefix_exp.operator %s != test.operator %s\n",
              prefix_exp.operator.str, test.operator.str);
@@ -569,10 +571,28 @@ int test_infix_expressions_harder() {
     String output;
   } infix_test;
 
+#define new_io(INPUT, OUTPUT)                                                  \
+  (infix_test){.input = string(INPUT), .output = string(OUTPUT)}
+
   infix_test expected_identifiers[] = {
-      {//
-       .input = string("let x = 1 * 2 * 3 * 4 * 5"),
-       .output = string("let x = ((((1 * 2) * 3) * 4) * 5)")},
+      new_io("fn popocacapipi_uwux  (y   ,z,   hhsadf, dfhgsfd  ,sdfghsdfhjg){ "
+             "let fool = x + y * z / (hhsadf-dfhgsasdf); return z; }",
+             "IGNORE"),
+      new_io("fn popocacapipi_uwu(x, y   ,z,   hhsadf, dfhgsfd  ,sdfghsdfhjg){ "
+             "let fool = x + y * z / (hhsadf-dfhgsasdf); return z; }",
+             "IGNORE"),
+      {
+          //
+          .input = string("fn popo(asdf){return x}"),
+          .output = string("IGNORE")
+          //
+      },
+      {
+          //
+          .input = string("let x = 1 * 2 * 3 * 4 * 5"),
+          .output = string("let x = ((((1 * 2) * 3) * 4) * 5)")
+          //
+      },
       //
       {.input = string("x * y / 2 + 3 * 8 - 123"),
        .output = string("((((x * y) / 2) + (3 * 8)) - 123)")},
@@ -644,12 +664,10 @@ int test_prefix_expressions() {
     Program program = ast_parse_program(&arena, &parser);
     print_parser_errors(parser);
     test_n_of_statements(1);
-    test_type(program.statements[0], EXPRESSION_STATEMENT);
-    ExpressionStatement expr =
-        cast_statement(program.statements[0], ExpressionStatement);
+    test_type(&program.statements[0], EXPRESSION_STATEMENT);
+    ExpressionStatement expr = program.statements[0].expression_statement;
     test_type(expr.expression_value, PREFIX_EXP);
-    PrefixExpression prefix_exp =
-        cast(expr.expression_value.exp_bytes, PrefixExpression);
+    PrefixExpression prefix_exp = expr.expression_value->prefix;
 
     if (!string_equals(prefix_exp.operator, test.operator)) {
       printf(LOG_ERROR "prefix_exp.operator %s != test.operator %s\n",
@@ -700,11 +718,11 @@ int test_expressions_integer_literals() {
   }
 
   ExpressionStatement expr_statement =
-      *(ExpressionStatement *)program.statements[0].data;
-  Expression exp = expr_statement.expression_value;
-  IntLiteral integer_exp = *(IntLiteral *)exp.exp_bytes;
+      program.statements[0].expression_statement;
+  Expression *exp = expr_statement.expression_value;
+  IntLiteral integer_exp = exp->integer_literal;
 
-  if (exp.type != INTEGER_LIT_EXP) {
+  if (exp->type != INTEGER_LIT_EXP) {
     printf(LOG_ERROR "The exp bytes type is not a INTEGER_LIT_EXP\n");
     end_program;
   }
@@ -754,23 +772,23 @@ exit_program:
   return failed;
 }
 
-bool test_let_statement(Node statement, String expected_name,
+bool test_let_statement(Node *statement, String expected_name,
                         void *expected_value) {
   // TODO: make this to give the token type in string, it now spits out what the
   // user typed `TokenType`
-  if (statement.type != LET_STATEMENT) {
+  if (statement->type != LET_STATEMENT) {
     printf(
         color(1) "ERROR:" end_color //
             color(4) "\n\tthe statement token is " color(
                 1) "NOT" end_color
                    " a " end_color color(6) "`let statement` " end_color color(
                        7) "\n\tgot: `%s`\n" end_color,
-        statement.token.literal.str);
+        statement->token.literal.str);
     return false;
   }
 
-  LetStatement let_stmt = *(LetStatement *)statement.data;
-  if (!string_equals(let_stmt.name.value, expected_name)) {
+  LetStatement let_statement = statement->let_statement;
+  if (!string_equals(let_statement.name.value, expected_name)) {
     printf(
         color(1) "ERROR:" end_color //
             color(
@@ -778,49 +796,51 @@ bool test_let_statement(Node statement, String expected_name,
                    "one" color(1) "\n\tARENT THE SAME" end_color
                        color(6) "\n\texpected : `%s`" end_color color(
                            7) "\tgot:`%s`\n" end_color,
-        expected_name.str, let_stmt.name.value.str);
+        expected_name.str, let_statement.name.value.str);
     return false;
   }
 
-  if (!string_equals(let_stmt.name.token.literal, expected_name)) {
+  if (!string_equals(let_statement.name.token.literal, expected_name)) {
     printf(color(1) "ERROR:" end_color //
                color(4) "\n\tthe *EXPECTED* let_stmt.name.token.literal name "
                         "and the *GOT* "
                         "one" color(1) "\n\tARENT THE SAME" end_color
                             color(6) "\n\texpected : `%s`" end_color color(
                                 7) "\tgot:`%s`\n" end_color,
-           expected_name.str, let_stmt.name.token.literal.str);
+           expected_name.str, let_statement.name.token.literal.str);
     return false;
   }
 
-  return test_literal_expression(let_stmt.expression_value, expected_value);
+  return test_literal_expression(let_statement.expression_value,
+                                 expected_value);
 }
 
-bool test_return_statement(Node statement, void *expected_value) {
-  ReturnStatement ret_stmt = *(ReturnStatement *)statement.data;
-  if (statement.type != RETURN_STATEMENT) {
+bool test_return_statement(Node *statement, void *expected_value) {
+  ReturnStatement return_statement = statement->return_statement;
+  if (statement->type != RETURN_STATEMENT) {
     printf(
         color(1) "ERROR:" end_color //
             color(4) "\n\tthe statement token is " color(
                 1) "NOT" end_color
                    " a " end_color color(6) "`let statement` " end_color color(
                        7) "\n\tgot: `%s`\n" end_color,
-        statement.token.literal.str);
+        statement->token.literal.str);
     return false;
   }
-  return test_literal_expression(ret_stmt.expression_value, expected_value);
+  return test_literal_expression(return_statement.expression_value,
+                                 expected_value);
 }
 
 bool generic_test_infix_expression( //
-    Expression expression,          //
+    Expression *expression,         //
     void *left,                     //
     const char *operator,           //
     void * right)                   //
 {
-  if (expression.type != INFIX_EXP) {
+  if (expression->type != INFIX_EXP) {
     print_error("Expression type is not INFIX_EXP\n");
   }
-  InfixExpression infix_exp = cast(expression.exp_bytes, InfixExpression);
+  InfixExpression infix_exp = expression->infix;
 
   bool left_test = test_literal_expression(infix_exp.left, left);
 
@@ -863,8 +883,7 @@ int test_booleans() {
     Parser parser = ast_new_parser(&arena, &lexer);
     Program program = ast_parse_program(&arena, &parser);
     print_parser_errors(parser);
-    ExpressionStatement exp_stmnt =
-        cast(program.statements[0].data, ExpressionStatement);
+    ExpressionStatement exp_stmnt = program.statements[0].expression_statement;
     failed = !generic_test_infix_expression(exp_stmnt.expression_value,
                                             test.left_value, test.operator.str,
                                             test.right_value);
@@ -879,5 +898,6 @@ int test_booleans() {
 
 int main() {
   test_infix_expressions_harder();
+  /*test_infix_expressions();*/
   return 0;
 }
