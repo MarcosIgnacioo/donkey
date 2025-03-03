@@ -1,5 +1,11 @@
 #include "./test.h"
 #include <stdarg.h>
+
+
+
+p░▓██████▓▓███████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓███░███▓███████████░
+░░░░░░░░░░░░░░░░░░▓░▒░░░░░░░░░░░░░░░░░░▒░█░░░░░░░░░░░░░░░░░
+
 TEST(test_tokens) {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
   String input = arena_new_string(&arena, "++(){},;");
