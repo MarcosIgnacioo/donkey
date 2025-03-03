@@ -1,16 +1,4 @@
-
-todo: saturday
-
-[ ] finish parsing chapter
-[ ] start odin book
-[ ] if i did both take a look at 4coders
-[ ] compiler.nvim please 
-[ ] better command mode
-[ ] flash.nvim
-[ ] the thing to go to definitions in other window withput bein anoyyin
-
-todo: sunday
-
+TODO monday tuesday
 [ ] how to make good tests in c
 [ ] which may imply to refactor a lot of stuff to 
     unions instead of void *

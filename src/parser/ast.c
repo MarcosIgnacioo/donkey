@@ -1014,7 +1014,7 @@ void print_parser_errors(Parser parser) {
   if (len(parser.errors)) {
     printf("Tal vez no funciona en burros\n");
     for (size_t i = 0; i < array_len(BURRO); i++) {
-      printf("%s\n", BURRO[i]);
+    printf("%s\n", BURRO[i]);
     }
   }
   for (size_t i = 0; i < len(parser.errors); i++) {
