@@ -552,7 +552,7 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   // reads the next token IF IT IS the expected one
   if (ast_expect_peek_token(arena, parser, IDENTIFIER)) {
     let_statement.name = (Identifier){.token = parser->curr_token,
-                                       .value = parser->curr_token.literal};
+                                      .value = parser->curr_token.literal};
   }
 
   // reads the next token IF IT IS the expected one
@@ -580,19 +580,20 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
 
 Node *ast_parse_return_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
-  ReturnStatement *return_statement =
-      arena_alloc(arena, sizeof(ReturnStatement));
+  ReturnStatement return_statement = (ReturnStatement){0};
 
-  statement->type = RETURN_STATEMENT;
-  statement->data = return_statement;
-
-  return_statement->token = parser->curr_token;
+  return_statement.token = parser->curr_token;
   ast_next_token(arena, parser);
-  return_statement->expression_value =
+
+  return_statement.expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
+
   if (peek_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
   }
+
+  statement->type = RETURN_STATEMENT;
+  statement->return_statement = return_statement;
   return statement;
 }
 
