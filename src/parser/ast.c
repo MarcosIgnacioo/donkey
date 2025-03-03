@@ -116,14 +116,9 @@ typedef struct {
   bool value;
 } Boolean;
 
-// statements
-typedef struct {
-  Token token;
-  NodeType type;
-  void *data;
-} Node;
-
 typedef struct Expression Expression;
+
+// statements
 
 typedef struct {
   Token token;
@@ -135,6 +130,21 @@ typedef struct {
   Token token;
   Expression *expression_value;
 } ReturnStatement;
+
+typedef struct {
+  Token token; // first token of the expression
+  Expression *expression_value;
+} ExpressionStatement;
+
+typedef struct {
+  Token token;
+  NodeType type;
+  union {
+    LetStatement let_statement;
+    ReturnStatement return_statement;
+    ExpressionStatement expression_statement;
+  };
+} Node;
 
 typedef struct {
   Node *statements;
@@ -187,15 +197,6 @@ struct Expression {
   };
 };
 // REFACTOR: incoming object oriented programming into c
-
-// TODO:
-// maybe i should just remove this to only
-// be the Expression struct because it confuses me
-// a LOT
-typedef struct {
-  Token token; // first token of the expression
-  Expression *expression_value;
-} ExpressionStatement;
 
 typedef struct {
   Node *statements;
@@ -534,14 +535,6 @@ void ast_parser_curr_error(Arena *arena, Parser *parser,
   append(parser->errors, error(error_msg));
 }
 
-Node *ast_parse_dummy_statement(Arena *arena, Parser *parser) {
-  Node *statement = arena_alloc(arena, sizeof(Node));
-  statement->token = parser->curr_token;
-  statement->type = NIL_STATEMENT;
-  statement->data = NULL;
-  return statement;
-}
-
 // TODO: FIND A WAY TO PUT THIS IN A MACRO
 /*
  Node *statement = arena_alloc(arena, sizeof(Node));
@@ -554,13 +547,11 @@ let_statement->token = parser->curr_token;
 // LET_STATEMENT
 Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
   Node *statement = arena_alloc(arena, sizeof(Node));
-  LetStatement *let_statement = arena_alloc(arena, sizeof(LetStatement));
-  statement->type = LET_STATEMENT;
-  statement->data = let_statement;
-  let_statement->token = parser->curr_token;
+  LetStatement let_statement = (LetStatement){0};
+  let_statement.token = parser->curr_token;
   // reads the next token IF IT IS the expected one
   if (ast_expect_peek_token(arena, parser, IDENTIFIER)) {
-    let_statement->name = (Identifier){.token = parser->curr_token,
+    let_statement.name = (Identifier){.token = parser->curr_token,
                                        .value = parser->curr_token.literal};
   }
 
@@ -575,12 +566,15 @@ Node *ast_parse_let_statement(Arena *arena, Parser *parser) {
 
   // TODO: PARSE EXPRESSIONS (this is just for a test, i gotta make this really
   // work later)
-  let_statement->expression_value =
+  let_statement.expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
 
   if (peek_token_is(parser, SEMICOLON)) {
     ast_next_token(arena, parser);
   }
+
+  statement->type = LET_STATEMENT;
+  statement->let_statement = let_statement;
   return statement;
 }
 
