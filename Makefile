@@ -8,7 +8,7 @@ DBG = gdb
 # fix this yay
 .PHONY: build-main
 build-main: build-dir
-	$(CC) -Wall -O0 -g -o build/test src/test.c 
+	$(CC) -Wall -O0 -g -o build/test src/testing/test.c 
 
 .PHONY: build-repl
 build-repl: build-dir
