@@ -77,11 +77,29 @@ const char *NODE_TYPES[] = {
 
 #define analysis_append(ANALYSIS)                                              \
   arena_string_concat(&arena, &(result.analysis), (ANALYSIS))
+#define IF_NOT_EQUALS(RESULT,EVALUATING, FIELD)                                                        \
+  do {                                                                         \
+    if (!EVALUATING.are_equals) {                                     \
+      RESULT.are_equals = false;                                               \
+      analysis_append(EVALUATING);                           \
+    }                                                                          \
+  } while (0)
 
 ResultEquals let_statement_equals(LetStatement *a, LetStatement *b);
 ResultEquals return_statement_equals(ReturnStatement *a, ReturnStatement *b);
-ResultEquals expression_equals(Expression*a,
-                                         Expression*b);
+ResultEquals expression_equals(Expression *a, Expression *b);
 ResultEquals node_equals(Node *a, Node *b);
+ResultEquals identifier_equals(Identifier, Identifier);
+ResultEquals integer_literal_equals(IntLiteral, IntLiteral);
+ResultEquals boolean_equals(Boolean, Boolean);
+ResultEquals prefix_equals(PrefixExpression, PrefixExpression);
+ResultEquals infix_equals(InfixExpression, InfixExpression);
+ResultEquals if_expression_equals(IfExpression, IfExpression);
+ResultEquals function_literal_equals(FunctionLiteral, FunctionLiteral);
+ResultEquals function_call_equals(FunctionCallExpression,
+                                  FunctionCallExpression);
+ResultEquals block_statement_equals(BlockStatement, BlockStatement);
+ResultEquals test_token_equals(Token, Token);
+
 Node *new_node(char *input);
 void test_print_expression(Expression *expression);
