@@ -58,7 +58,7 @@ typedef enum {
 typedef struct {
   bool are_equals;
   String analysis;
-} ExpressionEquals;
+} ResultEquals;
 
 const char *NODE_TYPES[] = {
     "NIL_STATEMENT",
@@ -78,44 +78,10 @@ const char *NODE_TYPES[] = {
 #define analysis_append(ANALYSIS)                                              \
   arena_string_concat(&arena, &(result.analysis), (ANALYSIS))
 
-ExpressionEquals expression_equals(Expression *a, Expression *b) {
-  ExpressionEquals result = {.are_equals = true,
-                             .analysis =
-                                 arena_new_empty_string_with_cap(&arena, 512)};
-
-  // this would be an amazing use of a temp arena btw maybe in a future refactor
-  String error = {0};
-  if (a->type != b->type) {
-    result.are_equals = false;
-    error = arena_string_fmt(&arena,
-                             "(a->type:%s) != (b->type:%s)", //
-                             NODE_TYPES[a->type],            //
-                             NODE_TYPES[b->type]             //
-    );
-    analysis_append(error);
-  }
-  return result;
-}
-
-Expression *new_expression(char *input) {
-  Lexer lexer = lexer_new_lexer(string(input));
-  Parser parser = ast_new_parser(&arena, &lexer);
-  Expression *expression = ast_parse_expression(&arena, &parser, LOWEST_PREC);
-  return expression;
-}
-
-void test_print_expression(Expression *expression) {
-  String expression_string = stringify_expression(&arena, NULL, expression);
-  printf("%s\n", expression_string.str);
-}
-
-void test() {
-  Expression *a = new_expression("1 + 2");
-  Expression *b = new_expression("++2");
-  ExpressionEquals res = expression_equals(a,b);
-  if (res.are_equals) {
-    printf(LOG_SUCCESS"everything stays\n");
-  } else {
-    printf(LOG_ERROR"%s\n", res.analysis.str);
-  }
-}
+ResultEquals let_statement_equals(LetStatement *a, LetStatement *b);
+ResultEquals return_statement_equals(ReturnStatement *a, ReturnStatement *b);
+ResultEquals expression_equals(Expression*a,
+                                         Expression*b);
+ResultEquals node_equals(Node *a, Node *b);
+Node *new_node(char *input);
+void test_print_expression(Expression *expression);
