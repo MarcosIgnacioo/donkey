@@ -1,5 +1,6 @@
 #ifndef _REPL_H
 #define _REPL_H
+#include "./object/object.h"
 #include "./parser/ast.c"
 #include "arena.c"
 #include "arena_strings.c"
@@ -27,16 +28,18 @@ void donkey_repl(Arena *arena) {
   Parser parser = {0};
   Program program = {0};
   String program_str;
+  Object evaluation;
   do {
     input = get_line_stdin(arena);
     lexi = lexer_new_lexer(input);
     parser = ast_new_parser(arena, &lexi);
     program = ast_parse_program(arena, &parser);
-    program_str = stringify_program(arena, &program);
+    evaluation = eval_evaluate_program(arena, program);
+    program_str = object_to_string(arena, evaluation);
     if (len(parser.errors)) {
       print_parser_errors(parser);
     } else if (program_str.len) {
-      printfln(color(4) "DONKEY >>" end_color "%S", program_str);
+      printfln(color(4) "DONKEY >> " end_color "%S", program_str);
     }
     /*arena_reset(arena);*/
   } while (input.len);

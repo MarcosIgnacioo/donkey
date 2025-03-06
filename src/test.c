@@ -897,7 +897,7 @@ int test_booleans() {
 }
 
 int main() {
-  printf("%s\n" ObjectToString[INTEGER].str);
+  /*repl();*/
   /*test_infix_expressions_harder();*/
   /*test_infix_expressions();*/
   return 0;
