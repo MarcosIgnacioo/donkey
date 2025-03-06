@@ -1,3 +1,6 @@
+#ifndef _TEST_H
+#define _TEST_H
+#include "../object/object.h"
 #include "../array.c"
 #include "../lexer.c"
 #include "../parser/ast.c"
@@ -77,11 +80,11 @@ const char *NODE_TYPES[] = {
 
 #define analysis_append(ANALYSIS)                                              \
   arena_string_concat(&arena, &(result.analysis), (ANALYSIS))
-#define IF_NOT_EQUALS(RESULT,EVALUATING, FIELD)                                                        \
+#define IF_NOT_EQUALS(RESULT, EVALUATING, FIELD)                               \
   do {                                                                         \
-    if (!EVALUATING.are_equals) {                                     \
+    if (!EVALUATING.are_equals) {                                              \
       RESULT.are_equals = false;                                               \
-      analysis_append(EVALUATING);                           \
+      analysis_append(EVALUATING);                                             \
     }                                                                          \
   } while (0)
 
@@ -101,5 +104,8 @@ ResultEquals function_call_equals(FunctionCallExpression,
 ResultEquals block_statement_equals(BlockStatement, BlockStatement);
 ResultEquals test_token_equals(Token, Token);
 
+bool test_object_integer(Object, I64);
+
 Node *new_node(char *input);
 void test_print_expression(Expression *expression);
+#endif // !_TEST_H

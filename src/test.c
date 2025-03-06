@@ -1,5 +1,4 @@
 #include "./test.h"
-#include "./object/object.h"
 #include <stdarg.h>
 
 TEST(test_tokens) {

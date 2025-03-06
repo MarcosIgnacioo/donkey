@@ -1,5 +1,6 @@
 #include "test.h"
 #include "../object/object.h"
+#include "test_evaluations.c"
 #include <stdio.h>
 
 ResultEquals let_statement_equals(LetStatement *a, LetStatement *b) {
@@ -601,7 +602,7 @@ Node *new_node(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Node *node = ast_parse_statement(&arena, &parser);
-  print_parser_errors(parser);
+  /*print_parser_errors(parser);*/
   return node;
 }
 
@@ -625,9 +626,12 @@ void test() {
   }
 }
 
-int main() {
-#define X(name) printf("%s\n", ObjectToString[name]);
+void print_object_types() {
+#define X(name) printf("%s\n", _ObjectToString[name]);
   OBJECT_TYPES
 #undef X
+}
+int main() {
+  test_integer_evaluations();
   return 0;
 }
