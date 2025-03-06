@@ -1,8 +1,8 @@
 #ifndef _TEST_H
 #define _TEST_H
-#include "../object/object.h"
 #include "../array.c"
 #include "../lexer.c"
+#include "../object/object.h"
 #include "../parser/ast.c"
 #include "../repl.c"
 #include "../token.c"
@@ -105,6 +105,7 @@ ResultEquals block_statement_equals(BlockStatement, BlockStatement);
 ResultEquals test_token_equals(Token, Token);
 
 bool test_object_integer(Object, I64);
+bool test_object_bool(Object, bool);
 
 Node *new_node(char *input);
 void test_print_expression(Expression *expression);

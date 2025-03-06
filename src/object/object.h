@@ -28,8 +28,6 @@ typedef struct {
 
 typedef String ObjectDonkey;
 
-ObjectDonkey donkey_panic =
-    (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
 
 typedef struct {
   ObjectType type;
@@ -39,6 +37,7 @@ typedef struct {
     ObjectDonkey donkey; // this is null btw
   };
 } Object;
+
 
 Object eval_evaluate_program(Arena *arena, Program program);
 Object eval_evaluate_node(Arena *, Node *);

@@ -1,3 +1,34 @@
+```c 
+typedef struct {
+  char *input;
+  XXXXX expected;
+} TestResultXXXXX;
+
+void test_XXXXX_evaluations() {
+  TestResultXXXXX test_cases[] = {
+      (TestResultXXXXX){.input = "", .expected = },
+      (TestResultXXXXX){.input = "", .expected = },
+  };
+  Object test_obj;
+  XXXXX pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestResultXXXXX test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (!test_object_XXXXX(test_obj, test.expected)) {
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S", object_to_string(&arena, test_obj));
+
+  // TODO: Find a way to make the part of the function name not be hardcoded and
+  //       just in a macro cause its better!! i hope
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_XXXXX_evaluations() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_XXXXX_evaluations() \n");
+  }
+}
+```
 TODO monday tuesday
 
 [x] which may imply to refactor a lot of stuff to 

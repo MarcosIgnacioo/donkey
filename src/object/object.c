@@ -1,5 +1,15 @@
 #include "object.h"
 
+ObjectDonkey donkey_panic =
+    (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
+Object DONKEY_PANIC_OBJECT =
+    (Object){.type = DONKEY_OBJECT, .donkey = (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8}};
+Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
+Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
+// TODO: check why src/testing/../object/object.c:10:72: error: initializer element is not a compile-time constant 10 | Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value = popo};
+/* int popo = 123;*/
+/* Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value = popo};*/
+
 Object eval_evaluate_expression(Arena *arena,
                                 ExpressionStatement expression_statement) {
 
@@ -9,9 +19,24 @@ Object eval_evaluate_expression(Arena *arena,
 
   switch (expression->type) {
   case INTEGER_LIT_EXP:
-    evaluated_object.type = INTEGER_OBJECT;
-    evaluated_object.integer.value = expression->integer_literal.value;
-    break;
+    //
+    {
+
+      evaluated_object.type = INTEGER_OBJECT;
+      evaluated_object.integer.value = expression->integer_literal.value;
+      break;
+    }
+  case BOOLEAN_EXP:
+    //
+    {
+      Boolean boolean = expression->boolean;
+      if (boolean.value == true) {
+        evaluated_object = TRUE_OBJECT;
+      } else {
+        evaluated_object = FALSE_OBJECT;
+      }
+      break;
+    }
   default:
     break;
   }
@@ -56,7 +81,7 @@ String object_to_string(Arena *arena, Object object) {
   case BOOLEAN_OBJECT:
     //
     {
-      return arena_string_fmt(arena, "%s", object.boolean.value);
+      return arena_string_fmt(arena, "%b", object.boolean.value);
       break;
     }
 
