@@ -10,8 +10,11 @@ typedef struct {
 
 void test_integer_evaluations() {
   TestResultInteger test_cases[] = {
+      (TestResultInteger){.input = "-8", .expected = -8},
+      (TestResultInteger){.input = "-5", .expected = -5},
       (TestResultInteger){.input = "8", .expected = 8},
       (TestResultInteger){.input = "5", .expected = 5},
+      (TestResultInteger){.input = "-2", .expected = -2},
   };
   Object test_obj;
   bool pass = true;
@@ -40,8 +43,12 @@ typedef struct {
 
 void test_bool_evaluations() {
   TestResultBool test_cases[] = {
-      (TestResultBool){.input = "false", .expected = false},
       (TestResultBool){.input = "true", .expected = true},
+      (TestResultBool){.input = "false", .expected = false},
+      (TestResultBool){.input = "!false", .expected = true},
+      (TestResultBool){.input = "!true", .expected = false},
+      (TestResultBool){.input = "!!false", .expected = false},
+      (TestResultBool){.input = "!!true", .expected = true},
   };
   Object test_obj;
   bool pass = true;

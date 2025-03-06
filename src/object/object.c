@@ -3,17 +3,21 @@
 ObjectDonkey donkey_panic =
     (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
 Object DONKEY_PANIC_OBJECT =
-    (Object){.type = DONKEY_OBJECT, .donkey = (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8}};
+    (Object){.type = DONKEY_OBJECT,
+             .donkey = (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8}};
 Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
 Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
-// TODO: check why src/testing/../object/object.c:10:72: error: initializer element is not a compile-time constant 10 | Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value = popo};
+String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
+String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
+// TODO: check why src/testing/../object/object.c:10:72: error: initializer
+// element is not a compile-time constant 10 | Object TRUE_OBJECT =
+// (Object){.type = INTEGER_OBJECT, .integer.value = popo};
 /* int popo = 123;*/
-/* Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value = popo};*/
+/* Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value =
+ * popo};*/
 
-Object eval_evaluate_expression(Arena *arena,
-                                ExpressionStatement expression_statement) {
+Object eval_evaluate_expression(Arena *arena, Expression *expression) {
 
-  Expression *expression = expression_statement.expression_value;
   Object evaluated_object =
       (Object){.type = DONKEY_OBJECT, .donkey = donkey_panic};
 
@@ -37,10 +41,30 @@ Object eval_evaluate_expression(Arena *arena,
       }
       break;
     }
+  case PREFIX_EXP:
+    //
+    {
+      PrefixExpression prefix = expression->prefix;
+      Object right = eval_evaluate_expression(arena, prefix.right);
+      evaluated_object = eval_prefix_expression(prefix.operator, right);
+      break;
+    }
   default:
     break;
   }
   return evaluated_object;
+}
+
+Object eval_prefix_expression(String operator, Object right) {
+  if (right.type != INTEGER_OBJECT && right.type != BOOLEAN_OBJECT) {
+    return DONKEY_PANIC_OBJECT;
+  }
+  if (string_equals(operator, MINUS_STRING)) {
+    right.integer.value = -right.integer.value;
+  } else if (string_equals(operator, BANG_STRING)) {
+    right.boolean.value = !right.boolean.value;
+  }
+  return right;
 }
 
 Object eval_evaluate_node(Arena *arena, Node *node) {
@@ -49,8 +73,8 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
       (Object){.type = DONKEY_OBJECT, .donkey = donkey_panic};
   switch (node->type) {
   case EXPRESSION_STATEMENT:
-    evaluated_object =
-        eval_evaluate_expression(arena, node->expression_statement);
+    evaluated_object = eval_evaluate_expression(
+        arena, node->expression_statement.expression_value);
     break;
   default:
     printf("todo\n");

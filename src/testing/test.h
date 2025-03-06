@@ -18,7 +18,7 @@
 
 Arena arena = {0};
 
-bool _expression_equals(Expression *exp_a, Expression *exp_b) {
+bool _expression_equalsowo(Expression *exp_a, Expression *exp_b) {
   bool are_equal = true;
   assert(exp_a->type == INFIX_EXP);
   assert(exp_b->type == INFIX_EXP);
@@ -30,7 +30,7 @@ bool _expression_equals(Expression *exp_a, Expression *exp_b) {
     print_error("Tokens are not equal");
   }
 
-  if (!_expression_equals(infix_a.left, infix_b.left)) {
+  if (!_expression_equalsowo(infix_a.left, infix_b.left)) {
     are_equal = false;
     print_error("Lefts are not equal");
   }

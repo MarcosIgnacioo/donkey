@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 #define OBJECT_TYPES                                                           \
-  X(INTEGER_OBJECT)                                                                   \
-  X(BOOLEAN_OBJECT)                                                                   \
+  X(INTEGER_OBJECT)                                                            \
+  X(BOOLEAN_OBJECT)                                                            \
   X(DONKEY_OBJECT)
 
 #define X(name) name,
@@ -28,7 +28,6 @@ typedef struct {
 
 typedef String ObjectDonkey;
 
-
 typedef struct {
   ObjectType type;
   union {
@@ -38,10 +37,10 @@ typedef struct {
   };
 } Object;
 
-
-Object eval_evaluate_program(Arena *arena, Program program);
+Object eval_evaluate_program(Arena *, Program);
+Object eval_prefix_expression(String, Object);
 Object eval_evaluate_node(Arena *, Node *);
-Object eval_evaluate_expression(Arena *, ExpressionStatement);
+Object eval_evaluate_expression(Arena *, Expression *);
 Object test_eval(char *);
 String object_to_string(Arena *, Object object);
 
