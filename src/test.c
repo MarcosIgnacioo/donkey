@@ -1,4 +1,5 @@
 #include "./test.h"
+#include "./object/object.h"
 #include <stdarg.h>
 
 TEST(test_tokens) {
@@ -897,7 +898,8 @@ int test_booleans() {
 }
 
 int main() {
-  test_infix_expressions_harder();
+  printf("%s\n" ObjectToString[INTEGER].str);
+  /*test_infix_expressions_harder();*/
   /*test_infix_expressions();*/
   return 0;
 }

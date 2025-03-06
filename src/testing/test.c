@@ -1,4 +1,5 @@
 #include "test.h"
+#include "../object/object.h"
 #include <stdio.h>
 
 ResultEquals let_statement_equals(LetStatement *a, LetStatement *b) {
@@ -108,15 +109,18 @@ ResultEquals identifier_equals(Identifier a, Identifier b) {
                              arena_new_empty_string_with_cap(&arena, 512)};
   ResultEquals tmp_result;
   String error = {0};
+  // create context please
   tmp_result = test_token_equals(a.token, b.token);
 
   if (!tmp_result.are_equals) {
     result.are_equals = false;
+    analysis_append(string(LOG_ERROR "Tokens are not the same\n"));
     analysis_append(tmp_result.analysis);
   }
 
   if (!string_equals(a.value, b.value)) {
     result.are_equals = false;
+    analysis_append(string(LOG_ERROR "Identifier names are not the same\n"));
     error = arena_string_fmt(&arena,
                              LOG_ERROR "%S != %S\n", //
                              a.value,                //
@@ -139,11 +143,14 @@ ResultEquals integer_literal_equals(IntLiteral a, IntLiteral b) {
 
   if (!tmp_result.are_equals) {
     result.are_equals = false;
+    analysis_append(string(LOG_ERROR "Tokens are not the same\n"));
     analysis_append(tmp_result.analysis);
   }
 
   if (a.value != b.value) {
     result.are_equals = false;
+    analysis_append(
+        string(LOG_ERROR "Integer literal values are not the same\n"));
     error = arena_string_fmt(&arena,
                              LOG_ERROR "%d != %d\n", //
                              a.value,                //
@@ -164,11 +171,13 @@ ResultEquals boolean_equals(Boolean a, Boolean b) {
   tmp_result = test_token_equals(a.token, b.token);
 
   if (!tmp_result.are_equals) {
+    analysis_append(string(LOG_ERROR "Tokens are not the same\n"));
     result.are_equals = false;
     analysis_append(tmp_result.analysis);
   }
 
   if (a.value != b.value) {
+    analysis_append(string(LOG_ERROR "Boolean values are not the same\n"));
     result.are_equals = false;
     error = arena_string_fmt(&arena,
                              LOG_ERROR "%b != %b\n", //
@@ -189,16 +198,13 @@ ResultEquals prefix_equals(PrefixExpression a, PrefixExpression b) {
   tmp_result = test_token_equals(a.token, b.token);
 
   if (!tmp_result.are_equals) {
-    result.are_equals = false;
-    analysis_append(tmp_result.analysis);
-  }
-
-  if (!tmp_result.are_equals) {
+    analysis_append(string(LOG_ERROR "Prefix: Tokens are not the same\n"));
     result.are_equals = false;
     analysis_append(tmp_result.analysis);
   }
 
   if (!string_equals(a.operator, b.operator)) {
+    analysis_append(string(LOG_ERROR "Pefix: Operators are not the same\n"));
     result.are_equals = false;
     error = arena_string_fmt(&arena,
                              LOG_ERROR "%S != %S\n", //
@@ -212,6 +218,8 @@ ResultEquals prefix_equals(PrefixExpression a, PrefixExpression b) {
   ResultEquals are_right_exps_equal = expression_equals(a.right, b.right);
 
   if (!are_right_exps_equal.are_equals) {
+    analysis_append(
+        string(LOG_ERROR "Pefix: Right operations are not the same\n"));
     result.are_equals = false;
     analysis_append(are_right_exps_equal.analysis);
   }
@@ -227,11 +235,13 @@ ResultEquals infix_equals(InfixExpression a, InfixExpression b) {
   tmp_result = test_token_equals(a.token, b.token);
 
   if (!tmp_result.are_equals) {
+    analysis_append(string(LOG_ERROR "Infix: tokens are not the same\n"));
     result.are_equals = false;
     analysis_append(tmp_result.analysis);
   }
 
   if (!string_equals(a.operator, b.operator)) {
+    analysis_append(string(LOG_ERROR "Infix: operators are not the same\n"));
     result.are_equals = false;
     error = arena_string_fmt(&arena,
                              LOG_ERROR "%S != %S\n", //
@@ -245,6 +255,8 @@ ResultEquals infix_equals(InfixExpression a, InfixExpression b) {
   ResultEquals are_right_exps_equal = expression_equals(a.right, b.right);
 
   if (!are_right_exps_equal.are_equals) {
+    analysis_append(
+        string(LOG_ERROR "Infix: right expressions are not the same\n"));
     result.are_equals = false;
     analysis_append(are_right_exps_equal.analysis);
   }
@@ -252,6 +264,8 @@ ResultEquals infix_equals(InfixExpression a, InfixExpression b) {
   ResultEquals are_left_exps_equal = expression_equals(a.left, b.left);
 
   if (!are_left_exps_equal.are_equals) {
+    analysis_append(
+        string(LOG_ERROR "Infix: left expressions are not the same\n"));
     result.are_equals = false;
     analysis_append(are_left_exps_equal.analysis);
   }
@@ -268,6 +282,8 @@ ResultEquals if_expression_equals(IfExpression a, IfExpression b) {
   tmp_result = test_token_equals(a.token, b.token);
 
   if (!tmp_result.are_equals) {
+    analysis_append(
+        string(LOG_ERROR "if_expression_equals: tokens are not the same\n"));
     result.are_equals = false;
     analysis_append(tmp_result.analysis);
   }
@@ -276,6 +292,8 @@ ResultEquals if_expression_equals(IfExpression a, IfExpression b) {
       expression_equals(a.condition, b.condition);
 
   if (!are_condition_exps_equal.are_equals) {
+    analysis_append(string(
+        LOG_ERROR "if_expression_equals: conditions are not the same\n"));
     result.are_equals = false;
     analysis_append(are_condition_exps_equal.analysis);
   }
@@ -286,6 +304,8 @@ ResultEquals if_expression_equals(IfExpression a, IfExpression b) {
       block_statement_equals(a.consequence, b.consequence);
 
   if (!are_consequences_equal.are_equals) {
+    analysis_append(string(
+        LOG_ERROR "if_expression_equals: consequences are not the same\n"));
     result.are_equals = false;
     analysis_append(are_consequences_equal.analysis);
   }
@@ -294,6 +314,8 @@ ResultEquals if_expression_equals(IfExpression a, IfExpression b) {
       block_statement_equals(a.alternative, b.alternative);
 
   if (!are_alternatives_equal.are_equals) {
+    analysis_append(string(
+        LOG_ERROR "if_expression_equals: alternatives are not the same\n"));
     result.are_equals = false;
     analysis_append(are_alternatives_equal.analysis);
   }
@@ -311,6 +333,9 @@ ResultEquals block_statement_equals(BlockStatement a, BlockStatement b) {
   String error = {0};
 
   if (len(a.statements) != len(b.statements)) {
+    analysis_append(string(LOG_ERROR
+                           "block_statement_equals: blocks statements lengths "
+                           "are not the same\n"));
     result.are_equals = false;
     error = arena_string_fmt(&arena, LOG_ERROR
                              "They dont have the same amount of statements\n");
@@ -323,6 +348,8 @@ ResultEquals block_statement_equals(BlockStatement a, BlockStatement b) {
     Node *statement_b = &b.statements[i];
     tmp_result = node_equals(statement_a, statement_b);
     if (!tmp_result.are_equals) {
+      analysis_append(string(
+          LOG_ERROR "block_statement_equals: statements are not the same\n"));
       result.are_equals = false;
       analysis_append(tmp_result.analysis);
     }
@@ -528,7 +555,7 @@ ResultEquals expression_equals(Expression *a, Expression *b) {
     log = LOG_ERROR;
   }
   final_msg = arena_string_fmt(&arena,
-                               "\n%s%S %s %S\n",      //
+                               "\n%s%S %s %S\n",    //
                                log,                 //
                                a_expression_string, //
                                symbol,              //
@@ -574,6 +601,7 @@ Node *new_node(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Node *node = ast_parse_statement(&arena, &parser);
+  print_parser_errors(parser);
   return node;
 }
 
@@ -598,6 +626,8 @@ void test() {
 }
 
 int main() {
-  test();
+#define X(name) printf("%s\n", ObjectToString[name]);
+  OBJECT_TYPES
+#undef X
   return 0;
 }

@@ -8,6 +8,9 @@ typedef unsigned long U64;
 typedef long long I64;
 typedef char byte;
 
+// TODO: when stringifying it we should be sure to set the length to the right value!
+#define string_compile_time(STRING)                                                         \
+  (String) { .str = STRING, .len = -1, .cap = str_len(STRING) }
 #define string(STRING)                                                         \
   (String) { .str = STRING, .len = str_len(STRING), .cap = str_len(STRING) }
 #define slice(STRING, BEGIN, END)                                              \
