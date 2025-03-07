@@ -146,6 +146,7 @@ typedef struct {
   };
 } Node;
 
+// TOREFACTOR: put block statements as a part of a union node and well refactor girlllllllllllll
 typedef struct {
   Node *statements;
 } BlockStatement;

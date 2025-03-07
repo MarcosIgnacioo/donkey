@@ -1,6 +1,20 @@
 donkey the compiler for and by lesbians
 
-i love gay peopleee
+why does this return false when putting a 0 in the if
+```go
+func isTruthy(obj object.Object) bool {
+    switch obj {
+    case NULL:
+      return false
+    case TRUE:
+      return true
+    case FALSE:
+      return false
+    default:
+      return true
+    }
+  }
+```
 
 ```c 
 typedef struct {

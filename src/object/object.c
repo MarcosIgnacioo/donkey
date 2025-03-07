@@ -26,7 +26,6 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
   case INTEGER_LIT_EXP:
     //
     {
-
       evaluated_object.type = INTEGER_OBJECT;
       evaluated_object.integer.value = expression->integer_literal.value;
       break;
@@ -141,13 +140,34 @@ Object eval_infix_expression(Object left, String operator, Object right) {
   return DONKEY_PANIC_OBJECT;
 }
 
-Object eval_if_expression(Arena *arena, Object object_condition, BlockStatement consequence,
-                          BlockStatement alternative) {
-  if (object_condition.type != BOOLEAN_OBJECT) {
-    return DONKEY_PANIC_OBJECT;
+bool is_truthy(Object condition) {
+
+  if (condition.type == NIL_OBJECT) {
+    return false;
   }
-  bool condition = object_condition.boolean.value;
-  if (condition) {
+
+  if (condition.type == BOOLEAN_OBJECT) {
+    bool bool_value = condition.boolean.value;
+    return bool_value;
+  }
+
+  // lets see if 0 evaluates to false which i dont think so
+  if (condition.type == INTEGER_OBJECT) {
+    I64 value = condition.integer.value;
+    if (value != 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+Object eval_if_expression(Arena *arena, Object condition,
+                          BlockStatement consequence,
+                          BlockStatement alternative) {
+  if (is_truthy(condition)) {
     return eval_evaluate_block_statements(arena, consequence);
   } else {
     return eval_evaluate_block_statements(arena, alternative);
