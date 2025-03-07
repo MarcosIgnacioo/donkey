@@ -106,7 +106,7 @@ void test_if_expressions_evaluations() {
       (TestResultIfExpression){.input = "if (1 > 2) { 10 }", .not= nil},
       (TestResultIfExpression){.input = "if (1 > 2) { 10 } else { 20 }",
                                .value = 20},
-      (TestResultIfExpression){.input = "if (1 < 2) { 11 } else { 20 }",
+      (TestResultIfExpression){.input = "if (1 < 2) { 10 } else { 20 }",
                                .value = 10},
   };
   Object test_obj;
