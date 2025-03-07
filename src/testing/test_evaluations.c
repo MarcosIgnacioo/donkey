@@ -89,6 +89,51 @@ void test_bool_evaluations() {
   }
 }
 
+typedef struct {
+  char *input;
+  union {
+    int value;
+    void * not;
+  };
+} TestResultIfExpression;
+
+void test_if_expressions_evaluations() {
+  TestResultIfExpression test_cases[] = {
+      (TestResultIfExpression){.input = "if (true) { 10 }", .value = 10},
+      (TestResultIfExpression){.input = "if (false) { 10 }", .not= nil},
+      (TestResultIfExpression){.input = "if (1) { 10 }", .value = 10},
+      (TestResultIfExpression){.input = "if (1 < 2) { 10 }", .value = 10},
+      (TestResultIfExpression){.input = "if (1 > 2) { 10 }", .not= nil},
+      (TestResultIfExpression){.input = "if (1 > 2) { 10 } else { 20 }",
+                               .value = 20},
+      (TestResultIfExpression){.input = "if (1 < 2) { 10 } else { 20 }",
+                               .value = 10},
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestResultIfExpression test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (test_obj.type == INTEGER_OBJECT) {
+      if (!test_object_integer(test_obj, test.value)) {
+        pass = false;
+      }
+    } else if (!test_object_null(test_obj)) {
+      pass = false;
+    } else {
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_if_expressions_evaluations() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_if_expressions_evaluations() \n");
+  }
+}
+
 Object test_eval(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
@@ -126,5 +171,13 @@ bool test_object_bool(Object testing, bool expected) {
     return false;
   }
 
+  return true;
+}
+
+bool test_object_null(Object testing) {
+  if (testing.type != NIL_OBJECT) {
+    printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.type));
+    return false;
+  }
   return true;
 }

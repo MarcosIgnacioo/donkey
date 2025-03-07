@@ -637,5 +637,6 @@ int main() {
   test_integer_evaluations();
   printf("\n");
   test_bool_evaluations();
+  test_if_expressions_evaluations();
   return 0;
 }

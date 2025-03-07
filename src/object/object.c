@@ -3,8 +3,8 @@
 ObjectDonkey donkey_panic =
     (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
 Object DONKEY_PANIC_OBJECT =
-    (Object){.type = DONKEY_OBJECT,
-             .donkey = (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8}};
+    (Object){.type = NIL_OBJECT,
+             .donkey = (ObjectDonkey){.str = "(null)", .len = 8, .cap = 8}};
 Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
 Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
 String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
@@ -18,8 +18,7 @@ String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
 
 Object eval_evaluate_expression(Arena *arena, Expression *expression) {
 
-  Object evaluated_object =
-      (Object){.type = DONKEY_OBJECT, .donkey = donkey_panic};
+  Object evaluated_object = DONKEY_PANIC_OBJECT;
 
   switch (expression->type) {
   case INTEGER_LIT_EXP:
@@ -312,9 +311,7 @@ Object eval_bool_infix_expression(Object left, String operator, Object right) {
 }
 
 Object eval_evaluate_node(Arena *arena, Node *node) {
-
-  Object evaluated_object =
-      (Object){.type = DONKEY_OBJECT, .donkey = donkey_panic};
+  Object evaluated_object = DONKEY_PANIC_OBJECT;
   switch (node->type) {
   case EXPRESSION_STATEMENT:
     evaluated_object = eval_evaluate_expression(
@@ -328,8 +325,7 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
 }
 
 Object eval_evaluate_program(Arena *arena, Program program) {
-  Object evaluated_object =
-      (Object){.type = DONKEY_OBJECT, .donkey = donkey_panic};
+  Object evaluated_object = DONKEY_PANIC_OBJECT;
   for (I64 i = 0; i < len(program.statements); i++) {
     Node *node = &program.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
