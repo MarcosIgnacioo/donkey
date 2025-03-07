@@ -87,84 +87,228 @@ String LESS_EQUAL_STRING = (String){.str = "<=", .len = 2, .cap = 2};
 String EQUAL_STRING = (String){.str = "==", .len = 2, .cap = 2};
 String NOT_EQUAL_STRING = (String){.str = "!=", .len = 2, .cap = 2};
 
+I64 donkey_operation(I64 a, I64 b) {
+  (void)a;
+  (void)b;
+  printf("panic at the operation!\n");
+  return -327;
+}
+
+I64 addition(I64 a, I64 b) { return a + b; }
+
+I64 substraction(I64 a, I64 b) { return a - b; }
+
+I64 multiplication(I64 a, I64 b) { return a * b; }
+
+I64 division(I64 a, I64 b) { return a / b; }
+
+I64 greater_than(I64 a, I64 b) { return a > b; }
+
+I64 less_than(I64 a, I64 b) { return a < b; }
+
+I64 equal_to(I64 a, I64 b) { return a == b; }
+
+I64 not_equal_to(I64 a, I64 b) { return a != b; }
+
+I64 less_equal_than(I64 a, I64 b) { return a <= b; }
+
+I64 greater_equal_than(I64 a, I64 b) { return a >= b; }
+
 // this madness is because we lose the operator as a token :sob:
 // and because in c we dont have switch for something else than ints!
 // it could be possible to create a custom switch tho so thats left to my
 // spare time
 Object eval_infix_expression(Object left, String operator, Object right) {
-  if (right.type != INTEGER_OBJECT && left.type != INTEGER_OBJECT) {
-    return DONKEY_PANIC_OBJECT;
+  if (right.type == INTEGER_OBJECT && right.type == INTEGER_OBJECT) {
+    return eval_integer_infix_expression(left, operator, right);
   }
-  ObjectInteger left_int = left.integer;
-  ObjectInteger right_int = right.integer;
-  Object product_object = DONKEY_PANIC_OBJECT;
+  if (right.type == BOOLEAN_OBJECT && right.type == BOOLEAN_OBJECT) {
+    return eval_bool_infix_expression(left, operator, right);
+  }
+  return DONKEY_PANIC_OBJECT;
+}
+
+Object c_boolean_to_donkey_boolean(bool boolean) {
+  Object product_object = {
+      .type = BOOLEAN_OBJECT,
+      .boolean.value = boolean,
+  };
+  return product_object;
+}
+
+bool is_arithmetic(String operator) {
+  if (operator.len<1) {
+    printf("bro how did u even manage to do this\n");
+    exit(1);
+  }
+  char op = operator.str[0];
+  return op == '+' || op == '-' || op == '*' || op == '/';
+}
+
+Object eval_integer_infix_expression(Object left, String operator,
+                                     Object right) {
+  Object product_object = (Object){0};
+  OperationFunction operation = NULL;
+  ObjectType result_type = NIL_OBJECT;
+  /* breaks with
+   * 500 / 2 != 250*/
+
   I64 result = 0;
 
-  if (string_equals(operator, ADD_STRING)) {
-    result = left_int.value + right_int.value;
-    product_object.type = INTEGER_OBJECT;
-    product_object.integer.value = result;
-    return product_object;
-  } //
-  else if (string_equals(operator, MINUS_STRING)) {
-    result = left_int.value - right_int.value;
-    product_object.type = INTEGER_OBJECT;
-    product_object.integer.value = result;
-    return product_object;
-  } //
-  else if (string_equals(operator, DIVISION_STRING)) {
-    result = left_int.value / right_int.value;
-    product_object.type = INTEGER_OBJECT;
-    product_object.integer.value = result;
-    return product_object;
-  } //
-  else if (string_equals(operator, MULTIPLY_STRING)) {
-    result = left_int.value * right_int.value;
-    product_object.type = INTEGER_OBJECT;
-    product_object.integer.value = result;
-    return product_object;
+  switch (*operator.str) {
+  case '+':
+    //
+    {
+      // assert that
+      operation = &addition;
+      result_type = INTEGER_OBJECT;
+      break;
+    }
+  case '-':
+    //
+    {
+      operation = &substraction;
+      result_type = INTEGER_OBJECT;
+      break;
+    }
+  case '*':
+    //
+    {
+      operation = &multiplication;
+      result_type = INTEGER_OBJECT;
+      break;
+    }
+  case '/':
+    //
+    {
+      operation = &division;
+      result_type = INTEGER_OBJECT;
+      break;
+    }
+  case '>':
+    //
+    {
+      result_type = BOOLEAN_OBJECT;
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &greater_equal_than;
+      } else {
+        operation = &greater_than;
+      }
+      break;
+    }
+  case '<':
+    //
+    {
+      result_type = BOOLEAN_OBJECT;
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &less_equal_than;
+      } else {
+        operation = &less_than;
+      }
+      break;
+    }
+  case '!':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &not_equal_to;
+        result_type = BOOLEAN_OBJECT;
+        break;
+      } else {
+        printfln("falling to default with this operator : %S \n", operator);
+      }
+    }
+  case '=':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &equal_to;
+        result_type = BOOLEAN_OBJECT;
+        break;
+      } else {
+        printfln("falling to default with this operator : %S \n", operator);
+      }
+    }
+  default:
+    //
+    {
+      return DONKEY_PANIC_OBJECT;
+    }
   }
 
-  if (string_equals(operator, GREATER_THAN_STRING)) {
-    result = left_int.value > right_int.value;
-    product_object.boolean.value = (bool)result;
-    product_object.type = BOOLEAN_OBJECT;
-    return product_object;
-  } //
-  else if (string_equals(operator, LESS_THAN_STRING)) {
-    result = left_int.value < right_int.value;
-    product_object.boolean.value = (bool)result;
-    product_object.type = BOOLEAN_OBJECT;
-    return product_object;
-  } //
-  else if (string_equals(operator, GREATER_EQUAL_STRING)) {
-    result = left_int.value >= right_int.value;
-    product_object.boolean.value = (bool)result;
-    product_object.type = BOOLEAN_OBJECT;
-    return product_object;
-  } //
-  else if (string_equals(operator, LESS_EQUAL_STRING)) {
-    result = left_int.value <= right_int.value;
-    product_object.boolean.value = (bool)result;
-    product_object.type = BOOLEAN_OBJECT;
-    return product_object;
-  } //
-  else if (string_equals(operator, EQUAL_STRING)) {
-    result = left_int.value == right_int.value;
-    product_object.boolean.value = (bool)result;
-    product_object.type = BOOLEAN_OBJECT;
-    return product_object;
-  } //
-  else if (string_equals(operator, NOT_EQUAL_STRING)) {
-    result = left_int.value != right_int.value;
-    product_object.boolean.value = (bool)result;
-    product_object.type = BOOLEAN_OBJECT;
-    return product_object;
-  } //
-  // this one fails (5 > 5 == true) != false
-  else {
-    return DONKEY_PANIC_OBJECT;
+  result = operation(left.integer.value, right.integer.value);
+
+  if (result_type == INTEGER_OBJECT) {
+    product_object.integer.value = result;
+  } else {
+    product_object.boolean.value = result;
   }
+
+  product_object.type = result_type;
+
+  return product_object;
+}
+
+Object eval_bool_infix_expression(Object left, String operator, Object right) {
+  Object product_object = (Object){0};
+  I64 result = 0;
+  OperationFunction operation;
+
+  switch (*operator.str) {
+  case '>':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &greater_equal_than;
+      } else {
+        operation = &greater_than;
+      }
+      break;
+    }
+  case '<':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &less_equal_than;
+      } else {
+        operation = &less_than;
+      }
+      break;
+    }
+  case '!':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &not_equal_to;
+        break;
+      }
+    }
+    // this is just because i wanna make it "branchless" so i
+    // use the fallthrought property in this two when conditions
+    // are not met at this point because it will just return to DONKEY_OBJECT
+    // in the default branch
+    // probably really bad for making something good? because
+    // it is less understandable
+  case '=':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        operation = &equal_to;
+        break;
+      }
+    }
+  default:
+    //
+    {
+      return DONKEY_PANIC_OBJECT;
+    }
+  }
+
+  result = operation(left.boolean.value, right.boolean.value);
+  product_object.boolean.value = result;
+  product_object.type = BOOLEAN_OBJECT;
+
+  return product_object;
 }
 
 Object eval_evaluate_node(Arena *arena, Node *node) {
@@ -209,7 +353,7 @@ String object_to_string(Arena *arena, Object object) {
       break;
     }
 
-  case DONKEY_OBJECT:
+  default:
     //
     {
       return arena_string_fmt(arena, "%S", object.donkey);

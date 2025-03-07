@@ -4,10 +4,12 @@
 #include "../parser/ast.c"
 #include <stdbool.h>
 
+// put donkey at first idk if this breaks stuff i dont think so
 #define OBJECT_TYPES                                                           \
+  X(NIL_OBJECT)                                                                       \
+  X(DONKEY_OBJECT)                                                             \
   X(INTEGER_OBJECT)                                                            \
-  X(BOOLEAN_OBJECT)                                                            \
-  X(DONKEY_OBJECT)
+  X(BOOLEAN_OBJECT)
 
 #define X(name) name,
 typedef enum { OBJECT_TYPES } ObjectType;
@@ -37,12 +39,22 @@ typedef struct {
   };
 } Object;
 
+typedef I64 (*OperationFunction)(I64, I64);
+
+typedef struct {
+  ObjectType type;
+  OperationFunction operation;
+} OperationFnAndType;
+
 Object eval_evaluate_program(Arena *, Program);
 Object eval_prefix_expression(String, Object);
 Object eval_infix_expression(Object, String, Object);
 Object eval_evaluate_node(Arena *, Node *);
 Object eval_evaluate_expression(Arena *, Expression *);
-Object test_eval(char *);
+Object eval_integer_infix_expression(Object left, String operator,
+                                     Object right);
+Object eval_bool_infix_expression(Object left, String operator, Object right);
 String object_to_string(Arena *, Object object);
+Object test_eval(char *);
 
 #endif // !_OBJECT_H
