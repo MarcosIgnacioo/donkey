@@ -633,10 +633,10 @@ void print_object_types() {
 }
 
 int main() {
-  /*donkey_repl(&arena);*/
-  test_integer_evaluations();
+  donkey_repl(&arena);
+  /*test_integer_evaluations();*/
   printf("\n");
-  test_bool_evaluations();
-  test_if_expressions_evaluations();
+  /*test_bool_evaluations();*/
+  /*test_if_expressions_evaluations();*/
   return 0;
 }

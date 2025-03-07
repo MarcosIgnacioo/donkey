@@ -1,4 +1,6 @@
 #include "object.h"
+// remove the arena passing all around is annoyinnn and also i dont do any
+// allocations i think
 
 ObjectDonkey donkey_panic =
     (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
@@ -55,6 +57,18 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
       Object left = eval_evaluate_expression(arena, infix.left);
       Object right = eval_evaluate_expression(arena, infix.right);
       evaluated_object = eval_infix_expression(left, infix.operator, right);
+      break;
+    }
+  case IF_EXP:
+    //
+    {
+      IfExpression if_expression = expression->if_expression;
+      Object condition =
+          eval_evaluate_expression(arena, if_expression.condition);
+      BlockStatement consequence = if_expression.consequence;
+      BlockStatement alternative = if_expression.alternative;
+      evaluated_object =
+          eval_if_expression(arena, condition, consequence, alternative);
       break;
     }
   default:
@@ -125,6 +139,19 @@ Object eval_infix_expression(Object left, String operator, Object right) {
     return eval_bool_infix_expression(left, operator, right);
   }
   return DONKEY_PANIC_OBJECT;
+}
+
+Object eval_if_expression(Arena *arena, Object object_condition, BlockStatement consequence,
+                          BlockStatement alternative) {
+  if (object_condition.type != BOOLEAN_OBJECT) {
+    return DONKEY_PANIC_OBJECT;
+  }
+  bool condition = object_condition.boolean.value;
+  if (condition) {
+    return eval_evaluate_block_statements(arena, consequence);
+  } else {
+    return eval_evaluate_block_statements(arena, alternative);
+  }
 }
 
 Object c_boolean_to_donkey_boolean(bool boolean) {
@@ -328,6 +355,21 @@ Object eval_evaluate_program(Arena *arena, Program program) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   for (I64 i = 0; i < len(program.statements); i++) {
     Node *node = &program.statements[i];
+    evaluated_object = eval_evaluate_node(arena, node);
+  }
+  return evaluated_object;
+}
+
+Object eval_evaluate_block_statements(Arena *arena,
+                                      BlockStatement block_statement) {
+  if (!block_statement.statements) {
+    return DONKEY_PANIC_OBJECT;
+  }
+
+  Object evaluated_object = (Object){0};
+
+  for (I64 i = 0; i < len(block_statement.statements); i++) {
+    Node *node = &block_statement.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
   }
   return evaluated_object;

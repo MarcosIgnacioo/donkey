@@ -1,3 +1,7 @@
+donkey the compiler for and by lesbians
+
+i love gay peopleee
+
 ```c 
 typedef struct {
   char *input;

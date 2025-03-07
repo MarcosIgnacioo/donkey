@@ -106,7 +106,7 @@ void test_if_expressions_evaluations() {
       (TestResultIfExpression){.input = "if (1 > 2) { 10 }", .not= nil},
       (TestResultIfExpression){.input = "if (1 > 2) { 10 } else { 20 }",
                                .value = 20},
-      (TestResultIfExpression){.input = "if (1 < 2) { 10 } else { 20 }",
+      (TestResultIfExpression){.input = "if (1 < 2) { 11 } else { 20 }",
                                .value = 10},
   };
   Object test_obj;
@@ -120,17 +120,17 @@ void test_if_expressions_evaluations() {
       }
     } else if (!test_object_null(test_obj)) {
       pass = false;
-    } else {
-      pass = false;
     }
   }
   printfln("Last expression evaluated to: %S",
            object_to_string(&arena, test_obj));
 
   if (pass) {
-    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_if_expressions_evaluations() \n");
+    printf(LOG_SUCCESS
+           "ALL TEST PASSED AT: test_if_expressions_evaluations() \n");
   } else {
-    printf(LOG_ERROR "TEST FAILED       AT: test_if_expressions_evaluations() \n");
+    printf(LOG_ERROR
+           "TEST FAILED       AT: test_if_expressions_evaluations() \n");
   }
 }
 
@@ -142,6 +142,10 @@ Object test_eval(char *input) {
   return evaluated;
 }
 
+// TODO : Implement here the number of the test with passin the i value 
+// in the loop
+// optional find a way to show the whole test stateemnt maybe just passing the 
+// string or something like that girl
 bool test_object_integer(Object testing, I64 expected) {
   if (testing.type != INTEGER_OBJECT) {
     printf("\n%s!=INTEGER_OBJECT\n", ObjectToString(testing.type));

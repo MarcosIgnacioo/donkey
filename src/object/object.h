@@ -6,7 +6,7 @@
 
 // put donkey at first idk if this breaks stuff i dont think so
 #define OBJECT_TYPES                                                           \
-  X(NIL_OBJECT)                                                                       \
+  X(NIL_OBJECT)                                                                \
   X(DONKEY_OBJECT)                                                             \
   X(INTEGER_OBJECT)                                                            \
   X(BOOLEAN_OBJECT)
@@ -47,14 +47,15 @@ typedef struct {
 } OperationFnAndType;
 
 Object eval_evaluate_program(Arena *, Program);
+Object eval_evaluate_block_statements(Arena *, BlockStatement);
 Object eval_prefix_expression(String, Object);
 Object eval_infix_expression(Object, String, Object);
 Object eval_evaluate_node(Arena *, Node *);
 Object eval_evaluate_expression(Arena *, Expression *);
-Object eval_integer_infix_expression(Object left, String operator,
-                                     Object right);
-Object eval_bool_infix_expression(Object left, String operator, Object right);
-String object_to_string(Arena *, Object object);
+Object eval_integer_infix_expression(Object, String, Object);
+Object eval_bool_infix_expression(Object, String, Object);
+Object eval_if_expression(Arena *, Object, BlockStatement, BlockStatement);
+String object_to_string(Arena *, Object);
 Object test_eval(char *);
 
 #endif // !_OBJECT_H
