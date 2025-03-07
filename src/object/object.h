@@ -39,6 +39,7 @@ typedef struct {
 
 Object eval_evaluate_program(Arena *, Program);
 Object eval_prefix_expression(String, Object);
+Object eval_infix_expression(Object, String, Object);
 Object eval_evaluate_node(Arena *, Node *);
 Object eval_evaluate_expression(Arena *, Expression *);
 Object test_eval(char *);

@@ -631,6 +631,7 @@ void print_object_types() {
   OBJECT_TYPES
 #undef X
 }
+
 int main() {
   donkey_repl(&arena);
   /*test_integer_evaluations();*/

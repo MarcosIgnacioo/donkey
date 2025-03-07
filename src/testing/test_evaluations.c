@@ -15,6 +15,22 @@ void test_integer_evaluations() {
       (TestResultInteger){.input = "8", .expected = 8},
       (TestResultInteger){.input = "5", .expected = 5},
       (TestResultInteger){.input = "-2", .expected = -2},
+      (TestResultInteger){.input = "5", .expected = 5},
+      (TestResultInteger){.input = "10", .expected = 10},
+      (TestResultInteger){.input = "-5", .expected = -5},
+      (TestResultInteger){.input = "-10", .expected = -10},
+      (TestResultInteger){.input = "5 + 5 + 5 + 5 - 10", .expected = 10},
+      (TestResultInteger){.input = "2 * 2 * 2 * 2 * 2", .expected = 32},
+      (TestResultInteger){.input = "-50 + 100 + -50", .expected = 0},
+      (TestResultInteger){.input = "5 * 2 + 10", .expected = 20},
+      (TestResultInteger){.input = "5 + 2 * 10", .expected = 25},
+      (TestResultInteger){.input = "20 + 2 * -10", .expected = 0},
+      (TestResultInteger){.input = "50 / 2 * 2 + 10", .expected = 60},
+      (TestResultInteger){.input = "2 * (5 + 10)", .expected = 30},
+      (TestResultInteger){.input = "3 * 3 * 3 + 10", .expected = 37},
+      (TestResultInteger){.input = "3 * (3 * 3) + 10", .expected = 37},
+      (TestResultInteger){.input = "(5 + 10 * 2 + 15 / 3) * 2 + -10",
+                          .expected = 50},
   };
   Object test_obj;
   bool pass = true;
@@ -25,7 +41,8 @@ void test_integer_evaluations() {
       pass = false;
     }
   }
-  printfln("Last expression evaluated to: %S", object_to_string(&arena, test_obj));
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
 
   // TODO: Find a way to make the part of the function name not be hardcoded and
   //       just in a macro cause its better!! i hope
@@ -43,6 +60,7 @@ typedef struct {
 
 void test_bool_evaluations() {
   TestResultBool test_cases[] = {
+      (TestResultBool){.input = "(5 > 5 == true)", .expected = false},
       (TestResultBool){.input = "true", .expected = true},
       (TestResultBool){.input = "false", .expected = false},
       (TestResultBool){.input = "!false", .expected = true},
@@ -59,7 +77,8 @@ void test_bool_evaluations() {
       pass = false;
     }
   }
-  printfln("Last expression evaluated to: %S", object_to_string(&arena, test_obj));
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
 
   // TODO: Find a way to make the part of the function name not be hardcoded and
   //       just in a macro cause its better!! i hope
