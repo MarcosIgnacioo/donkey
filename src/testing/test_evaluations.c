@@ -99,8 +99,13 @@ typedef struct {
 
 void test_if_expressions_evaluations() {
   TestResultIfExpression test_cases[] = {
+      (TestResultIfExpression){.input = "return 10;", .value = 10},
+      (TestResultIfExpression){.input = "return 10; 9;", .value = 10},
+      (TestResultIfExpression){.input = "return 2 * 5; 9;", .value = 10},
+      (TestResultIfExpression){.input = "9; return 2 * 5; 9;", .value = 10},
       (TestResultIfExpression){
-          .input = "if (10 > 1) { if (10 > 1) { return 10; } return 1; }",
+          .input =
+              "if (10 > 1) { if (10 > 1) { 123; return 10; 456;} return 1; }",
           .value = 10},
       (TestResultIfExpression){.input = "if (true) { 10 }", .value = 10},
       (TestResultIfExpression){.input = "if (false) { 10 }", .not= nil},
@@ -117,7 +122,7 @@ void test_if_expressions_evaluations() {
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestResultIfExpression test = test_cases[i];
     test_obj = test_eval(test.input);
-    if (test_obj.type == INTEGER_OBJECT) {
+    if (test_obj.object_type == INTEGER_OBJECT) {
       if (!test_object_integer(test_obj, test.value)) {
         pass = false;
       }
@@ -137,6 +142,51 @@ void test_if_expressions_evaluations() {
   }
 }
 
+typedef struct {
+  char *input;
+  union {
+    int value;
+    void * not;
+  };
+} TestResultReturnExpressions;
+
+void test_return_expressions_evaluations() {
+  TestResultReturnExpressions test_cases[] = {
+      (TestResultReturnExpressions){.input = "return 10;", .value = 10},
+      (TestResultReturnExpressions){.input = "return 10; 9;", .value = 10},
+      (TestResultReturnExpressions){.input = "return 2 * 5; 9;", .value = 10},
+      (TestResultReturnExpressions){.input = "9; return 2 * 5; 9;",
+                                    .value = 10},
+      (TestResultReturnExpressions){
+          .input =
+              "if (10 > 1) { if (10 > 1) { 123; return 10; 456;} return 1; }",
+          .value = 10},
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestResultReturnExpressions test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (test_obj.object_type == INTEGER_OBJECT) {
+      if (!test_object_integer(test_obj, test.value)) {
+        pass = false;
+      }
+    } else if (!test_object_null(test_obj)) {
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  if (pass) {
+    printf(LOG_SUCCESS
+           "ALL TEST PASSED AT: test_return_expressions_evaluations() \n");
+  } else {
+    printf(LOG_ERROR
+           "TEST FAILED       AT: test_return_expressions_evaluations() \n");
+  }
+}
+
 Object test_eval(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
@@ -150,8 +200,8 @@ Object test_eval(char *input) {
 // optional find a way to show the whole test stateemnt maybe just passing the
 // string or something like that girl
 bool test_object_integer(Object testing, I64 expected) {
-  if (testing.type != INTEGER_OBJECT) {
-    printf("\n%s!=INTEGER_OBJECT\n", ObjectToString(testing.type));
+  if (testing.object_type != INTEGER_OBJECT) {
+    printf("\n%s!=INTEGER_OBJECT\n", ObjectToString(testing.object_type));
     return false;
   }
 
@@ -166,8 +216,8 @@ bool test_object_integer(Object testing, I64 expected) {
 }
 
 bool test_object_bool(Object testing, bool expected) {
-  if (testing.type != BOOLEAN_OBJECT) {
-    printf("\n%s!=BOOLEAN_OBJECT\n", ObjectToString(testing.type));
+  if (testing.object_type != BOOLEAN_OBJECT) {
+    printf("\n%s!=BOOLEAN_OBJECT\n", ObjectToString(testing.object_type));
     return false;
   }
 
@@ -182,8 +232,8 @@ bool test_object_bool(Object testing, bool expected) {
 }
 
 bool test_object_null(Object testing) {
-  if (testing.type != NIL_OBJECT) {
-    printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.type));
+  if (testing.object_type != NIL_OBJECT) {
+    printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.object_type));
     return false;
   }
   return true;

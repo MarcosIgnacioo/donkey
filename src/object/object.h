@@ -35,9 +35,12 @@ typedef struct {
 } ObjectReturn;
 
 typedef String ObjectDonkey;
+typedef enum { EVAL_NIL, EVAL_OBJECT, EVAL_RETURN } EvalType;
 
 struct Object{
-  ObjectType type;
+  EvalType eval_type;
+  ObjectType object_type;
+  /*ObjectType type;*/
   union {
     ObjectInteger integer;
     ObjectBoolean boolean;
@@ -52,18 +55,12 @@ typedef struct {
   OperationFunction operation;
 } OperationFnAndType;
 
-typedef enum { EVAL_NIL, EVAL_OBJECT, EVAL_RETURN } EvalType;
-
-typedef struct {
-  EvalType type;
-  Object object;
-} EvalObject;
 
 Object eval_evaluate_program(Arena *, Program);
 Object eval_evaluate_block_statements(Arena *, BlockStatement);
 Object eval_prefix_expression(String, Object);
 Object eval_infix_expression(Object, String, Object);
-EvalObject eval_evaluate_node(Arena *, Node *);
+Object eval_evaluate_node(Arena *, Node *);
 Object eval_evaluate_expression(Arena *, Expression *);
 Object eval_integer_infix_expression(Object, String, Object);
 Object eval_bool_infix_expression(Object, String, Object);

@@ -5,10 +5,11 @@
 ObjectDonkey donkey_panic =
     (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
 Object DONKEY_PANIC_OBJECT =
-    (Object){.type = NIL_OBJECT,
+    (Object){.eval_type = EVAL_OBJECT,
+             .object_type = NIL_OBJECT,
              .donkey = (ObjectDonkey){.str = "(null)", .len = 8, .cap = 8}};
-Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
-Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
+Object TRUE_OBJECT = (Object){.object_type = BOOLEAN_OBJECT, .boolean.value = true};
+Object FALSE_OBJECT = (Object){.object_type = BOOLEAN_OBJECT, .boolean.value = false};
 String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
 String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
 // TODO: check why src/testing/../object/object.c:10:72: error: initializer
@@ -26,7 +27,7 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
   case INTEGER_LIT_EXP:
     //
     {
-      evaluated_object.type = INTEGER_OBJECT;
+      evaluated_object.object_type = INTEGER_OBJECT;
       evaluated_object.integer.value = expression->integer_literal.value;
       break;
     }
@@ -77,7 +78,7 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
 }
 
 Object eval_prefix_expression(String operator, Object right) {
-  if (right.type != INTEGER_OBJECT && right.type != BOOLEAN_OBJECT) {
+  if (right.object_type != INTEGER_OBJECT && right.object_type != BOOLEAN_OBJECT) {
     return DONKEY_PANIC_OBJECT;
   }
   if (string_equals(operator, MINUS_STRING)) {
@@ -131,10 +132,10 @@ I64 greater_equal_than(I64 a, I64 b) { return a >= b; }
 // it could be possible to create a custom switch tho so thats left to my
 // spare time
 Object eval_infix_expression(Object left, String operator, Object right) {
-  if (right.type == INTEGER_OBJECT && right.type == INTEGER_OBJECT) {
+  if (right.object_type == INTEGER_OBJECT && right.object_type == INTEGER_OBJECT) {
     return eval_integer_infix_expression(left, operator, right);
   }
-  if (right.type == BOOLEAN_OBJECT && right.type == BOOLEAN_OBJECT) {
+  if (right.object_type == BOOLEAN_OBJECT && right.object_type == BOOLEAN_OBJECT) {
     return eval_bool_infix_expression(left, operator, right);
   }
   return DONKEY_PANIC_OBJECT;
@@ -142,17 +143,17 @@ Object eval_infix_expression(Object left, String operator, Object right) {
 
 bool is_truthy(Object condition) {
 
-  if (condition.type == NIL_OBJECT) {
+  if (condition.object_type == NIL_OBJECT) {
     return false;
   }
 
-  if (condition.type == BOOLEAN_OBJECT) {
+  if (condition.object_type == BOOLEAN_OBJECT) {
     bool bool_value = condition.boolean.value;
     return bool_value;
   }
 
   // lets see if 0 evaluates to false which i dont think so
-  if (condition.type == INTEGER_OBJECT) {
+  if (condition.object_type == INTEGER_OBJECT) {
     I64 value = condition.integer.value;
     if (value != 0) {
       return true;
@@ -176,7 +177,7 @@ Object eval_if_expression(Arena *arena, Object condition,
 
 Object c_boolean_to_donkey_boolean(bool boolean) {
   Object product_object = {
-      .type = BOOLEAN_OBJECT,
+      .object_type = BOOLEAN_OBJECT,
       .boolean.value = boolean,
   };
   return product_object;
@@ -290,7 +291,7 @@ Object eval_integer_infix_expression(Object left, String operator,
     product_object.boolean.value = result;
   }
 
-  product_object.type = result_type;
+  product_object.object_type = result_type;
 
   return product_object;
 }
@@ -352,47 +353,46 @@ Object eval_bool_infix_expression(Object left, String operator, Object right) {
 
   result = operation(left.boolean.value, right.boolean.value);
   product_object.boolean.value = result;
-  product_object.type = BOOLEAN_OBJECT;
+  product_object.object_type = BOOLEAN_OBJECT;
 
   return product_object;
 }
 
-
-
-EvalObject eval_evaluate_node(Arena *arena, Node *node) {
+// yeah basically refactor this whole thing
+// and watch in the debugger what happens to 10
+// which is probably just that when evaluating the content
+// of a nested if the 10 turns itself into from EVAL_RETURN to INTEGER_OBJECT
+Object eval_evaluate_node(Arena *arena, Node *node) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
-  EvalType type = EVAL_NIL;
   switch (node->type) {
   case EXPRESSION_STATEMENT:
-    type = EVAL_OBJECT;
     evaluated_object = eval_evaluate_expression(
         arena, node->expression_statement.expression_value);
     break;
   case RETURN_STATEMENT:
-    type = EVAL_RETURN;
     evaluated_object = eval_evaluate_expression(
         arena, node->return_statement.expression_value);
+    EvalType eval_type = EVAL_RETURN;
+    evaluated_object.eval_type = eval_type;
     break;
   default:
     printf("todo\n");
     break;
   }
-  EvalObject evaluation =
-      (EvalObject){.type = type, .object = evaluated_object};
-  return evaluation;
+  return evaluated_object;
 }
 
 Object eval_evaluate_program(Arena *arena, Program program) {
-  EvalObject evaluated_object = (EvalObject) {.object = DONKEY_PANIC_OBJECT};
+  Object evaluated_object = DONKEY_PANIC_OBJECT;
   for (I64 i = 0; i < len(program.statements); i++) {
     Node *node = &program.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
-    if (evaluated_object.type == EVAL_RETURN) {
+    if (evaluated_object.eval_type == EVAL_RETURN) {
       break;
     }
   }
 
-  return evaluated_object.object;
+  return evaluated_object;
 }
 
 Object eval_evaluate_block_statements(Arena *arena,
@@ -401,21 +401,21 @@ Object eval_evaluate_block_statements(Arena *arena,
     return DONKEY_PANIC_OBJECT;
   }
 
-  EvalObject evaluated_object = (EvalObject) {.object = DONKEY_PANIC_OBJECT};
+  Object evaluated_object = DONKEY_PANIC_OBJECT;
 
   for (I64 i = 0; i < len(block_statement.statements); i++) {
     Node *node = &block_statement.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
-    if (evaluated_object.type == EVAL_RETURN) {
+    if (evaluated_object.eval_type == EVAL_RETURN) {
       break;
     }
   }
 
-  return evaluated_object.object;
+  return evaluated_object;
 }
 
 String object_to_string(Arena *arena, Object object) {
-  switch (object.type) {
+  switch (object.object_type) {
   case INTEGER_OBJECT:
     //
     {
