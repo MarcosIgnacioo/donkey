@@ -99,6 +99,9 @@ typedef struct {
 
 void test_if_expressions_evaluations() {
   TestResultIfExpression test_cases[] = {
+      (TestResultIfExpression){
+          .input = "if (10 > 1) { if (10 > 1) { return 10; } return 1; }",
+          .value = 10},
       (TestResultIfExpression){.input = "if (true) { 10 }", .value = 10},
       (TestResultIfExpression){.input = "if (false) { 10 }", .not= nil},
       (TestResultIfExpression){.input = "if (1) { 10 }", .value = 10},
@@ -142,9 +145,9 @@ Object test_eval(char *input) {
   return evaluated;
 }
 
-// TODO : Implement here the number of the test with passin the i value 
+// TODO : Implement here the number of the test with passin the i value
 // in the loop
-// optional find a way to show the whole test stateemnt maybe just passing the 
+// optional find a way to show the whole test stateemnt maybe just passing the
 // string or something like that girl
 bool test_object_integer(Object testing, I64 expected) {
   if (testing.type != INTEGER_OBJECT) {

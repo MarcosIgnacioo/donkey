@@ -635,10 +635,10 @@ void print_object_types() {
 // TODO: put number of tests failed and passed just a counter girllll and if u wanna get nitty and gritty use a hashtable {or just a struct array that contains the number of the test, the name of the function of the test or just the input test string yeah that sounds better andddd if passed or not}
 int main() {
   /*donkey_repl(&arena);*/
+  test_if_expressions_evaluations();
   test_integer_evaluations();
   printf("\n");
   test_bool_evaluations();
   printf("\n");
-  test_if_expressions_evaluations();
   return 0;
 }

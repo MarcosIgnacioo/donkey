@@ -357,27 +357,42 @@ Object eval_bool_infix_expression(Object left, String operator, Object right) {
   return product_object;
 }
 
-Object eval_evaluate_node(Arena *arena, Node *node) {
+
+
+EvalObject eval_evaluate_node(Arena *arena, Node *node) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
+  EvalType type = EVAL_NIL;
   switch (node->type) {
   case EXPRESSION_STATEMENT:
+    type = EVAL_OBJECT;
     evaluated_object = eval_evaluate_expression(
         arena, node->expression_statement.expression_value);
+    break;
+  case RETURN_STATEMENT:
+    type = EVAL_RETURN;
+    evaluated_object = eval_evaluate_expression(
+        arena, node->return_statement.expression_value);
     break;
   default:
     printf("todo\n");
     break;
   }
-  return evaluated_object;
+  EvalObject evaluation =
+      (EvalObject){.type = type, .object = evaluated_object};
+  return evaluation;
 }
 
 Object eval_evaluate_program(Arena *arena, Program program) {
-  Object evaluated_object = DONKEY_PANIC_OBJECT;
+  EvalObject evaluated_object = (EvalObject) {.object = DONKEY_PANIC_OBJECT};
   for (I64 i = 0; i < len(program.statements); i++) {
     Node *node = &program.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
+    if (evaluated_object.type == EVAL_RETURN) {
+      break;
+    }
   }
-  return evaluated_object;
+
+  return evaluated_object.object;
 }
 
 Object eval_evaluate_block_statements(Arena *arena,
@@ -386,13 +401,17 @@ Object eval_evaluate_block_statements(Arena *arena,
     return DONKEY_PANIC_OBJECT;
   }
 
-  Object evaluated_object = (Object){0};
+  EvalObject evaluated_object = (EvalObject) {.object = DONKEY_PANIC_OBJECT};
 
   for (I64 i = 0; i < len(block_statement.statements); i++) {
     Node *node = &block_statement.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
+    if (evaluated_object.type == EVAL_RETURN) {
+      break;
+    }
   }
-  return evaluated_object;
+
+  return evaluated_object.object;
 }
 
 String object_to_string(Arena *arena, Object object) {
