@@ -636,10 +636,12 @@ void print_object_types() {
 // contains the number of the test, the name of the function of the test or just
 // the input test string yeah that sounds better andddd if passed or not}
 int main() {
-  /*donkey_repl(&arena);*/
-  test_if_expressions_evaluations();
+  test_error_handling();
   printf("\n");
   test_integer_evaluations();
+  printf("\n");
+  printf("\n");
+  test_if_expressions_evaluations();
   printf("\n");
   test_bool_evaluations();
   printf("\n");

@@ -1,4 +1,5 @@
 #include "object.h"
+#include "../arena_strings.c"
 // remove the arena passing all around is annoyinnn and also i dont do any
 // allocations i think
 
@@ -6,10 +7,10 @@ ObjectDonkey donkey_panic =
     (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
 Object DONKEY_PANIC_OBJECT =
     (Object){.eval_type = EVAL_OBJECT,
-             .object_type = NIL_OBJECT,
+             .type = NIL_OBJECT,
              .donkey = (ObjectDonkey){.str = "(null)", .len = 8, .cap = 8}};
-Object TRUE_OBJECT = (Object){.object_type = BOOLEAN_OBJECT, .boolean.value = true};
-Object FALSE_OBJECT = (Object){.object_type = BOOLEAN_OBJECT, .boolean.value = false};
+Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
+Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
 String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
 String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
 // TODO: check why src/testing/../object/object.c:10:72: error: initializer
@@ -20,14 +21,12 @@ String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
  * popo};*/
 
 Object eval_evaluate_expression(Arena *arena, Expression *expression) {
-
   Object evaluated_object = DONKEY_PANIC_OBJECT;
-
   switch (expression->type) {
   case INTEGER_LIT_EXP:
     //
     {
-      evaluated_object.object_type = INTEGER_OBJECT;
+      evaluated_object.type = INTEGER_OBJECT;
       evaluated_object.integer.value = expression->integer_literal.value;
       break;
     }
@@ -47,7 +46,7 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
     {
       PrefixExpression prefix = expression->prefix;
       Object right = eval_evaluate_expression(arena, prefix.right);
-      evaluated_object = eval_prefix_expression(prefix.operator, right);
+      evaluated_object = eval_prefix_expression(arena, prefix.operator, right);
       break;
     }
   case INFIX_EXP:
@@ -56,7 +55,8 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
       InfixExpression infix = expression->infix;
       Object left = eval_evaluate_expression(arena, infix.left);
       Object right = eval_evaluate_expression(arena, infix.right);
-      evaluated_object = eval_infix_expression(left, infix.operator, right);
+      evaluated_object =
+          eval_infix_expression(arena, left, infix.operator, right);
       break;
     }
   case IF_EXP:
@@ -77,16 +77,44 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
   return evaluated_object;
 }
 
-Object eval_prefix_expression(String operator, Object right) {
-  if (right.object_type != INTEGER_OBJECT && right.object_type != BOOLEAN_OBJECT) {
-    return DONKEY_PANIC_OBJECT;
+String error_stringify_object_type(Object object) {
+  String str_type = string(ObjectToString(object.type));
+  string_chop_until(&str_type, '_');
+  return str_type;
+}
+
+Object new_error(Arena *arena, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  String error_message = vargs_arena_string_fmt(arena, fmt, args);
+  va_end(args);
+
+  Object error_type_mismatch = _new_error(error_message);
+  return error_type_mismatch;
+}
+
+Object eval_prefix_expression(Arena *arena, String operator, Object right) {
+  if (right.type != BOOLEAN_OBJECT && right.type != INTEGER_OBJECT) {
+    String right_type = error_stringify_object_type(right);
+    Object error_object =
+        new_error(arena, "%S != BOOLEAN or INTEGER ", right_type);
+    return error_object;
   }
-  if (string_equals(operator, MINUS_STRING)) {
+
+  if (right.type == INTEGER_OBJECT && string_equals(operator, MINUS_STRING)) {
     right.integer.value = -right.integer.value;
-  } else if (string_equals(operator, BANG_STRING)) {
+    return right;
+  } else if (right.type == BOOLEAN_OBJECT &&
+             string_equals(operator, BANG_STRING)) {
     right.boolean.value = !right.boolean.value;
+    return right;
   }
-  return right;
+
+  String right_type = error_stringify_object_type(right);
+  Object error_object =
+      new_error(arena, "unknown operator: %S%S", operator, right_type);
+
+  return error_object;
 }
 
 String ADD_STRING = (String){.str = "+", .len = 1, .cap = 1};
@@ -131,29 +159,48 @@ I64 greater_equal_than(I64 a, I64 b) { return a >= b; }
 // and because in c we dont have switch for something else than ints!
 // it could be possible to create a custom switch tho so thats left to my
 // spare time
-Object eval_infix_expression(Object left, String operator, Object right) {
-  if (right.object_type == INTEGER_OBJECT && right.object_type == INTEGER_OBJECT) {
-    return eval_integer_infix_expression(left, operator, right);
+Object eval_infix_expression(Arena *arena, Object left, String operator,
+                             Object right) {
+  // pass this to
+  if (right.type == INTEGER_OBJECT && left.type == INTEGER_OBJECT) {
+    return eval_integer_infix_expression(arena, left, operator, right);
   }
-  if (right.object_type == BOOLEAN_OBJECT && right.object_type == BOOLEAN_OBJECT) {
-    return eval_bool_infix_expression(left, operator, right);
+
+  if (right.type == BOOLEAN_OBJECT && left.type == BOOLEAN_OBJECT) {
+    return eval_bool_infix_expression(arena, left, operator, right);
   }
-  return DONKEY_PANIC_OBJECT;
+
+  Object error_object;
+
+  if (left.type != right.type) {
+    String left_type = error_stringify_object_type(left);
+    String right_type = error_stringify_object_type(right);
+    error_object = new_error(arena, "type mismatch: %S %s %S",
+                             left_type, operator.str, right_type);
+    return error_object;
+  } else {
+    String left_type = error_stringify_object_type(left);
+    String right_type = error_stringify_object_type(right);
+    error_object = new_error(arena, "unknown operator: %S %s %S",
+                             left_type, operator.str, right_type);
+  }
+
+  return error_object;
 }
 
 bool is_truthy(Object condition) {
 
-  if (condition.object_type == NIL_OBJECT) {
+  if (condition.type == NIL_OBJECT) {
     return false;
   }
 
-  if (condition.object_type == BOOLEAN_OBJECT) {
+  if (condition.type == BOOLEAN_OBJECT) {
     bool bool_value = condition.boolean.value;
     return bool_value;
   }
 
   // lets see if 0 evaluates to false which i dont think so
-  if (condition.object_type == INTEGER_OBJECT) {
+  if (condition.type == INTEGER_OBJECT) {
     I64 value = condition.integer.value;
     if (value != 0) {
       return true;
@@ -177,7 +224,7 @@ Object eval_if_expression(Arena *arena, Object condition,
 
 Object c_boolean_to_donkey_boolean(bool boolean) {
   Object product_object = {
-      .object_type = BOOLEAN_OBJECT,
+      .type = BOOLEAN_OBJECT,
       .boolean.value = boolean,
   };
   return product_object;
@@ -192,7 +239,7 @@ bool is_arithmetic(String operator) {
   return op == '+' || op == '-' || op == '*' || op == '/';
 }
 
-Object eval_integer_infix_expression(Object left, String operator,
+Object eval_integer_infix_expression(Arena *arena, Object left, String operator,
                                      Object right) {
   Object product_object = (Object){0};
   OperationFunction operation = NULL;
@@ -262,7 +309,9 @@ Object eval_integer_infix_expression(Object left, String operator,
         result_type = BOOLEAN_OBJECT;
         break;
       } else {
-        printfln("falling to default with this operator : %S \n", operator);
+        Object error_object =
+            new_error(arena, "expected: = \ngot:%S", operator);
+        return error_object;
       }
     }
   case '=':
@@ -273,13 +322,19 @@ Object eval_integer_infix_expression(Object left, String operator,
         result_type = BOOLEAN_OBJECT;
         break;
       } else {
-        printfln("falling to default with this operator : %S \n", operator);
+        Object error_object =
+            new_error(arena, "expected: = \ngot:%S", operator);
+        return error_object;
       }
     }
   default:
     //
     {
-      return DONKEY_PANIC_OBJECT;
+      String left_type = error_stringify_object_type(left);
+      String right_type = error_stringify_object_type(right);
+      Object error_object = new_error(arena, "unknown operator: %S %S %S",
+                                      left_type, operator, right_type);
+      return error_object;
     }
   }
 
@@ -291,12 +346,13 @@ Object eval_integer_infix_expression(Object left, String operator,
     product_object.boolean.value = result;
   }
 
-  product_object.object_type = result_type;
+  product_object.type = result_type;
 
   return product_object;
 }
 
-Object eval_bool_infix_expression(Object left, String operator, Object right) {
+Object eval_bool_infix_expression(Arena *arena, Object left, String operator,
+                                  Object right) {
   Object product_object = (Object){0};
   I64 result = 0;
   OperationFunction operation;
@@ -307,20 +363,22 @@ Object eval_bool_infix_expression(Object left, String operator, Object right) {
     {
       if (operator.len> 1 && operator.str[1] == '=') {
         operation = &greater_equal_than;
+        break;
       } else {
         operation = &greater_than;
+        break;
       }
-      break;
     }
   case '<':
-    //
+    // try <+
     {
       if (operator.len> 1 && operator.str[1] == '=') {
         operation = &less_equal_than;
+        break;
       } else {
         operation = &less_than;
+        break;
       }
-      break;
     }
   case '!':
     //
@@ -347,13 +405,17 @@ Object eval_bool_infix_expression(Object left, String operator, Object right) {
   default:
     //
     {
-      return DONKEY_PANIC_OBJECT;
+      String left_type = error_stringify_object_type(left);
+      String right_type = error_stringify_object_type(right);
+      Object error_object = new_error(arena, "unknown operator: %S %S %S",
+                                      left_type, operator, right_type);
+      return error_object;
     }
   }
 
   result = operation(left.boolean.value, right.boolean.value);
   product_object.boolean.value = result;
-  product_object.object_type = BOOLEAN_OBJECT;
+  product_object.type = BOOLEAN_OBJECT;
 
   return product_object;
 }
@@ -364,6 +426,10 @@ Object eval_bool_infix_expression(Object left, String operator, Object right) {
 // of a nested if the 10 turns itself into from EVAL_RETURN to INTEGER_OBJECT
 Object eval_evaluate_node(Arena *arena, Node *node) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
+  if (!node) {
+    return evaluated_object;
+  }
+
   switch (node->type) {
   case EXPRESSION_STATEMENT:
     evaluated_object = eval_evaluate_expression(
@@ -387,7 +453,8 @@ Object eval_evaluate_program(Arena *arena, Program program) {
   for (I64 i = 0; i < len(program.statements); i++) {
     Node *node = &program.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
-    if (evaluated_object.eval_type == EVAL_RETURN) {
+    if (evaluated_object.eval_type == EVAL_RETURN ||
+        evaluated_object.eval_type == EVAL_ERROR) {
       break;
     }
   }
@@ -406,7 +473,8 @@ Object eval_evaluate_block_statements(Arena *arena,
   for (I64 i = 0; i < len(block_statement.statements); i++) {
     Node *node = &block_statement.statements[i];
     evaluated_object = eval_evaluate_node(arena, node);
-    if (evaluated_object.eval_type == EVAL_RETURN) {
+    if (evaluated_object.eval_type == EVAL_RETURN ||
+        evaluated_object.eval_type == EVAL_ERROR) {
       break;
     }
   }
@@ -415,7 +483,7 @@ Object eval_evaluate_block_statements(Arena *arena,
 }
 
 String object_to_string(Arena *arena, Object object) {
-  switch (object.object_type) {
+  switch (object.type) {
   case INTEGER_OBJECT:
     //
     {

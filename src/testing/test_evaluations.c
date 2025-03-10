@@ -38,6 +38,9 @@ void test_integer_evaluations() {
     TestResultInteger test = test_cases[i];
     test_obj = test_eval(test.input);
     if (!test_object_integer(test_obj, test.expected)) {
+      printf("FAILED:%s\n", test.input);
+      printf("expected:%lld\n", test.expected);
+      printfln("got:%S\n", object_to_string(&arena, test_obj));
       pass = false;
     }
   }
@@ -91,6 +94,90 @@ void test_bool_evaluations() {
 
 typedef struct {
   char *input;
+  String expected;
+} TestResultError;
+
+void foo(String what) {
+  printfln("%S", what);
+  String q = what;
+  (void)q;
+}
+
+bool test_object_error(Object testing, String expected) {
+  if (testing.type != ERROR_OBJECT) {
+    printf("\n%s!=OBJECT_ERROR\n", ObjectToString(testing.type));
+    return false;
+  }
+  if (!string_equals(testing.error.value, expected)) {
+    printf("\n%s!=%s\n", testing.error.value.str, expected.str);
+    return false;
+  }
+  return true;
+}
+
+void test_error_handling() {
+  TestResultError test_cases[] = {
+      (TestResultError){
+          //
+          .input = "true + 5;",
+          .expected = string("type mismatch: BOOLEAN + INTEGER")
+          //
+      },
+      (TestResultError){
+          //
+          .input = "true + 5;",
+          .expected = string("type mismatch: BOOLEAN + INTEGER")
+          //
+      },
+      (TestResultError){
+          .input = "5 + true; 5;",
+          .expected = string("type mismatch: INTEGER + BOOLEAN"),
+      },
+      (TestResultError){
+          .input = "-true",
+          .expected = string("unknown operator: -BOOLEAN"),
+      },
+      (TestResultError){
+          .input = "true + false;",
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN"),
+      },
+      (TestResultError){
+          .input = "5; true + false; 5",
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN"),
+      },
+      (TestResultError){
+          .input = "if (10 > 1) { true + false; }",
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN"),
+      },
+    (TestResultError) {
+      .input = "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
+      .expected = string("unknown operator: BOOLEAN + BOOLEAN")
+    }
+  };
+
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestResultError test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (!test_object_error(test_obj, test.expected)) {
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  // TODO: Find a way to make the part of the function name not be hardcoded and
+  //       just in a macro cause its better!! i hope
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_error_handling() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_error_handling() \n");
+  }
+}
+
+typedef struct {
+  char *input;
   union {
     int value;
     void * not;
@@ -122,7 +209,7 @@ void test_if_expressions_evaluations() {
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestResultIfExpression test = test_cases[i];
     test_obj = test_eval(test.input);
-    if (test_obj.object_type == INTEGER_OBJECT) {
+    if (test_obj.type == INTEGER_OBJECT) {
       if (!test_object_integer(test_obj, test.value)) {
         pass = false;
       }
@@ -167,7 +254,7 @@ void test_return_expressions_evaluations() {
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestResultReturnExpressions test = test_cases[i];
     test_obj = test_eval(test.input);
-    if (test_obj.object_type == INTEGER_OBJECT) {
+    if (test_obj.type == INTEGER_OBJECT) {
       if (!test_object_integer(test_obj, test.value)) {
         pass = false;
       }
@@ -200,8 +287,8 @@ Object test_eval(char *input) {
 // optional find a way to show the whole test stateemnt maybe just passing the
 // string or something like that girl
 bool test_object_integer(Object testing, I64 expected) {
-  if (testing.object_type != INTEGER_OBJECT) {
-    printf("\n%s!=INTEGER_OBJECT\n", ObjectToString(testing.object_type));
+  if (testing.type != INTEGER_OBJECT) {
+    printf("\n%s!=INTEGER_OBJECT\n", ObjectToString(testing.type));
     return false;
   }
 
@@ -216,8 +303,8 @@ bool test_object_integer(Object testing, I64 expected) {
 }
 
 bool test_object_bool(Object testing, bool expected) {
-  if (testing.object_type != BOOLEAN_OBJECT) {
-    printf("\n%s!=BOOLEAN_OBJECT\n", ObjectToString(testing.object_type));
+  if (testing.type != BOOLEAN_OBJECT) {
+    printf("\n%s!=BOOLEAN_OBJECT\n", ObjectToString(testing.type));
     return false;
   }
 
@@ -232,8 +319,8 @@ bool test_object_bool(Object testing, bool expected) {
 }
 
 bool test_object_null(Object testing) {
-  if (testing.object_type != NIL_OBJECT) {
-    printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.object_type));
+  if (testing.type != NIL_OBJECT) {
+    printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.type));
     return false;
   }
   return true;

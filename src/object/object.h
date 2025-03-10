@@ -10,6 +10,7 @@
   X(DONKEY_OBJECT)                                                             \
   X(INTEGER_OBJECT)                                                            \
   X(BOOLEAN_OBJECT)                                                            \
+  X(ERROR_OBJECT)
 
 #define X(name) name,
 typedef enum { OBJECT_TYPES } ObjectType;
@@ -31,19 +32,20 @@ typedef struct {
 } ObjectBoolean;
 
 typedef struct {
-  Object *return_value;
-} ObjectReturn;
+  String value;
+} ObjectError;
 
 typedef String ObjectDonkey;
-typedef enum { EVAL_NIL, EVAL_OBJECT, EVAL_RETURN } EvalType;
+typedef enum { EVAL_NIL, EVAL_OBJECT, EVAL_RETURN, EVAL_ERROR } EvalType;
 
-struct Object{
+struct Object {
   EvalType eval_type;
-  ObjectType object_type;
+  ObjectType type;
   /*ObjectType type;*/
   union {
     ObjectInteger integer;
     ObjectBoolean boolean;
+    ObjectError error;
     ObjectDonkey donkey; // this is null btw
   };
 };
@@ -55,15 +57,19 @@ typedef struct {
   OperationFunction operation;
 } OperationFnAndType;
 
+#define _new_error(MSG)                                                         \
+  (Object) {                                                                   \
+    .eval_type = EVAL_ERROR, .type = ERROR_OBJECT, .error.value = MSG         \
+  }
 
 Object eval_evaluate_program(Arena *, Program);
 Object eval_evaluate_block_statements(Arena *, BlockStatement);
-Object eval_prefix_expression(String, Object);
-Object eval_infix_expression(Object, String, Object);
+Object eval_prefix_expression(Arena *, String, Object);
+Object eval_infix_expression(Arena *, Object, String, Object);
 Object eval_evaluate_node(Arena *, Node *);
 Object eval_evaluate_expression(Arena *, Expression *);
-Object eval_integer_infix_expression(Object, String, Object);
-Object eval_bool_infix_expression(Object, String, Object);
+Object eval_integer_infix_expression(Arena *, Object, String, Object);
+Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_if_expression(Arena *, Object, BlockStatement, BlockStatement);
 String object_to_string(Arena *, Object);
 Object test_eval(char *);

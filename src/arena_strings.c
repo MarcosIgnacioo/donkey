@@ -8,8 +8,9 @@ typedef unsigned long U64;
 typedef long long I64;
 typedef char byte;
 
-// TODO: when stringifying it we should be sure to set the length to the right value!
-#define string_compile_time(STRING)                                                         \
+// TODO: when stringifying it we should be sure to set the length to the right
+// value!
+#define string_compile_time(STRING)                                            \
   (String) { .str = STRING, .len = -1, .cap = str_len(STRING) }
 #define string(STRING)                                                         \
   (String) { .str = STRING, .len = str_len(STRING), .cap = str_len(STRING) }
@@ -48,6 +49,7 @@ void read_file(String *file_content, const char *file_name);
 
 // maybe
 void string_trim_space_left(String *trimming);
+int string_index_of(String source);
 void string_trim_space_right(String *trimming);
 void string_trim_space(String *trimming);
 void string_concat(String *dest, String source);
@@ -212,6 +214,23 @@ String arena_string_fmt(Arena *arena, const char *fmt, ...) {
     buffer[0] = '\0';
   }
   va_end(arg_ptr);
+  return res;
+}
+
+String vargs_arena_string_fmt(Arena *arena, const char *fmt, va_list args) {
+  char buffer[1024];
+  buffer[0] = '\0';
+  char token[1024];
+  String res = arena_new_empty_string_with_cap(arena, 4);
+  int k = 0;
+  for (int i = 0; fmt[i] != '\0'; i++) {
+    token[k++] = fmt[i];
+    k = fmt_buffer(buffer, token, args, fmt, i, k);
+    if (!k) {
+      arena_c_string_concat(arena, &res, buffer);
+    }
+    buffer[0] = '\0';
+  }
   return res;
 }
 
@@ -429,6 +448,37 @@ void arena_string_concat(Arena *arena, String *dest, String source) {
   }
   memory_copy(dest->str + dest->len, source.str, n_bytes);
   dest->len = total_size;
+}
+
+int c_string_index_of(const char *haystack, char needle) {
+  for (int i = 0; haystack[i] != '\0'; i++) {
+    if (haystack[i] == needle) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int arena_string_index_of(String haystack, char needle) {
+  for (int i = 0; i < haystack.len; i++) {
+    if (haystack.str[i] == needle) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+String string_slice_until_char(String slicing, size_t begin, char delimiter) {
+  int char_idx = arena_string_index_of(slicing, delimiter);
+  if (char_idx < 0) {
+    return slicing;
+  }
+  return slice(slicing, begin, char_idx);
+}
+
+void string_chop_until(String *chopping, char cut_point) {
+   U64 new_len = arena_string_index_of(*chopping, cut_point);
+   chopping->len = new_len;
 }
 
 void print_string(String str) {
