@@ -1,6 +1,6 @@
+#include "./ram/ram.c"
 #include <stdbool.h>
 #include <stdio.h>
-#include "./ram/ram.c"
 
 int main() {
   Arena arena = {0};
@@ -8,17 +8,13 @@ int main() {
                    &RAM_key_value_equals);
   hash_table_alloc(&arena, &MEMORY[STRINGS_MEMORY], KeyValueStrings,
                    &RAM_key_value_equals);
-  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("uwu"), string("owo"));
-  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("iwi"),
-                          string("pipi"));
-  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("ovo"),
-                          string("poop"));
-  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("uvu"),
-                          string("asdkf"));
-  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("ewe"),
-                          string("caca"));
+  insert_string_to_memory(string("uwu"), string("owo"));
+  insert_string_to_memory(string("iwi"), string("pipi"));
+  insert_string_to_memory(string("ovo"), string("poop"));
+  insert_string_to_memory(string("uvu"), string("asdkf"));
+  insert_string_to_memory(string("ewe"), string("caca"));
   String key1 = string("uvu");
-  String val1 = get_string_from_memory(MEMORY[STRINGS_MEMORY], key1);
+  String val1 = get_string_from_memory(key1);
   printfln("[%S]:[%S]", key1, val1);
   /*HashTable ht = {0};*/
   /*hash_table_alloc(&arena, &ht, KeyValueIntegers, &RAM_key_value_equals);*/

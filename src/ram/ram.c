@@ -49,9 +49,8 @@ byte *get_item_in_hash_table(HashTable ht, String key) {
   return cursor;
 }
 
-KeyValueStrings *insert_string_to_memory(HashTable ht, String key,
-                                         String value) {
-  void *item_ptr = get_item_in_hash_table((ht), key);
+KeyValueStrings *insert_string_to_memory(String key, String value) {
+  void *item_ptr = get_item_in_hash_table(MEMORY[STRINGS_MEMORY], key);
   if (!item_ptr) {
     return NULL;
   }
@@ -61,9 +60,8 @@ KeyValueStrings *insert_string_to_memory(HashTable ht, String key,
   return item;
 }
 
-KeyValueIntegers *insert_integers_to_memory(HashTable ht, String key,
-                                            int value) {
-  void *item_ptr = hash_table_find_item((ht), &key);
+KeyValueIntegers *insert_integers_to_memory(String key, int value) {
+  void *item_ptr = hash_table_find_item(MEMORY[INTEGERS_MEMORY], &key);
   if (!item_ptr) {
     return NULL;
   }
@@ -73,8 +71,8 @@ KeyValueIntegers *insert_integers_to_memory(HashTable ht, String key,
   return item;
 }
 
-String get_string_from_memory(HashTable ht, String key) {
-  void *item_ptr = hash_table_find_item((ht), &key);
+String get_string_from_memory(String key) {
+  void *item_ptr = hash_table_find_item(MEMORY[STRINGS_MEMORY], &key);
   if (!item_ptr) {
     return string("(donk)");
   }
@@ -82,8 +80,8 @@ String get_string_from_memory(HashTable ht, String key) {
   return item->value;
 }
 
-int get_integer_from_memory(HashTable ht, String key) {
-  void *item_ptr = hash_table_find_item((ht), &key);
+int get_integer_from_memory(String key) {
+  void *item_ptr = hash_table_find_item(MEMORY[INTEGERS_MEMORY], &key);
   if (!item_ptr) {
     return 0;
   }

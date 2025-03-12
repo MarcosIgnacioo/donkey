@@ -64,6 +64,7 @@ typedef enum {
   // expressions
   IDENTIFIER_EXP,
   INTEGER_LIT_EXP,
+  STRING_LIT_EXP,
   BOOLEAN_EXP,
   PREFIX_EXP,
   INFIX_EXP,
@@ -102,6 +103,11 @@ typedef struct {
   Token token;
   I64 value;
 } IntLiteral;
+
+typedef struct {
+  Token token;
+  String value;
+} StringLiteral;
 
 // this can be an expression or a part of a statement
 // let foo = 1; <- this is an statement
@@ -146,7 +152,8 @@ typedef struct {
   };
 } Node;
 
-// TOREFACTOR: put block statements as a part of a union node and well refactor girlllllllllllll
+// TOREFACTOR: put block statements as a part of a union node and well refactor
+// girlllllllllllll
 typedef struct {
   Node *statements;
 } BlockStatement;
@@ -191,6 +198,7 @@ struct Expression {
     PrefixExpression prefix;
     Identifier identifier;
     IntLiteral integer_literal;
+    StringLiteral string_literal;
     IfExpression if_expression;
     FunctionCallExpression function_call;
     FunctionLiteral function_literal;

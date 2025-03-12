@@ -10,6 +10,7 @@
   X(DONKEY_OBJECT)                                                             \
   X(INTEGER_OBJECT)                                                            \
   X(BOOLEAN_OBJECT)                                                            \
+  X(STRING_OBJECT)                                                             \
   X(IDENTIFIER_OBJECT)                                                         \
   X(ERROR_OBJECT)
 
@@ -47,6 +48,10 @@ typedef struct {
 
 typedef struct {
   String value;
+} ObjectString;
+
+typedef struct {
+  String value;
 } ObjectError;
 
 typedef String ObjectDonkey;
@@ -60,6 +65,7 @@ struct Object {
     ObjectInteger integer;
     ObjectBoolean boolean;
     ObjectIdentifier identifier;
+    ObjectString string;
     ObjectError error;
     ObjectDonkey donkey; // this is null btw
   };

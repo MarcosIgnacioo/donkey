@@ -1,5 +1,6 @@
 #include "object.h"
 #include "../arena_strings.c"
+#include "../ram/ram.c"
 // remove the arena passing all around is annoyinnn and also i dont do any
 // allocations i think
 
@@ -29,6 +30,14 @@ HashTable DONKEY_MEMORY = new_hash_table(KeyValue_PRC,             //
 Object eval_evaluate_expression(Arena *arena, Expression *expression) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   switch (expression->type) {
+  case IDENTIFIER:
+    //
+    {
+      Identifier identifier = expression->identifier;
+      evaluated_object.type = IDENTIFIER_OBJECT;
+      evaluated_object.identifier = expression->identifier;
+      break;
+    }
   case INTEGER_LIT_EXP:
     //
     {
@@ -75,13 +84,6 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
       BlockStatement alternative = if_expression.alternative;
       evaluated_object =
           eval_if_expression(arena, condition, consequence, alternative);
-      break;
-    }
-  case IDENTIFIER:
-    //
-    {
-      Identifier if_expression = expression->identifier;
-      (void)if_expression;
       break;
     }
   default:
@@ -456,9 +458,28 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
   case LET_STATEMENT: {
     LetStatement let_statement = node->let_statement;
     Identifier identifier = let_statement.name;
-    (void)identifier;
     Expression *expression_value = let_statement.expression_value;
-    evaluated_object = eval_evaluate_expression(arena, expression_value);
+    evaluated_object = eval_evaluate_expression(expression_value);
+    switch (evaluated_object.type) {
+    case INTEGER_OBJECT:
+      //
+      {
+        insert_integer_to_memory(identifier.value, expression_object.integer);
+        break;
+      }
+    case STRING_OBJECT:
+      //
+      {
+        insert_string_to_memory(identifier.value, expression_object.string);
+        break;
+      }
+    default:
+      //
+      {
+        printf("not implemented yet darling\n");
+        break;
+      }
+    }
     break;
   }
   default:
