@@ -1,3 +1,18 @@
+
+finish hashmaps for variables in donkey
+
+see how to send the data of the login from google api to 
+the frontend, i dont think google would allow me to 
+send the password in plain text, so it wouldnt be that 
+bad if when the user is loging in they put their credentials
+and then a popup with the google part is shown
+is not the best ux but i think is plausible
+
+1 hour of olivie
+
+1 hour of learning clay
+
+
 donkey the compiler for and by lesbians
 
 why does this return false when putting a 0 in the if

@@ -50,14 +50,14 @@ U64 get_hash(String key) {
 #define hash_table_alloc(_arena, _hash_table, _key_value_t, _are_keys_equals)  \
   do {                                                                         \
     (_hash_table)->capacity = DEFAULT_CAPACITY;                                \
-    (_hash_table)->item_size = DEFAULT_CAPACITY;                               \
+    (_hash_table)->item_size = sizeof(_key_value_t);                           \
     (_hash_table)->are_keys_equals = _are_keys_equals;                         \
     (_hash_table)->get_hash = &get_hash;                                       \
     (_hash_table)->len = 0;                                                    \
     (_hash_table)->items =                                                     \
-        arena_alloc(_arena, sizeof(*(_hash_table)->items) * DEFAULT_CAPACITY); \
+        arena_alloc(_arena, sizeof(_key_value_t) * DEFAULT_CAPACITY); \
     memory_set((byte *)(_hash_table)->items,                                   \
-               sizeof(*(_hash_table)->items) * DEFAULT_CAPACITY, 0);           \
+               sizeof(_key_value_t) * DEFAULT_CAPACITY, 0);           \
   } while (false) // 54: this sizeof(*(_hash_table)->items) should segfault use
                   // sizeof(_key_value_t) instead
 
@@ -109,6 +109,19 @@ void *hash_table_find_item(HashTable table, void *key) {
   return NULL;
 }
 
+void *hash_table_find_item_key_string(HashTable table, String key) {
+  byte *items = table.items;
+  void *item_kv;
+  U64 i;
+  for (i = 0; i < table.capacity; i++) {
+    item_kv = items + i * table.item_size;
+    if (table.are_keys_equals(item_kv, &key)) {
+      return item_kv;
+    }
+  }
+  return NULL;
+}
+
 void *hash_table_find_key(HashTable table, void *value) {
   byte *items = table.items;
   void *item_kv;
@@ -124,7 +137,7 @@ void *hash_table_find_key(HashTable table, void *value) {
 
 U64 hash(String string);
 
-U64 hash(String string) {
+size_t hash(String string) {
   U64 index = 0;
   for (U64 i = 0; i < string.len; i++) {
     index = index * 7 + string.str[i];

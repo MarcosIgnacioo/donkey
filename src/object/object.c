@@ -77,6 +77,13 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
           eval_if_expression(arena, condition, consequence, alternative);
       break;
     }
+  case IDENTIFIER:
+    //
+    {
+      Identifier if_expression = expression->identifier;
+      (void)if_expression;
+      break;
+    }
   default:
     break;
   }

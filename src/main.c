@@ -1,64 +1,31 @@
-#include "./arena_hash_table.c"
 #include <stdbool.h>
 #include <stdio.h>
+#include "./ram/ram.c"
 
-typedef struct {
-  String key;
-  bool is_occupied;
-  union {
-    int int_value;
-    String string_value;
-  };
-} KeyValueDonkey;
-
-bool key_value_donkey_fn(void *a, void *b) {
-  String a_string = (*(KeyValueDonkey *)a).key;
-  String b_string = *(String *)b;
-  return string_equals(a_string, b_string);
-}
-
-HashIndexResult get_KVD(void *void_items, U64 hash) {
-  KeyValueDonkey *items = (KeyValueDonkey *)void_items;
-  String key = items[hash].key;
-  bool is_occupied = items[hash].is_occupied;
-
-  HashResult result = (HashIndexResult){
-      .item_ptr = items + hash,
-      .is_occupied = is_occupied,
-  };
-
-  return result;
-}
-
-void set_KVD(void *void_items, U64 hash, void *key, )
-
-    int main() {
+int main() {
   Arena arena = {0};
-  HashTable ht = {0};
-  /*void *PROGRAM_MEMORY = arena_alloc(&arena, 1024 * 8);*/
-  printf("%p\n", ht.items);
-  hash_table_alloc(&arena, &ht, KeyValueDonkey, &key_value_donkey_fn);
-  String KEY = string("lazy o lazy im losign it lately");
-  int VALUE = 123;
-  do {
-    U64 hash = (ht).get_hash(KEY) % cap((ht).items);
-    byte *items = (ht).items;
-    byte *cursor = items;
-    bool is_occupied = *(bool *)(cursor + sizeof(String));
-    while (is_occupied && !(ht).are_keys_equals(cursor, &KEY) &&
-           hash < cap((ht).items)) {
-      hash++;
-      cursor += (ht).item_size * hash;
-      is_occupied = *(bool *)cursor + sizeof(String);
-    }
-
-    if (is_occupied && !((ht).are_keys_equals(cursor, &KEY))) {
-      printf("OUT OF MEMORY IN DONKEYLANG\n");
-    }
-
-    cursor.int_value = VALUE;
-    cursor.key = KEY;
-    cursor.is_occupied = true;
-  } while (false);
+  hash_table_alloc(&arena, &MEMORY[INTEGERS_MEMORY], KeyValueIntegers,
+                   &RAM_key_value_equals);
+  hash_table_alloc(&arena, &MEMORY[STRINGS_MEMORY], KeyValueStrings,
+                   &RAM_key_value_equals);
+  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("uwu"), string("owo"));
+  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("iwi"),
+                          string("pipi"));
+  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("ovo"),
+                          string("poop"));
+  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("uvu"),
+                          string("asdkf"));
+  insert_string_to_memory(MEMORY[STRINGS_MEMORY], string("ewe"),
+                          string("caca"));
+  String key1 = string("uvu");
+  String val1 = get_string_from_memory(MEMORY[STRINGS_MEMORY], key1);
+  printfln("[%S]:[%S]", key1, val1);
+  /*HashTable ht = {0};*/
+  /*hash_table_alloc(&arena, &ht, KeyValueIntegers, &RAM_key_value_equals);*/
+  /*String key1 = string("hello");*/
+  /*String key2 = string("wtf");*/
+  /*insert_string_to_memory(ht, key2, string("poop"));*/
+  /*String val2 = get_string_from_memory(ht, key2);*/
+  /*printfln("[%S]:[%S]", key2, val2);*/
   return 0;
 }
