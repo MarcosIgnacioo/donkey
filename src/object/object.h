@@ -10,6 +10,7 @@
   X(DONKEY_OBJECT)                                                             \
   X(INTEGER_OBJECT)                                                            \
   X(BOOLEAN_OBJECT)                                                            \
+  X(IDENTIFIER_OBJECT)                                                         \
   X(ERROR_OBJECT)
 
 #define X(name) name,
@@ -31,6 +32,19 @@ typedef struct {
   bool value;
 } ObjectBoolean;
 
+typedef enum {
+  INT_TYPE,
+  STRING_TYPE,
+} DataType;
+
+typedef struct {
+  DataType type;
+  union {
+    String string_value;
+    I64 integer_value;
+  };
+} ObjectIdentifier;
+
 typedef struct {
   String value;
 } ObjectError;
@@ -45,6 +59,7 @@ struct Object {
   union {
     ObjectInteger integer;
     ObjectBoolean boolean;
+    ObjectIdentifier identifier;
     ObjectError error;
     ObjectDonkey donkey; // this is null btw
   };
@@ -57,10 +72,8 @@ typedef struct {
   OperationFunction operation;
 } OperationFnAndType;
 
-#define _new_error(MSG)                                                         \
-  (Object) {                                                                   \
-    .eval_type = EVAL_ERROR, .type = ERROR_OBJECT, .error.value = MSG         \
-  }
+#define _new_error(MSG)                                                        \
+  (Object) { .eval_type = EVAL_ERROR, .type = ERROR_OBJECT, .error.value = MSG }
 
 Object eval_evaluate_program(Arena *, Program);
 Object eval_evaluate_block_statements(Arena *, BlockStatement);

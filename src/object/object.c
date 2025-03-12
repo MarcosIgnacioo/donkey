@@ -13,6 +13,12 @@ Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
 Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
 String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
 String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
+
+HashTable DONKEY_MEMORY = new_hash_table(KeyValue_PRC,             //
+                                         PRECEDENCES_ARR,          //
+                                         &compare_token_type_keys, //
+                                         NULL                      //
+);
 // TODO: check why src/testing/../object/object.c:10:72: error: initializer
 // element is not a compile-time constant 10 | Object TRUE_OBJECT =
 // (Object){.type = INTEGER_OBJECT, .integer.value = popo};
@@ -438,9 +444,16 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
   case RETURN_STATEMENT:
     evaluated_object = eval_evaluate_expression(
         arena, node->return_statement.expression_value);
-    EvalType eval_type = EVAL_RETURN;
-    evaluated_object.eval_type = eval_type;
+    evaluated_object.eval_type = EVAL_RETURN;
     break;
+  case LET_STATEMENT: {
+    LetStatement let_statement = node->let_statement;
+    Identifier identifier = let_statement.name;
+    (void)identifier;
+    Expression *expression_value = let_statement.expression_value;
+    evaluated_object = eval_evaluate_expression(arena, expression_value);
+    break;
+  }
   default:
     printf("todo\n");
     break;

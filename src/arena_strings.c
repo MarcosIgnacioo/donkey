@@ -20,9 +20,9 @@ typedef char byte;
   (String) { .str = STRING + BEGIN, .len = END - BEGIN, .cap = END - BEGIN }
 
 typedef struct {
-  byte *str;
-  U64 len;
-  U64 cap;
+  byte *str; // 8
+  U64 len;   // 8
+  U64 cap;   // 8
 } String;
 
 typedef bool (*TrimmerPredicator)(char);
@@ -477,8 +477,8 @@ String string_slice_until_char(String slicing, size_t begin, char delimiter) {
 }
 
 void string_chop_until(String *chopping, char cut_point) {
-   U64 new_len = arena_string_index_of(*chopping, cut_point);
-   chopping->len = new_len;
+  U64 new_len = arena_string_index_of(*chopping, cut_point);
+  chopping->len = new_len;
 }
 
 void print_string(String str) {

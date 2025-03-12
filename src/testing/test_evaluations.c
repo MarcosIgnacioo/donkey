@@ -97,12 +97,6 @@ typedef struct {
   String expected;
 } TestResultError;
 
-void foo(String what) {
-  printfln("%S", what);
-  String q = what;
-  (void)q;
-}
-
 bool test_object_error(Object testing, String expected) {
   if (testing.type != ERROR_OBJECT) {
     printf("\n%s!=OBJECT_ERROR\n", ObjectToString(testing.type));
@@ -173,6 +167,83 @@ void test_error_handling() {
     printf(LOG_SUCCESS "ALL TEST PASSED AT: test_error_handling() \n");
   } else {
     printf(LOG_ERROR "TEST FAILED       AT: test_error_handling() \n");
+  }
+}
+
+typedef struct {
+  char *input;
+  String expected;
+} TestLetStatementsIdentifiers;
+
+bool test_object_let_statement_identifier(Object testing, String expected) {
+  if (testing.type != IDENTIFIER_OBJECT) {
+    printf("\n%s!=OBJECT_ERROR\n", ObjectToString(testing.type));
+    return false;
+  }
+  if (!string_equals(testing.error.value, expected)) {
+    printf("\n%s!=%s\n", testing.error.value.str, expected.str);
+    return false;
+  }
+  return true;
+}
+
+void test_let_statements_and_identifiers() {
+  TestLetStatementsIdentifiers test_cases[] = {
+      (TestLetStatementsIdentifiers){
+          //
+          .input = "true + 5;",
+          .expected = string("type mismatch: BOOLEAN + INTEGER")
+          //
+      },
+      (TestLetStatementsIdentifiers){
+          //
+          .input = "true + 5;",
+          .expected = string("type mismatch: BOOLEAN + INTEGER")
+          //
+      },
+      (TestLetStatementsIdentifiers){
+          .input = "5 + true; 5;",
+          .expected = string("type mismatch: INTEGER + BOOLEAN"),
+      },
+      (TestLetStatementsIdentifiers){
+          .input = "-true",
+          .expected = string("unknown operator: -BOOLEAN"),
+      },
+      (TestLetStatementsIdentifiers){
+          .input = "true + false;",
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN"),
+      },
+      (TestLetStatementsIdentifiers){
+          .input = "5; true + false; 5",
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN"),
+      },
+      (TestLetStatementsIdentifiers){
+          .input = "if (10 > 1) { true + false; }",
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN"),
+      },
+    (TestLetStatementsIdentifiers) {
+      .input = "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
+      .expected = string("unknown operator: BOOLEAN + BOOLEAN")
+    }
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestLetStatementsIdentifiers test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (!test_object_error(test_obj, test.expected)) {
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  // TODO: Find a way to make the part of the function name not be hardcoded and
+  //       just in a macro cause its better!! i hope
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_let_statements_and_identifiers() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_let_statements_and_identifiers() \n");
   }
 }
 
