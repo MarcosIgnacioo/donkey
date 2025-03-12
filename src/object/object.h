@@ -81,6 +81,17 @@ typedef struct {
 #define _new_error(MSG)                                                        \
   (Object) { .eval_type = EVAL_ERROR, .type = ERROR_OBJECT, .error.value = MSG }
 
+ObjectDonkey donkey_panic =
+    (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
+Object DONKEY_PANIC_OBJECT =
+    (Object){.eval_type = EVAL_OBJECT,
+             .type = NIL_OBJECT,
+             .donkey = (ObjectDonkey){.str = "(null)", .len = 8, .cap = 8}};
+Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
+Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
+String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
+String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
+
 Object eval_evaluate_program(Arena *, Program);
 Object eval_evaluate_block_statements(Arena *, BlockStatement);
 Object eval_prefix_expression(Arena *, String, Object);

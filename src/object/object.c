@@ -4,22 +4,6 @@
 // remove the arena passing all around is annoyinnn and also i dont do any
 // allocations i think
 
-ObjectDonkey donkey_panic =
-    (ObjectDonkey){.str = "(donkey)", .len = 8, .cap = 8};
-Object DONKEY_PANIC_OBJECT =
-    (Object){.eval_type = EVAL_OBJECT,
-             .type = NIL_OBJECT,
-             .donkey = (ObjectDonkey){.str = "(null)", .len = 8, .cap = 8}};
-Object TRUE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = true};
-Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
-String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
-String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
-
-HashTable DONKEY_MEMORY = new_hash_table(KeyValue_PRC,             //
-                                         PRECEDENCES_ARR,          //
-                                         &compare_token_type_keys, //
-                                         NULL                      //
-);
 // TODO: check why src/testing/../object/object.c:10:72: error: initializer
 // element is not a compile-time constant 10 | Object TRUE_OBJECT =
 // (Object){.type = INTEGER_OBJECT, .integer.value = popo};
@@ -30,12 +14,11 @@ HashTable DONKEY_MEMORY = new_hash_table(KeyValue_PRC,             //
 Object eval_evaluate_expression(Arena *arena, Expression *expression) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   switch (expression->type) {
-  case IDENTIFIER:
+  case IDENTIFIER_EXP:
     //
     {
       Identifier identifier = expression->identifier;
-      evaluated_object.type = IDENTIFIER_OBJECT;
-      evaluated_object.identifier = expression->identifier;
+      evaluated_object = ram_get_object(identifier.value);
       break;
     }
   case INTEGER_LIT_EXP:
@@ -459,27 +442,8 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
     LetStatement let_statement = node->let_statement;
     Identifier identifier = let_statement.name;
     Expression *expression_value = let_statement.expression_value;
-    evaluated_object = eval_evaluate_expression(expression_value);
-    switch (evaluated_object.type) {
-    case INTEGER_OBJECT:
-      //
-      {
-        insert_integer_to_memory(identifier.value, expression_object.integer);
-        break;
-      }
-    case STRING_OBJECT:
-      //
-      {
-        insert_string_to_memory(identifier.value, expression_object.string);
-        break;
-      }
-    default:
-      //
-      {
-        printf("not implemented yet darling\n");
-        break;
-      }
-    }
+    evaluated_object = eval_evaluate_expression(arena, expression_value);
+    ram_insert_object(arena, identifier.value, evaluated_object);
     break;
   }
   default:
