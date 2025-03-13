@@ -29,12 +29,14 @@ void donkey_repl(Arena *arena) {
   Program program = {0};
   String program_str;
   Object evaluation;
+  Enviroment env = {0};
+  env_init(arena, &env);
   do {
     input = get_line_stdin(arena);
     lexi = lexer_new_lexer(input);
     parser = ast_new_parser(arena, &lexi);
     program = ast_parse_program(arena, &parser);
-    evaluation = eval_evaluate_program(arena, program);
+    evaluation = eval_evaluate_program(arena, env, program);
     program_str = object_to_string(arena, evaluation);
     if (len(parser.errors)) {
       print_parser_errors(parser);

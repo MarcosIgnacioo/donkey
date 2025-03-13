@@ -1,7 +1,11 @@
-#ifndef _RAM_H
-#define _RAM_H
+#ifndef _ENV_H
+#define _ENV_H
 #include "../arena_hash_table.c"
 #include "../object/object.h"
+
+typedef struct {
+  HashTable memory;
+} Enviroment;
 
 typedef struct {
   String key;
@@ -9,10 +13,11 @@ typedef struct {
   Object value;
 } KeyValueMemory;
 
-HashTable MEMORY = {0};
 
-void ram_init(Arena *);
-bool ram_key_value_equals(void *this, void *that);
-void ram_insert_object(Arena *arena, String key, Object value);
-Object ram_get_object(Arena *arena, String key);
-#endif // !_RAM_H
+/*HashTable MEMORY = {0};*/
+
+void env_init(Arena *, Enviroment *);
+bool env_key_value_equals(void *, void *);
+void env_insert_object(Arena *, Enviroment, String, Object);
+Object env_get_object(Arena *, Enviroment, String);
+#endif // !_ENV_H

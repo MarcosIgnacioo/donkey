@@ -22,7 +22,6 @@ typedef enum { OBJECT_TYPES } ObjectType;
 char *_ObjectToString[] = {OBJECT_TYPES};
 #undef X
 #define ObjectToString(TYPE) _ObjectToString[TYPE]
-
 typedef struct Object Object;
 
 typedef struct {
@@ -56,6 +55,7 @@ struct Object {
     ObjectDonkey donkey; // this is null btw
   };
 };
+#include "../ram/ram.h"
 
 typedef I64 (*OperationFunction)(I64, I64);
 
@@ -78,15 +78,16 @@ Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
 String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
 String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
 
-Object eval_evaluate_program(Arena *, Program);
-Object eval_evaluate_block_statements(Arena *, BlockStatement);
+Object eval_evaluate_program(Arena *, Enviroment, Program);
+Object eval_evaluate_block_statements(Arena *, Enviroment, BlockStatement);
 Object eval_prefix_expression(Arena *, String, Object);
 Object eval_infix_expression(Arena *, Object, String, Object);
-Object eval_evaluate_node(Arena *, Node *);
-Object eval_evaluate_expression(Arena *, Expression *);
+Object eval_evaluate_node(Arena *, Enviroment, Node *);
+Object eval_evaluate_expression(Arena *, Enviroment, Expression *);
 Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
-Object eval_if_expression(Arena *, Object, BlockStatement, BlockStatement);
+Object eval_if_expression(Arena *, Enviroment, Object, BlockStatement,
+                          BlockStatement);
 String object_to_string(Arena *, Object);
 String error_stringify_object_type(Object object);
 Object new_error(Arena *arena, const char *fmt, ...);

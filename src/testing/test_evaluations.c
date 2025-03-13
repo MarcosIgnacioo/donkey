@@ -149,8 +149,7 @@ void test_error_handling() {
               "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
           .expected = string("unknown operator: BOOLEAN + BOOLEAN")},
       (TestResultError){.input = "foobar",
-                        .expected =
-                            string("identifier not found: foobar")}};
+                        .expected = string("identifier not found: foobar")}};
 
   Object test_obj;
   bool pass = true;
@@ -306,11 +305,12 @@ void test_return_expressions_evaluations() {
 }
 
 Object test_eval(char *input) {
-  ram_init(&arena);
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
-  Object evaluated = eval_evaluate_program(&arena, program);
+  Enviroment env = {0};
+  env_init(&arena, &env);
+  Object evaluated = eval_evaluate_program(&arena, env, program);
   return evaluated;
 }
 

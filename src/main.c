@@ -2,16 +2,18 @@
 #include "./object/object.c"
 #include "./parser/ast.c"
 #include "./ram/ram.h"
+#include "./repl.c"
 #include <stdbool.h>
 #include <stdio.h>
-#include "./repl.c"
 Arena arena = {0};
 
 Object test_eval(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
-  Object evaluated = eval_evaluate_program(&arena, program);
+  Enviroment env = {0};
+  env_init(&arena, &env);
+  Object evaluated = eval_evaluate_program(&arena, env, program);
   return evaluated;
 }
 

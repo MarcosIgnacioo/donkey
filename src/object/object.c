@@ -11,14 +11,15 @@
 /* Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value =
  * popo};*/
 
-Object eval_evaluate_expression(Arena *arena, Expression *expression) {
+Object eval_evaluate_expression(Arena *arena, Enviroment env,
+                                Expression *expression) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   switch (expression->type) {
   case IDENTIFIER_EXP:
     //
     {
       Identifier identifier = expression->identifier;
-      evaluated_object = ram_get_object(arena, identifier.value);
+      evaluated_object = env_get_object(arena, env, identifier.value);
       break;
     }
   case INTEGER_LIT_EXP:
@@ -43,7 +44,7 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
     //
     {
       PrefixExpression prefix = expression->prefix;
-      Object right = eval_evaluate_expression(arena, prefix.right);
+      Object right = eval_evaluate_expression(arena, env, prefix.right);
       evaluated_object = eval_prefix_expression(arena, prefix.operator, right);
       break;
     }
@@ -51,8 +52,8 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
     //
     {
       InfixExpression infix = expression->infix;
-      Object left = eval_evaluate_expression(arena, infix.left);
-      Object right = eval_evaluate_expression(arena, infix.right);
+      Object left = eval_evaluate_expression(arena, env, infix.left);
+      Object right = eval_evaluate_expression(arena, env, infix.right);
       evaluated_object =
           eval_infix_expression(arena, left, infix.operator, right);
       break;
@@ -62,11 +63,11 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
     {
       IfExpression if_expression = expression->if_expression;
       Object condition =
-          eval_evaluate_expression(arena, if_expression.condition);
+          eval_evaluate_expression(arena, env, if_expression.condition);
       BlockStatement consequence = if_expression.consequence;
       BlockStatement alternative = if_expression.alternative;
       evaluated_object =
-          eval_if_expression(arena, condition, consequence, alternative);
+          eval_if_expression(arena, env, condition, consequence, alternative);
       break;
     }
   default:
@@ -210,13 +211,13 @@ bool is_truthy(Object condition) {
   return true;
 }
 
-Object eval_if_expression(Arena *arena, Object condition,
+Object eval_if_expression(Arena *arena, Enviroment env, Object condition,
                           BlockStatement consequence,
                           BlockStatement alternative) {
   if (is_truthy(condition)) {
-    return eval_evaluate_block_statements(arena, consequence);
+    return eval_evaluate_block_statements(arena, env, consequence);
   } else {
-    return eval_evaluate_block_statements(arena, alternative);
+    return eval_evaluate_block_statements(arena, env, alternative);
   }
 }
 
@@ -422,7 +423,7 @@ Object eval_bool_infix_expression(Arena *arena, Object left, String operator,
 // and watch in the debugger what happens to 10
 // which is probably just that when evaluating the content
 // of a nested if the 10 turns itself into from EVAL_RETURN to INTEGER_OBJECT
-Object eval_evaluate_node(Arena *arena, Node *node) {
+Object eval_evaluate_node(Arena *arena, Enviroment env, Node *node) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   if (!node) {
     return evaluated_object;
@@ -431,19 +432,19 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
   switch (node->type) {
   case EXPRESSION_STATEMENT:
     evaluated_object = eval_evaluate_expression(
-        arena, node->expression_statement.expression_value);
+        arena, env, node->expression_statement.expression_value);
     break;
   case RETURN_STATEMENT:
     evaluated_object = eval_evaluate_expression(
-        arena, node->return_statement.expression_value);
+        arena, env, node->return_statement.expression_value);
     evaluated_object.eval_type = EVAL_RETURN;
     break;
   case LET_STATEMENT: {
     LetStatement let_statement = node->let_statement;
     Identifier identifier = let_statement.name;
     Expression *expression_value = let_statement.expression_value;
-    evaluated_object = eval_evaluate_expression(arena, expression_value);
-    ram_insert_object(arena, identifier.value, evaluated_object);
+    evaluated_object = eval_evaluate_expression(arena, env, expression_value);
+    env_insert_object(arena, env, identifier.value, evaluated_object);
     break;
   }
   default:
@@ -453,11 +454,15 @@ Object eval_evaluate_node(Arena *arena, Node *node) {
   return evaluated_object;
 }
 
-Object eval_evaluate_program(Arena *arena, Program program) {
+Object eval_evaluate_program(Arena *arena, Enviroment env, Program program) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
+  // i dont think i need to pass the env as a parameter
+  // here because this function lives the whole evaluation
+  // lifetime so yeah
+
   for (I64 i = 0; i < len(program.statements); i++) {
     Node *node = &program.statements[i];
-    evaluated_object = eval_evaluate_node(arena, node);
+    evaluated_object = eval_evaluate_node(arena, env, node);
     if (evaluated_object.eval_type == EVAL_RETURN ||
         evaluated_object.eval_type == EVAL_ERROR) {
       break;
@@ -467,7 +472,7 @@ Object eval_evaluate_program(Arena *arena, Program program) {
   return evaluated_object;
 }
 
-Object eval_evaluate_block_statements(Arena *arena,
+Object eval_evaluate_block_statements(Arena *arena, Enviroment env,
                                       BlockStatement block_statement) {
   if (!block_statement.statements) {
     return DONKEY_PANIC_OBJECT;
@@ -477,7 +482,7 @@ Object eval_evaluate_block_statements(Arena *arena,
 
   for (I64 i = 0; i < len(block_statement.statements); i++) {
     Node *node = &block_statement.statements[i];
-    evaluated_object = eval_evaluate_node(arena, node);
+    evaluated_object = eval_evaluate_node(arena, env, node);
     if (evaluated_object.eval_type == EVAL_RETURN ||
         evaluated_object.eval_type == EVAL_ERROR) {
       break;
