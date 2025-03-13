@@ -1,4 +1,5 @@
 #include "./ram.h"
+#include "../object/object.h"
 
 bool ram_key_value_equals(void *this, void *that) {
   String this_str = (*(KeyValueMemory *)this).key;
@@ -20,17 +21,20 @@ void ram_insert_object(Arena *arena, String key, Object value) {
   KeyValueMemory *items = (MEMORY).items;
   KeyValueMemory *curr_item = &items[hash];
 
-  while (curr_item->is_occupied && !(MEMORY).are_keys_equals(&curr_item, &key) &&
+  while (curr_item->is_occupied && !(MEMORY).are_keys_equals(curr_item, &key) &&
          hash < (MEMORY).capacity) {
     hash++;
     curr_item = &items[hash];
   }
 
-  if (curr_item->is_occupied && !((MEMORY).are_keys_equals(&curr_item, &key))) {
+  if (curr_item->is_occupied && !((MEMORY).are_keys_equals(curr_item, &key))) {
     printf("OUT OF MEMORY IN DONKEYLANG\n");
     return;
   }
 
+  // if i dont wanna support redeclaration with lets
+  // just putting the assigmnet here would do the
+  // job
   if (!curr_item->is_occupied) {
     MEMORY.len++;
   }
@@ -40,9 +44,10 @@ void ram_insert_object(Arena *arena, String key, Object value) {
   curr_item->value = value;
 }
 
-Object ram_get_object(String key) {
+Object ram_get_object(Arena *arena, String key) {
   if (!MEMORY.items) {
-    return DONKEY_PANIC_OBJECT;
+    Object error_object = new_error(arena, "ram memory empty");
+    return error_object;
   }
 
   U64 hash = get_hash(key) % (MEMORY).capacity;
@@ -55,8 +60,11 @@ Object ram_get_object(String key) {
     curr_item = &items[hash];
   }
 
-  if (curr_item->is_occupied && !((MEMORY).are_keys_equals(curr_item, &key))) {
-    return DONKEY_PANIC_OBJECT;
+  bool are_keys_equals = (MEMORY).are_keys_equals(curr_item, &key);
+
+  if (!are_keys_equals) {
+    Object error_object = new_error(arena, "identifier not found: %S", key);
+    return error_object;
   }
 
   return curr_item->value;

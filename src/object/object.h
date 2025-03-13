@@ -33,19 +33,6 @@ typedef struct {
   bool value;
 } ObjectBoolean;
 
-typedef enum {
-  INT_TYPE,
-  STRING_TYPE,
-} DataType;
-
-typedef struct {
-  DataType type;
-  union {
-    String string_value;
-    I64 integer_value;
-  };
-} ObjectIdentifier;
-
 typedef struct {
   String value;
 } ObjectString;
@@ -64,7 +51,6 @@ struct Object {
   union {
     ObjectInteger integer;
     ObjectBoolean boolean;
-    ObjectIdentifier identifier;
     ObjectString string;
     ObjectError error;
     ObjectDonkey donkey; // this is null btw
@@ -102,6 +88,8 @@ Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_if_expression(Arena *, Object, BlockStatement, BlockStatement);
 String object_to_string(Arena *, Object);
+String error_stringify_object_type(Object object);
+Object new_error(Arena *arena, const char *fmt, ...);
 Object test_eval(char *);
 
 #endif // !_OBJECT_H

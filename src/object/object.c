@@ -18,7 +18,7 @@ Object eval_evaluate_expression(Arena *arena, Expression *expression) {
     //
     {
       Identifier identifier = expression->identifier;
-      evaluated_object = ram_get_object(identifier.value);
+      evaluated_object = ram_get_object(arena, identifier.value);
       break;
     }
   case INTEGER_LIT_EXP:
@@ -495,18 +495,22 @@ String object_to_string(Arena *arena, Object object) {
       return arena_string_fmt(arena, "%d", object.integer.value);
       break;
     }
-
   case BOOLEAN_OBJECT:
     //
     {
       return arena_string_fmt(arena, "%b", object.boolean.value);
       break;
     }
-
+  case ERROR_OBJECT:
+    //
+    {
+      return arena_string_fmt(arena, "%S", object.error.value);
+      break;
+    }
   default:
     //
     {
-      return arena_string_fmt(arena, "%S", object.donkey);
+      return arena_string_fmt(arena, "not stringrified amix", object.donkey);
       break;
     }
   }

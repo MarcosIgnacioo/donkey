@@ -636,8 +636,8 @@ void print_object_types() {
 // contains the number of the test, the name of the function of the test or just
 // the input test string yeah that sounds better andddd if passed or not}
 int main() {
-  donkey_repl(&arena);
-  test_let_statements_and_identifiers();
+  /*donkey_repl(&arena);*/
+  test_let_statements_integers();
   printf("\n");
   test_error_handling();
   printf("\n");

@@ -13,5 +13,5 @@ HashTable MEMORY = {0};
 
 bool ram_key_value_equals(void *this, void *that);
 void ram_insert_object(Arena *arena, String key, Object value);
-Object ram_get_object(String key);
+Object ram_get_object(Arena *arena, String key);
 #endif // !_RAM_H

@@ -106,7 +106,8 @@ ResultEquals test_token_equals(Token, Token);
 
 bool test_object_integer(Object, I64);
 bool test_object_bool(Object, bool);
-bool test_object_null(Object testing);
+bool test_object_null(Object);
+bool test_object_string(Object, String);
 
 Node *new_node(char *input);
 void test_print_expression(Expression *expression);

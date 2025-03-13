@@ -171,36 +171,26 @@ void test_error_handling() {
 
 typedef struct {
   char *input;
-  String expected;
+  I64 expected;
 } TestLetStatementsIdentifiers;
 
-bool test_object_let_statement_identifier(Object testing, String expected) {
-  if (testing.type != IDENTIFIER_OBJECT) {
-    printf("\n%s!=OBJECT_ERROR\n", ObjectToString(testing.type));
-    return false;
-  }
-  if (!string_equals(testing.error.value, expected)) {
-    printf("\n%s!=%s\n", testing.error.value.str, expected.str);
-    return false;
-  }
-  return true;
-}
-
-void test_let_statements_and_identifiers() {
+void test_let_statements_integers() {
   TestLetStatementsIdentifiers test_cases[] = {
-      (TestLetStatementsIdentifiers){
-          .input = "let foo = 1; foo;",
-          .expected = string("1")
-      },
+      {.input = "let foo = 1; foo;", .expected = 1},
+      {.input = "let a = 5; a;", .expected = 5},
+      {.input = "let a = 5 * 5; a;", .expected = 25},
+      {.input = "let a = 5; let b = a; b;", .expected = 5},
+      {.input = "let a = 5; let b = a; let c = a + b + 5; c;", .expected = 15},
   };
-  Object test_obj;
+  Object testing;
   bool pass = true;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestLetStatementsIdentifiers test = test_cases[i];
-    test_obj = test_eval(test.input);
+    testing = test_eval(test.input);
+    test_object_integer(testing, test.expected);
   }
   printfln("Last expression evaluated to: %S",
-           object_to_string(&arena, test_obj));
+           object_to_string(&arena, testing));
 
   // TODO: Find a way to make the part of the function name not be hardcoded and
   //       just in a macro cause its better!! i hope
@@ -349,6 +339,22 @@ bool test_object_bool(Object testing, bool expected) {
 
   if (testing_bool.value != expected) {
     printfln("expected: %b\ngot:\t  %b", expected, testing_bool.value);
+    return false;
+  }
+
+  return true;
+}
+
+bool test_object_string(Object testing, String expected) {
+  if (testing.type != STRING_OBJECT) {
+    printf("\n%s!=STRING_OBJECT\n", ObjectToString(testing.type));
+    return false;
+  }
+
+  ObjectString testing_string = testing.string;
+
+  if (!string_equals(testing_string.value, expected)) {
+    printfln("expected: %S\ngot:\t  %S", expected, testing_string.value);
     return false;
   }
 
