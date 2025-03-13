@@ -1,6 +1,11 @@
 #include "./ram.h"
 #include "../object/object.h"
 
+void ram_init(Arena *arena) {
+  /*arena_reset(arena);*/
+  hash_table_alloc(arena, &MEMORY, KeyValueMemory, &ram_key_value_equals);
+}
+
 bool ram_key_value_equals(void *this, void *that) {
   String this_str = (*(KeyValueMemory *)this).key;
   String that_str = *(String *)that;
@@ -46,7 +51,7 @@ void ram_insert_object(Arena *arena, String key, Object value) {
 
 Object ram_get_object(Arena *arena, String key) {
   if (!MEMORY.items) {
-    Object error_object = new_error(arena, "ram memory empty");
+    Object error_object = new_error(arena, "identifier not found: %S", key);
     return error_object;
   }
 

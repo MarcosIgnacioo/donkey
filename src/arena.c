@@ -291,11 +291,13 @@ Arena_Mark arena_snapshot(Arena *arena) {
 
 // fix this cause it keeps the count from some regions
 void arena_reset(Arena *arena) {
-  Region *curr = arena->end;
+  Region *curr = arena->begin;
+
   while (curr) {
     curr->count = 0;
     curr = curr->next;
   }
+
   arena->end = arena->begin;
 }
 

@@ -1,5 +1,6 @@
 #include "../array.c"
 #include "../object/object.c"
+#include "../ram/ram.h"
 #include "test.h"
 #include <stdio.h>
 
@@ -146,7 +147,10 @@ void test_error_handling() {
       (TestResultError){
           .input =
               "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
-          .expected = string("unknown operator: BOOLEAN + BOOLEAN")}};
+          .expected = string("unknown operator: BOOLEAN + BOOLEAN")},
+      (TestResultError){.input = "foobar",
+                        .expected =
+                            string("identifier not found: foobar")}};
 
   Object test_obj;
   bool pass = true;
@@ -302,6 +306,7 @@ void test_return_expressions_evaluations() {
 }
 
 Object test_eval(char *input) {
+  ram_init(&arena);
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);

@@ -11,6 +11,7 @@ typedef struct {
 
 HashTable MEMORY = {0};
 
+void ram_init(Arena *);
 bool ram_key_value_equals(void *this, void *that);
 void ram_insert_object(Arena *arena, String key, Object value);
 Object ram_get_object(Arena *arena, String key);
