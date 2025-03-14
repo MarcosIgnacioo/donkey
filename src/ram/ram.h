@@ -3,9 +3,9 @@
 #include "../arena_hash_table.c"
 #include "../object/object.h"
 
-typedef struct {
+struct Enviroment{
   HashTable memory;
-} Enviroment;
+};
 
 typedef struct {
   String key;

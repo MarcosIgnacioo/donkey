@@ -68,8 +68,16 @@ Object eval_evaluate_expression(Arena *arena, Enviroment env,
       BlockStatement alternative = if_expression.alternative;
       Enviroment if_env = {0};
       env_clone(arena, &if_env, env);
+      evaluated_object = eval_if_expression(arena, if_env, condition,
+                                            consequence, alternative);
+      break;
+    }
+  case FUNCTION_LITERAL_EXP:
+    //
+    {
+      FunctionLiteral function = expression->function_literal;
       evaluated_object =
-          eval_if_expression(arena, if_env, condition, consequence, alternative);
+          eval_fn_expression(arena, env, &function.body, function.parameters);
       break;
     }
   default:
@@ -221,6 +229,20 @@ Object eval_if_expression(Arena *arena, Enviroment env, Object condition,
   } else {
     return eval_evaluate_block_statements(arena, env, alternative);
   }
+}
+
+Object eval_fn_expression(Arena *arena,         //
+                          Enviroment env,       //
+                          BlockStatement *body, //
+                          Identifier *parameters) {
+  Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
+  env_clone(arena, fn_env, env);
+  Object evaluated_object;
+  evaluated_object.function.parameters = parameters;
+  evaluated_object.function.body = body;
+  evaluated_object.function.env = fn_env;
+  evaluated_object.type = FUNCTION_OBJECT;
+  return evaluated_object;
 }
 
 Object c_boolean_to_donkey_boolean(bool boolean) {
@@ -508,10 +530,19 @@ String object_to_string(Arena *arena, Object object) {
       return arena_string_fmt(arena, "%b", object.boolean.value);
       break;
     }
+  case FUNCTION_OBJECT:
+    //
+    {
+      ObjectFunction fn = object.function;
+      String parameters = arena_join_identifier_array(arena, fn.parameters);
+      String body = stringify_statements(arena, fn.body->statements);
+      return arena_string_fmt(arena, "fn (%S) { %S }", parameters, body);
+      break;
+    }
   case ERROR_OBJECT:
     //
     {
-      return arena_string_fmt(arena, "ERROR:%S", object.error.value);
+      return arena_string_fmt(arena, "[ERROR]: %S", object.error.value);
       break;
     }
   default:

@@ -12,6 +12,7 @@
   X(BOOLEAN_OBJECT)                                                            \
   X(STRING_OBJECT)                                                             \
   X(IDENTIFIER_OBJECT)                                                         \
+  X(FUNCTION_OBJECT)                                                           \
   X(ERROR_OBJECT)
 
 #define X(name) name,
@@ -36,6 +37,14 @@ typedef struct {
   String value;
 } ObjectString;
 
+typedef struct Enviroment Enviroment;
+
+typedef struct {
+  Identifier *parameters;
+  BlockStatement *body;
+  Enviroment *env;
+} ObjectFunction;
+
 typedef struct {
   String value;
 } ObjectError;
@@ -51,6 +60,7 @@ struct Object {
     ObjectInteger integer;
     ObjectBoolean boolean;
     ObjectString string;
+    ObjectFunction function;
     ObjectError error;
     ObjectDonkey donkey; // this is null btw
   };
@@ -88,6 +98,7 @@ Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_if_expression(Arena *, Enviroment, Object, BlockStatement,
                           BlockStatement);
+Object eval_fn_expression(Arena *, Enviroment, BlockStatement *, Identifier *);
 String object_to_string(Arena *, Object);
 String error_stringify_object_type(Object object);
 Object new_error(Arena *arena, const char *fmt, ...);

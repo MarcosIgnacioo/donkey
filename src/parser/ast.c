@@ -298,8 +298,7 @@ Expression *ast_parse_prefix_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_infix_expression(Arena *arena, Parser *parser,
                                        Expression *left);
 // utility
-String arena_join_identifier_array(Arena *arena, Identifier *identifiers,
-                                   String separator);
+String arena_join_identifier_array(Arena *arena, Identifier *identifiers);
 String join_expression_caster(Arena *arena, void *data);
 String join_argument_caster(Arena *arena, void *data);
 bool ast_expect_peek_token(Arena *arena, Parser *parser,
@@ -462,8 +461,7 @@ void ast_next_token(Arena *arena, Parser *parser) {
 #define curr_token_is(P, E) (P->curr_token.type == E)
 
 // expects dynamic array
-String arena_join_identifier_array(Arena *arena, Identifier *identifiers,
-                                   String separator) {
+String arena_join_identifier_array(Arena *arena, Identifier *identifiers) {
   String join = arena_new_empty_string_with_cap(arena, 512);
   for (I64 i = 0; i < len(identifiers); i++) {
     if (i > 0) {
