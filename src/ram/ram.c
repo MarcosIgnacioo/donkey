@@ -12,8 +12,9 @@ bool env_key_value_equals(void *this, void *that) {
   return string_equals(this_str, that_str);
 }
 
-void env_insert_object(Arena *arena, Enviroment env, String key, Object value) {
-  HashTable memory_env = env.memory;
+void env_insert_object(Arena *arena, Enviroment *env, String key,
+                       Object value) {
+  HashTable memory_env = env->memory;
   if (!memory_env.items) {
     hash_table_alloc(arena, &memory_env, KeyValueMemory, &env_key_value_equals);
   }
@@ -78,4 +79,13 @@ Object env_get_object(Arena *arena, Enviroment env, String key) {
   }
 
   return curr_item->value;
+}
+
+void env_clone(Arena *arena, Enviroment *inner, Enviroment outer) {
+  /*memory_copy((byte *)inner, (byte *)&outer, sizeof(HashTable));*/
+  HashTable outer_ht = outer.memory;
+  hash_table_alloc(arena, &inner->memory, KeyValueMemory,
+                   outer.memory.are_keys_equals);
+  memory_copy((byte *)inner->memory.items, (byte *)outer_ht.items,
+              outer_ht.item_size * outer_ht.len);
 }

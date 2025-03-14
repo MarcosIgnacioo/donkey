@@ -66,8 +66,10 @@ Object eval_evaluate_expression(Arena *arena, Enviroment env,
           eval_evaluate_expression(arena, env, if_expression.condition);
       BlockStatement consequence = if_expression.consequence;
       BlockStatement alternative = if_expression.alternative;
+      Enviroment if_env = {0};
+      env_clone(arena, &if_env, env);
       evaluated_object =
-          eval_if_expression(arena, env, condition, consequence, alternative);
+          eval_if_expression(arena, if_env, condition, consequence, alternative);
       break;
     }
   default:
@@ -444,7 +446,7 @@ Object eval_evaluate_node(Arena *arena, Enviroment env, Node *node) {
     Identifier identifier = let_statement.name;
     Expression *expression_value = let_statement.expression_value;
     evaluated_object = eval_evaluate_expression(arena, env, expression_value);
-    env_insert_object(arena, env, identifier.value, evaluated_object);
+    env_insert_object(arena, &env, identifier.value, evaluated_object);
     break;
   }
   default:
@@ -509,7 +511,7 @@ String object_to_string(Arena *arena, Object object) {
   case ERROR_OBJECT:
     //
     {
-      return arena_string_fmt(arena, "%S", object.error.value);
+      return arena_string_fmt(arena, "ERROR:%S", object.error.value);
       break;
     }
   default:

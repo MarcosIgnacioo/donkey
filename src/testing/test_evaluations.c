@@ -170,6 +170,7 @@ void test_error_handling() {
   } else {
     printf(LOG_ERROR "TEST FAILED       AT: test_error_handling() \n");
   }
+  printf("\n");
 }
 
 typedef struct {

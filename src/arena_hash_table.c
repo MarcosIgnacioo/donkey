@@ -55,9 +55,9 @@ U64 get_hash(String key) {
     (_hash_table)->get_hash = &get_hash;                                       \
     (_hash_table)->len = 0;                                                    \
     (_hash_table)->items =                                                     \
-        arena_alloc(_arena, sizeof(_key_value_t) * DEFAULT_CAPACITY); \
+        arena_alloc(_arena, sizeof(_key_value_t) * DEFAULT_CAPACITY);          \
     memory_set((byte *)(_hash_table)->items,                                   \
-               sizeof(_key_value_t) * DEFAULT_CAPACITY, 0);           \
+               sizeof(_key_value_t) * DEFAULT_CAPACITY, 0);                    \
   } while (false) // 54: this sizeof(*(_hash_table)->items) should segfault use
                   // sizeof(_key_value_t) instead
 
