@@ -76,8 +76,8 @@ Object eval_evaluate_expression(Arena *arena, Enviroment env,
     //
     {
       FunctionLiteral function = expression->function_literal;
-      evaluated_object =
-          eval_fn_expression(arena, env, &function.body, function.parameters);
+      evaluated_object = eval_fn_expression(
+          arena, env, function.name.value, &function.body, function.parameters);
       break;
     }
   default:
@@ -233,6 +233,7 @@ Object eval_if_expression(Arena *arena, Enviroment env, Object condition,
 
 Object eval_fn_expression(Arena *arena,         //
                           Enviroment env,       //
+                          String name,          //
                           BlockStatement *body, //
                           Identifier *parameters) {
   Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
@@ -242,6 +243,12 @@ Object eval_fn_expression(Arena *arena,         //
   evaluated_object.function.body = body;
   evaluated_object.function.env = fn_env;
   evaluated_object.type = FUNCTION_OBJECT;
+  if (name.len) {
+    evaluated_object.function.name = name;
+    env_insert_object(arena, &env, name, evaluated_object);
+  } else {
+    evaluated_object.function.name = (String){ .str = "", .len = 0, .cap = 0 };
+  }
   return evaluated_object;
 }
 
@@ -536,7 +543,11 @@ String object_to_string(Arena *arena, Object object) {
       ObjectFunction fn = object.function;
       String parameters = arena_join_identifier_array(arena, fn.parameters);
       String body = stringify_statements(arena, fn.body->statements);
-      return arena_string_fmt(arena, "fn (%S) { %S }", parameters, body);
+      String name = fn.name;
+        if (true) {
+        }
+      return arena_string_fmt(arena, "fn %S(%S) { %S }", name, parameters,
+                              body);
       break;
     }
   case ERROR_OBJECT:

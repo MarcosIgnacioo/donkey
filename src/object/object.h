@@ -39,7 +39,9 @@ typedef struct {
 
 typedef struct Enviroment Enviroment;
 
+
 typedef struct {
+  String name;
   Identifier *parameters;
   BlockStatement *body;
   Enviroment *env;
@@ -98,7 +100,7 @@ Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_if_expression(Arena *, Enviroment, Object, BlockStatement,
                           BlockStatement);
-Object eval_fn_expression(Arena *, Enviroment, BlockStatement *, Identifier *);
+Object eval_fn_expression(Arena *, Enviroment, String name, BlockStatement *, Identifier *);
 String object_to_string(Arena *, Object);
 String error_stringify_object_type(Object object);
 Object new_error(Arena *arena, const char *fmt, ...);

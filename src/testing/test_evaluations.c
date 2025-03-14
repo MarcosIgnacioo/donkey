@@ -209,6 +209,24 @@ void test_let_statements_integers() {
 
 typedef struct {
   char *input;
+} TestGeneric;
+
+void test_generic() {
+  TestGeneric test_cases[] = {
+      {.input = "fn foo(x) {return x;} foo;"},
+      {.input = "let caca = fn (x) {return x;} caca;"},
+  };
+  Object testing;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestGeneric test = test_cases[i];
+    testing = test_eval(test.input);
+    printfln("%S", object_to_string(&arena, testing));
+  }
+  (void) testing;
+}
+
+typedef struct {
+  char *input;
   union {
     int value;
     void * not;
