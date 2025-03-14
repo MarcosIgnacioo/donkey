@@ -13,7 +13,7 @@ Object test_eval(char *input) {
   Program program = ast_parse_program(&arena, &parser);
   Enviroment env = {0};
   env_init(&arena, &env);
-  Object evaluated = eval_evaluate_program(&arena, env, program);
+  Object evaluated = eval_evaluate_program(&arena, &env, program);
   return evaluated;
 }
 

@@ -14,29 +14,28 @@ bool env_key_value_equals(void *this, void *that) {
 
 void env_insert_object(Arena *arena, Enviroment *env, String key,
                        Object value) {
-  HashTable memory_env = env->memory;
-  if (!memory_env.items) {
-    hash_table_alloc(arena, &memory_env, KeyValueMemory, &env_key_value_equals);
+  if (!env->memory.items) {
+    hash_table_alloc(arena, &env->memory, KeyValueMemory, &env_key_value_equals);
   }
 
-  if (memory_env.len >= memory_env.capacity) {
-    memory_env.items = realloc(memory_env.items, memory_env.capacity * 2);
-    memory_env.capacity = memory_env.capacity * 2;
+  if (env->memory.len >= env->memory.capacity) {
+    env->memory.items = realloc(env->memory.items, env->memory.capacity * 2);
+    env->memory.capacity = env->memory.capacity * 2;
   }
 
-  U64 hash = get_hash(key) % (memory_env).capacity;
-  KeyValueMemory *items = (memory_env).items;
+  U64 hash = get_hash(key) % (env->memory).capacity;
+  KeyValueMemory *items = (env->memory).items;
   KeyValueMemory *curr_item = &items[hash];
 
   while (curr_item->is_occupied &&
-         !(memory_env).are_keys_equals(curr_item, &key) &&
-         hash < (memory_env).capacity) {
+         !(env->memory).are_keys_equals(curr_item, &key) &&
+         hash < (env->memory).capacity) {
     hash++;
     curr_item = &items[hash];
   }
 
   if (curr_item->is_occupied &&
-      !((memory_env).are_keys_equals(curr_item, &key))) {
+      !((env->memory).are_keys_equals(curr_item, &key))) {
     printf("OUT OF MEMORY IN DONKEYLANG\n");
     return;
   }
@@ -45,7 +44,7 @@ void env_insert_object(Arena *arena, Enviroment *env, String key,
   // just putting the assigmnet here would do the
   // job
   if (!curr_item->is_occupied) {
-    memory_env.len++;
+    env->memory.len++;
   }
 
   curr_item->key = key;
@@ -53,8 +52,8 @@ void env_insert_object(Arena *arena, Enviroment *env, String key,
   curr_item->value = value;
 }
 
-Object env_get_object(Arena *arena, Enviroment env, String key) {
-  HashTable memory_env = env.memory;
+Object env_get_object(Arena *arena, Enviroment *env, String key) {
+  HashTable memory_env = env->memory;
   if (!memory_env.items) {
     Object error_object = new_error(arena, "identifier not found: %S", key);
     return error_object;
@@ -81,11 +80,11 @@ Object env_get_object(Arena *arena, Enviroment env, String key) {
   return curr_item->value;
 }
 
-void env_clone(Arena *arena, Enviroment *inner, Enviroment outer) {
+void env_clone(Arena *arena, Enviroment *inner, Enviroment *outer) {
   /*memory_copy((byte *)inner, (byte *)&outer, sizeof(HashTable));*/
-  HashTable outer_ht = outer.memory;
+  HashTable outer_ht = outer->memory;
   hash_table_alloc(arena, &inner->memory, KeyValueMemory,
-                   outer.memory.are_keys_equals);
+                   outer_ht.are_keys_equals);
   memory_copy((byte *)inner->memory.items, (byte *)outer_ht.items,
-              outer_ht.item_size * outer_ht.len);
+              outer_ht.item_size * outer_ht.capacity);
 }

@@ -36,7 +36,7 @@ void donkey_repl(Arena *arena) {
     lexi = lexer_new_lexer(input);
     parser = ast_new_parser(arena, &lexi);
     program = ast_parse_program(arena, &parser);
-    evaluation = eval_evaluate_program(arena, env, program);
+    evaluation = eval_evaluate_program(arena, &env, program);
     program_str = object_to_string(arena, evaluation);
     if (len(parser.errors)) {
       print_parser_errors(parser);

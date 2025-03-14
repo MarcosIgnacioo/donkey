@@ -39,11 +39,10 @@ typedef struct {
 
 typedef struct Enviroment Enviroment;
 
-
 typedef struct {
   String name;
   Identifier *parameters;
-  BlockStatement *body;
+  BlockStatement body;
   Enviroment *env;
 } ObjectFunction;
 
@@ -90,17 +89,20 @@ Object FALSE_OBJECT = (Object){.type = BOOLEAN_OBJECT, .boolean.value = false};
 String BANG_STRING = (String){.str = "!", .len = 1, .cap = 1};
 String MINUS_STRING = (String){.str = "-", .len = 1, .cap = 1};
 
-Object eval_evaluate_program(Arena *, Enviroment, Program);
-Object eval_evaluate_block_statements(Arena *, Enviroment, BlockStatement);
+Object eval_evaluate_program(Arena *, Enviroment *, Program);
+Object eval_evaluate_block_statements(Arena *, Enviroment *, BlockStatement);
 Object eval_prefix_expression(Arena *, String, Object);
 Object eval_infix_expression(Arena *, Object, String, Object);
-Object eval_evaluate_node(Arena *, Enviroment, Node *);
-Object eval_evaluate_expression(Arena *, Enviroment, Expression *);
+Object eval_evaluate_node(Arena *, Enviroment *, Node *);
+Object eval_evaluate_expression(Arena *, Enviroment *, Expression *);
 Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
-Object eval_if_expression(Arena *, Enviroment, Object, BlockStatement,
+Object eval_if_expression(Arena *, Enviroment *, Object, BlockStatement,
                           BlockStatement);
-Object eval_fn_expression(Arena *, Enviroment, String name, BlockStatement *, Identifier *);
+Object eval_fn_expression(Arena *, Enviroment *, String name, BlockStatement,
+                          Identifier *);
+Object eval_fn_call_expression(Arena *, Enviroment *, ObjectFunction,
+                               Expression **);
 String object_to_string(Arena *, Object);
 String error_stringify_object_type(Object object);
 Object new_error(Arena *arena, const char *fmt, ...);

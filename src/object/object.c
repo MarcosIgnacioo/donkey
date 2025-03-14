@@ -11,7 +11,7 @@
 /* Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value =
  * popo};*/
 
-Object eval_evaluate_expression(Arena *arena, Enviroment env,
+Object eval_evaluate_expression(Arena *arena, Enviroment *env,
                                 Expression *expression) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   switch (expression->type) {
@@ -66,9 +66,10 @@ Object eval_evaluate_expression(Arena *arena, Enviroment env,
           eval_evaluate_expression(arena, env, if_expression.condition);
       BlockStatement consequence = if_expression.consequence;
       BlockStatement alternative = if_expression.alternative;
+      /*Enviroment *if_env = arena_alloc(arena, sizeof(Enviroment));*/
       Enviroment if_env = {0};
       env_clone(arena, &if_env, env);
-      evaluated_object = eval_if_expression(arena, if_env, condition,
+      evaluated_object = eval_if_expression(arena, &if_env, condition,
                                             consequence, alternative);
       break;
     }
@@ -76,8 +77,27 @@ Object eval_evaluate_expression(Arena *arena, Enviroment env,
     //
     {
       FunctionLiteral function = expression->function_literal;
-      evaluated_object = eval_fn_expression(
-          arena, env, function.name.value, &function.body, function.parameters);
+      evaluated_object = eval_fn_expression(arena, env, function.name.value,
+                                            function.body, function.parameters);
+      break;
+    }
+  case FUNCTION_CALL_EXP:
+    //
+    {
+      FunctionCallExpression function_call = expression->function_call;
+      Expression **arguments = function_call.arguments;
+      Object fn_object =
+          eval_evaluate_expression(arena, env, function_call.function);
+      if (fn_object.type != FUNCTION_OBJECT) {
+        return fn_object;
+      }
+      ObjectFunction function = fn_object.function;
+      evaluated_object = eval_fn_call_expression( //
+          arena,                                  //
+          env,                                    //
+          function,                               //
+          arguments                               //
+      );
       break;
     }
   default:
@@ -221,7 +241,7 @@ bool is_truthy(Object condition) {
   return true;
 }
 
-Object eval_if_expression(Arena *arena, Enviroment env, Object condition,
+Object eval_if_expression(Arena *arena, Enviroment *env, Object condition,
                           BlockStatement consequence,
                           BlockStatement alternative) {
   if (is_truthy(condition)) {
@@ -231,25 +251,46 @@ Object eval_if_expression(Arena *arena, Enviroment env, Object condition,
   }
 }
 
-Object eval_fn_expression(Arena *arena,         //
-                          Enviroment env,       //
-                          String name,          //
-                          BlockStatement *body, //
+Object eval_fn_expression(Arena *arena,        //
+                          Enviroment *env,     //
+                          String name,         //
+                          BlockStatement body, //
                           Identifier *parameters) {
   Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
-  env_clone(arena, fn_env, env);
   Object evaluated_object;
-  evaluated_object.function.parameters = parameters;
-  evaluated_object.function.body = body;
-  evaluated_object.function.env = fn_env;
+  ObjectFunction *function = &evaluated_object.function;
+  function->parameters = parameters;
+  function->body = body;
+  function->env = fn_env;
   evaluated_object.type = FUNCTION_OBJECT;
   if (name.len) {
+    env_insert_object(arena, env, name, evaluated_object);
     evaluated_object.function.name = name;
-    env_insert_object(arena, &env, name, evaluated_object);
   } else {
-    evaluated_object.function.name = (String){ .str = "", .len = 0, .cap = 0 };
+    evaluated_object.function.name = (String){.str = "", .len = 0, .cap = 0};
   }
   return evaluated_object;
+}
+
+Object eval_fn_call_expression(Arena *arena,            //
+                               Enviroment *env,         //
+                               ObjectFunction function, //
+                               Expression **arguments) {
+  Enviroment *fn_env = function.env;
+  env_clone(arena, fn_env, env);
+  BlockStatement fn_body = function.body;
+  Identifier *parameters = function.parameters;
+
+  for (int i = 0; i < len(parameters); i++) {
+    Expression *argument = arguments[i];
+    String parameter_name = parameters[i].value;
+    Object object_argument = eval_evaluate_expression(arena, fn_env, argument);
+    env_insert_object(arena, fn_env, parameter_name, object_argument);
+  }
+
+  Object returning_object =
+      eval_evaluate_block_statements(arena, fn_env, fn_body);
+  return returning_object;
 }
 
 Object c_boolean_to_donkey_boolean(bool boolean) {
@@ -454,7 +495,7 @@ Object eval_bool_infix_expression(Arena *arena, Object left, String operator,
 // and watch in the debugger what happens to 10
 // which is probably just that when evaluating the content
 // of a nested if the 10 turns itself into from EVAL_RETURN to INTEGER_OBJECT
-Object eval_evaluate_node(Arena *arena, Enviroment env, Node *node) {
+Object eval_evaluate_node(Arena *arena, Enviroment *env, Node *node) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   if (!node) {
     return evaluated_object;
@@ -475,7 +516,10 @@ Object eval_evaluate_node(Arena *arena, Enviroment env, Node *node) {
     Identifier identifier = let_statement.name;
     Expression *expression_value = let_statement.expression_value;
     evaluated_object = eval_evaluate_expression(arena, env, expression_value);
-    env_insert_object(arena, &env, identifier.value, evaluated_object);
+    if (evaluated_object.type == ERROR_OBJECT) {
+      return evaluated_object;
+    }
+    env_insert_object(arena, env, identifier.value, evaluated_object);
     break;
   }
   default:
@@ -485,7 +529,7 @@ Object eval_evaluate_node(Arena *arena, Enviroment env, Node *node) {
   return evaluated_object;
 }
 
-Object eval_evaluate_program(Arena *arena, Enviroment env, Program program) {
+Object eval_evaluate_program(Arena *arena, Enviroment *env, Program program) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   // i dont think i need to pass the env as a parameter
   // here because this function lives the whole evaluation
@@ -503,7 +547,7 @@ Object eval_evaluate_program(Arena *arena, Enviroment env, Program program) {
   return evaluated_object;
 }
 
-Object eval_evaluate_block_statements(Arena *arena, Enviroment env,
+Object eval_evaluate_block_statements(Arena *arena, Enviroment *env,
                                       BlockStatement block_statement) {
   if (!block_statement.statements) {
     return DONKEY_PANIC_OBJECT;
@@ -542,10 +586,10 @@ String object_to_string(Arena *arena, Object object) {
     {
       ObjectFunction fn = object.function;
       String parameters = arena_join_identifier_array(arena, fn.parameters);
-      String body = stringify_statements(arena, fn.body->statements);
+      String body = stringify_statements(arena, fn.body.statements);
       String name = fn.name;
-        if (true) {
-        }
+      if (true) {
+      }
       return arena_string_fmt(arena, "fn %S(%S) { %S }", name, parameters,
                               body);
       break;

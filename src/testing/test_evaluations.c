@@ -211,18 +211,52 @@ typedef struct {
   char *input;
 } TestGeneric;
 
-void test_generic() {
+void test_repl() {
+  env_init(&arena, &env);
   TestGeneric test_cases[] = {
-      {.input = "fn foo(x) {return x;} foo;"},
-      {.input = "let caca = fn (x) {return x;} caca;"},
+      {.input = "let newAdder = fn(x) { return fn foo(y) { return x + y } }"},
+      {.input = "fn foo(x){return x;}"},
+      {.input = "foo(3);"},
   };
+  String input = {0};
+  Lexer lexer = (Lexer){0};
+  Parser parser = {0};
+  Program program = {0};
+  String program_str;
+  Object evaluation;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestGeneric test = test_cases[i];
+    input = string(test.input);
+    lexer = lexer_new_lexer(input);
+    parser = ast_new_parser(&arena, &lexer);
+    program = ast_parse_program(&arena, &parser);
+    evaluation = eval_evaluate_program(&arena, &env, program);
+    program_str = object_to_string(&arena, evaluation);
+    printfln(color(4) "DONKEY >> " end_color "%S", program_str);
+    /*if (len(parser.errors)) {*/
+    /*  print_parser_errors(parser);*/
+    /*} else if (program_str.len) {*/
+    /*}*/
+  }
+}
+
+void test_generic() {
+  env_init(&arena, &env);
+  TestGeneric test_cases[] = {
+      /*{.input = "fn factorial(n) { if ((n == 0)) {1;} else {factorial((n - "*/
+      /*          "1));}; }"},*/
+      /*{.input = "factorial(3);"},*/
+      {.input = "let factorial = fn(n) { if (n == 0) { 1 } else { n * "
+                "factorial(n - 1) } };"},
+      {.input = "factorial(5);"}};
   Object testing;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestGeneric test = test_cases[i];
     testing = test_eval(test.input);
     printfln("%S", object_to_string(&arena, testing));
   }
-  (void) testing;
+  (void)testing;
+  printf("\n");
 }
 
 typedef struct {
@@ -327,9 +361,7 @@ Object test_eval(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
-  Enviroment env = {0};
-  env_init(&arena, &env);
-  Object evaluated = eval_evaluate_program(&arena, env, program);
+  Object evaluated = eval_evaluate_program(&arena, &env, program);
   return evaluated;
 }
 

@@ -45,6 +45,14 @@ U64 get_hash(String key) {
   return d;
 }
 
+U64 cstr_get_hash(char *key) {
+  U64 d = 0x01000193;
+  for (U64 i = 0; key[i]; i++) {
+    d = ((d * 0x01000193) ^ key[i]) & 0xffffffff;
+  }
+  return d;
+}
+
 #define DEFAULT_CAPACITY 1024 * 8
 
 #define hash_table_alloc(_arena, _hash_table, _key_value_t, _are_keys_equals)  \

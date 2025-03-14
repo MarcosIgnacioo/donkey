@@ -98,6 +98,9 @@ Region *new_region_zero(U64 capacity) {
   return region;
 }
 
+  // an example of use of the tmp arena, cause the array args is
+  // not being useful after this fn call we could just reset the tmp arena and
+  // vualaaaa memory efficencncni
 void free_region(Region *region) { free(region); }
 
 // arena well arena

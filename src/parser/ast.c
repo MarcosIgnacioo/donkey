@@ -323,7 +323,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, IDENTIFIER,
        prs_fn(&ast_parse_identifier, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, INT, prs_fn(&ast_parse_int, NULL)),             //
-    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                    //
+    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                    // implement reasigning variables :3
     kv(KeyValue_PF, MINUS,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, PLUS,

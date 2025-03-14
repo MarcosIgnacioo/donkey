@@ -17,6 +17,7 @@
 #define print_error(...) printf(LOG_ERROR __VA_ARGS__)
 
 Arena arena = {0};
+Enviroment env = {0};
 
 bool _expression_equalsowo(Expression *exp_a, Expression *exp_b) {
   bool are_equal = true;
