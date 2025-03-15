@@ -85,11 +85,17 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
     //
     {
       FunctionCallExpression function_call = expression->function_call;
-      Expression **arguments = function_call.arguments;
       Object fn_object =
           eval_evaluate_expression(arena, env, function_call.function);
-      if (fn_object.type != FUNCTION_OBJECT) {
+      if (fn_object.type == ERROR_OBJECT) {
         return fn_object;
+      }
+      Object *arguments =
+          eval_evaluate_expressions(arena, env, function_call.arguments);
+      // we check the first element of the array
+      // if it is an error well we then return it :D
+      if (arguments->type == ERROR_OBJECT) {
+        return *arguments;
       }
       ObjectFunction function = fn_object.function;
       evaluated_object = eval_fn_call_expression( //
@@ -98,6 +104,9 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
           function,                               //
           arguments                               //
       );
+      // here tmp arena would be super cool for storing the arguments
+      // cause after evaluating the fn_call_expression we dont really
+      // need them anymore so freeing that memory would be pretty cool
       break;
     }
   default:
@@ -256,12 +265,12 @@ Object eval_fn_expression(Arena *arena,        //
                           String name,         //
                           BlockStatement body, //
                           Identifier *parameters) {
-  Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
+  /*Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));*/
   Object evaluated_object;
   ObjectFunction *function = &evaluated_object.function;
   function->parameters = parameters;
   function->body = body;
-  function->env = fn_env;
+  /*function->env = fn_env;*/
   evaluated_object.type = FUNCTION_OBJECT;
   if (name.len) {
     env_insert_object(arena, env, name, evaluated_object);
@@ -272,22 +281,42 @@ Object eval_fn_expression(Arena *arena,        //
   return evaluated_object;
 }
 
+Object *eval_evaluate_expressions(Arena *arena, Enviroment *env,
+                                  Expression **expressions) {
+  Object *resulting_objects = arena_array(arena, Object);
+
+  for (int i = 0; i < len(expressions); i++) {
+    Expression *expression = expressions[i];
+    Object evaluated_object = eval_evaluate_expression(arena, env, expression);
+    if (evaluated_object.type == ERROR_OBJECT) {
+      reset(resulting_objects);
+      append(resulting_objects, evaluated_object);
+      break;
+    }
+    append(resulting_objects, evaluated_object);
+  }
+
+  return resulting_objects;
+}
+
 Object eval_fn_call_expression(Arena *arena,            //
                                Enviroment *env,         //
                                ObjectFunction function, //
-                               Expression **arguments) {
-  Enviroment *fn_env = function.env;
+                               Object *arguments) {
+  // store the function enviroment pointer
+  Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
+  function.env = fn_env;
   env_clone(arena, fn_env, env);
   BlockStatement fn_body = function.body;
   Identifier *parameters = function.parameters;
 
   for (int i = 0; i < len(parameters); i++) {
-    Expression *argument = arguments[i];
+    Object arg = arguments[i];
     String parameter_name = parameters[i].value;
-    Object object_argument = eval_evaluate_expression(arena, fn_env, argument);
-    env_insert_object(arena, fn_env, parameter_name, object_argument);
+    env_insert_object(arena, fn_env, parameter_name, arg);
   }
 
+  // we should free the enviromentttttt!!!
   Object returning_object =
       eval_evaluate_block_statements(arena, fn_env, fn_body);
   return returning_object;

@@ -261,6 +261,47 @@ void test_generic() {
 
 typedef struct {
   char *input;
+  I64 expected;
+} TestFunctionApplication;
+void test_function_application() {
+  env_init(&arena, &env);
+  TestFunctionApplication test_cases[] = {
+      {.input = "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+       .expected = 20},
+      {.input = "let identity = fn(x) { x; }; identity(5);", .expected = 5},
+      {.input = "let identity = fn(x) { return x; }; identity(5);",
+       .expected = 5},
+      {.input = "let double = fn(x) { x * 2; }; double(5);", .expected = 10},
+      {.input = "let add = fn(x, y) { x + y; }; add(5, 5);", .expected = 10},
+      {.input = "fn(x) { x; }(5)", .expected = 5},
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestFunctionApplication test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (!test_object_integer(test_obj, test.expected)) {
+      printf("FAILED:%s\n", test.input);
+      printf("expected:%lld\n", test.expected);
+      printfln("got:%S\n", object_to_string(&arena, test_obj));
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  // TODO: Find a way to make the part of the function name not be hardcoded and
+  //       just in a macro cause its better!! i hope
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_integer_evaluations() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_integer_evaluations() \n");
+  }
+  printf("\n");
+}
+
+typedef struct {
+  char *input;
   union {
     int value;
     void * not;
