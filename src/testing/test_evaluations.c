@@ -242,13 +242,12 @@ void test_repl() {
 
 void test_generic() {
   env_init(&arena, &env);
-  TestGeneric test_cases[] = {
-      /*{.input = "fn factorial(n) { if ((n == 0)) {1;} else {factorial((n - "*/
-      /*          "1));}; }"},*/
-      /*{.input = "factorial(3);"},*/
-      {.input = "let factorial = fn(n) { if (n == 0) { 1 } else { n * "
-                "factorial(n - 1) } };"},
-      {.input = "factorial(5);"}};
+  TestGeneric test_cases[] = {{.input = "let foo = 17;"
+                                        "let newAdder = fn(x) {"
+                                        "fn(y) { foo;x + y; };"
+                                        "};"
+                                        "let addTwo = newAdder(2);"
+                                        "addTwo(16);"}};
   Object testing;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestGeneric test = test_cases[i];
@@ -266,20 +265,25 @@ typedef struct {
 void test_function_application() {
   env_init(&arena, &env);
   TestFunctionApplication test_cases[] = {
+      {.input = "let identity = fn(x) { x; }; identity(5);", .expected = 5},
       {.input = "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
        .expected = 20},
-      {.input = "let identity = fn(x) { x; }; identity(5);", .expected = 5},
       {.input = "let identity = fn(x) { return x; }; identity(5);",
        .expected = 5},
       {.input = "let double = fn(x) { x * 2; }; double(5);", .expected = 10},
       {.input = "let add = fn(x, y) { x + y; }; add(5, 5);", .expected = 10},
       {.input = "fn(x) { x; }(5)", .expected = 5},
+      /*{.input = "fn(x) { fn(z) {z + 1;} }(5)", .expected = -999},*/
   };
   Object test_obj;
   bool pass = true;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestFunctionApplication test = test_cases[i];
     test_obj = test_eval(test.input);
+    if (test.expected == -999) {
+      printfln("%S\n", object_to_string(&arena, test_obj));
+      continue;
+    }
     if (!test_object_integer(test_obj, test.expected)) {
       printf("FAILED:%s\n", test.input);
       printf("expected:%lld\n", test.expected);

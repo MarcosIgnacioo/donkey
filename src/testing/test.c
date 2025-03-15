@@ -636,10 +636,10 @@ void print_object_types() {
 // contains the number of the test, the name of the function of the test or just
 // the input test string yeah that sounds better andddd if passed or not}
 int main() {
-  test_function_application();
-  return 0;
-  /*donkey_repl(&arena);*/
   test_generic();
+  return 0;
+  test_function_application();
+  /*donkey_repl(&arena);*/
   /*test_repl();*/
   test_error_handling();
   test_let_statements_integers();

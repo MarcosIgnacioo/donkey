@@ -4,6 +4,11 @@
 void env_init(Arena *arena, Enviroment *env) {
   /*arena_reset(arena);*/
   hash_table_alloc(arena, &env->memory, KeyValueMemory, &env_key_value_equals);
+  env->outer_memory = NULL;
+}
+
+void env_reset_local(Enviroment *env) {
+  memory_set(env->memory.items, env->memory.item_size * env->memory.capacity, 0);
 }
 
 bool env_key_value_equals(void *this, void *that) {
@@ -15,7 +20,8 @@ bool env_key_value_equals(void *this, void *that) {
 void env_insert_object(Arena *arena, Enviroment *env, String key,
                        Object value) {
   if (!env->memory.items) {
-    hash_table_alloc(arena, &env->memory, KeyValueMemory, &env_key_value_equals);
+    hash_table_alloc(arena, &env->memory, KeyValueMemory,
+                     &env_key_value_equals);
   }
 
   if (env->memory.len >= env->memory.capacity) {
@@ -52,12 +58,13 @@ void env_insert_object(Arena *arena, Enviroment *env, String key,
   curr_item->value = value;
 }
 
-Object env_get_object(Arena *arena, Enviroment *env, String key) {
-  HashTable memory_env = env->memory;
-  if (!memory_env.items) {
+Object _env_get_object(Arena *arena, Enviroment *env, String key) {
+  if (!env || !env->memory.items) {
     Object error_object = new_error(arena, "identifier not found: %S", key);
     return error_object;
   }
+
+  HashTable memory_env = env->memory;
 
   U64 hash = get_hash(key) % (memory_env).capacity;
   KeyValueMemory *items = (memory_env).items;
@@ -78,6 +85,17 @@ Object env_get_object(Arena *arena, Enviroment *env, String key) {
   }
 
   return curr_item->value;
+}
+
+Object env_get_object(Arena *arena, Enviroment *env, String key) {
+  if (!env) {
+    return new_error(arena, "identifier not found: %S", key);
+  }
+  Object needle = _env_get_object(arena, env, key);
+  if (needle.type == ERROR_OBJECT) {
+    needle = env_get_object(arena, env->outer_memory, key);
+  }
+  return needle;
 }
 
 void env_clone(Arena *arena, Enviroment *inner, Enviroment *outer) {

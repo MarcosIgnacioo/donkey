@@ -66,11 +66,8 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
           eval_evaluate_expression(arena, env, if_expression.condition);
       BlockStatement consequence = if_expression.consequence;
       BlockStatement alternative = if_expression.alternative;
-      /*Enviroment *if_env = arena_alloc(arena, sizeof(Enviroment));*/
-      Enviroment if_env = {0};
-      env_clone(arena, &if_env, env);
-      evaluated_object = eval_if_expression(arena, &if_env, condition,
-                                            consequence, alternative);
+      evaluated_object =
+          eval_if_expression(arena, env, condition, consequence, alternative);
       break;
     }
   case FUNCTION_LITERAL_EXP:
@@ -90,6 +87,10 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
       if (fn_object.type == ERROR_OBJECT) {
         return fn_object;
       }
+      if (fn_object.type != FUNCTION_OBJECT) {
+        return new_error(arena, "not a function: %S",
+                         error_stringify_object_type(fn_object));
+      }
       Object *arguments =
           eval_evaluate_expressions(arena, env, function_call.arguments);
       // we check the first element of the array
@@ -97,6 +98,7 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
       if (arguments->type == ERROR_OBJECT) {
         return *arguments;
       }
+
       ObjectFunction function = fn_object.function;
       evaluated_object = eval_fn_call_expression( //
           arena,                                  //
@@ -265,12 +267,13 @@ Object eval_fn_expression(Arena *arena,        //
                           String name,         //
                           BlockStatement body, //
                           Identifier *parameters) {
-  /*Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));*/
+  Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
+  env_clone(arena, fn_env, env);
   Object evaluated_object;
   ObjectFunction *function = &evaluated_object.function;
   function->parameters = parameters;
   function->body = body;
-  /*function->env = fn_env;*/
+  function->env = fn_env;
   evaluated_object.type = FUNCTION_OBJECT;
   if (name.len) {
     env_insert_object(arena, env, name, evaluated_object);
@@ -299,26 +302,45 @@ Object *eval_evaluate_expressions(Arena *arena, Enviroment *env,
   return resulting_objects;
 }
 
+void eval_expand_function_enviroment(Arena *arena, Enviroment *env,
+                                     Identifier *parameters,
+                                     Object *arguments) {
+  for (int i = 0; i < len(parameters); i++) {
+    Object arg = arguments[i];
+    String parameter_name = parameters[i].value;
+    env_insert_object(arena, env, parameter_name, arg);
+  }
+}
+
+void eval_unwrap_function_return(Object *returning_object) {
+  if (returning_object->eval_type == EVAL_RETURN) {
+    returning_object->eval_type = EVAL_OBJECT;
+  }
+}
+
 Object eval_fn_call_expression(Arena *arena,            //
                                Enviroment *env,         //
                                ObjectFunction function, //
                                Object *arguments) {
-  // store the function enviroment pointer
-  Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
-  function.env = fn_env;
-  env_clone(arena, fn_env, env);
+  // the enviroment doesnt get stored in inner functions
+  // aka closures dont work
+  // which makes me sad
+  // but im hungri
+  // the easiest way to fix this would be just to make
+  // everything return an object pointer bug ahhhhghghhhhh
+  // i dont really wanna do that, the other way around that
+  // would be to return an Object pointer in the get_from_env
+  // because then it makes sense we wanna manipulate that env
+  Enviroment *fn_env = function.env;
+  fn_env->outer_memory = env;
   BlockStatement fn_body = function.body;
   Identifier *parameters = function.parameters;
 
-  for (int i = 0; i < len(parameters); i++) {
-    Object arg = arguments[i];
-    String parameter_name = parameters[i].value;
-    env_insert_object(arena, fn_env, parameter_name, arg);
-  }
+  eval_expand_function_enviroment(arena, fn_env, parameters, arguments);
 
-  // we should free the enviromentttttt!!!
   Object returning_object =
       eval_evaluate_block_statements(arena, fn_env, fn_body);
+  eval_unwrap_function_return(&returning_object);
   return returning_object;
 }
 
