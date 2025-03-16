@@ -1,0 +1,4 @@
+((KeyValueMemory *)0x7ffff7cf3028)[7065] = 
+	key = {str = 0x5555555722d8 "foo", len = 3, cap = 3}
+	is_occupied = true
+	value = {eval_type = EVAL_OBJECT, type = INTEGER_OBJECT, {integer = {value = 17}, boolean = {value = 17}, string = {value = {str = 0x11 <error: Cannot access memory at address 0x11>, len = 8, cap = 8}}, funct

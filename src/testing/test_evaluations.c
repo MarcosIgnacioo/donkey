@@ -247,7 +247,7 @@ void test_generic() {
                                         "fn(y) { foo;x + y; };"
                                         "};"
                                         "let addTwo = newAdder(2);"
-                                        "addTwo(16);"}};
+                                        "addTwo(2);"}};
   Object testing;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestGeneric test = test_cases[i];
@@ -273,18 +273,29 @@ void test_function_application() {
       {.input = "let double = fn(x) { x * 2; }; double(5);", .expected = 10},
       {.input = "let add = fn(x, y) { x + y; }; add(5, 5);", .expected = 10},
       {.input = "fn(x) { x; }(5)", .expected = 5},
-      /*{.input = "fn(x) { fn(z) {z + 1;} }(5)", .expected = -999},*/
-  };
+      {.input = "let foo = 17;"
+                "let newAdder = fn(x) {"
+                "fn(y) { foo;x + y; };"
+                "};"
+                "let addTwo = newAdder(2);"
+                "addTwo(2);"
+                "let foo = 23"
+                "let bar = 26"
+                "addTwo(13);"
+                "addTwo(16);"
+                "x;",
+       .expected = -999}};
   Object test_obj;
   bool pass = true;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestFunctionApplication test = test_cases[i];
     test_obj = test_eval(test.input);
-    if (test.expected == -999) {
-      printfln("%S\n", object_to_string(&arena, test_obj));
-      continue;
-    }
-    if (!test_object_integer(test_obj, test.expected)) {
+    printfln("TEST ID:%d", i, test.input);
+    printfln("%s", test.input);
+    printfln("EVALUATED TO:");
+    printfln("%S", object_to_string(&arena, test_obj));
+    printf("\n");
+    if (test.expected != -999 && !test_object_integer(test_obj, test.expected)) {
       printf("FAILED:%s\n", test.input);
       printf("expected:%lld\n", test.expected);
       printfln("got:%S\n", object_to_string(&arena, test_obj));

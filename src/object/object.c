@@ -262,7 +262,7 @@ Object eval_if_expression(Arena *arena, Enviroment *env, Object condition,
   }
 }
 
-Object eval_fn_expression(Arena *arena,        //
+Object _eval_fn_expression(Arena *arena,        //
                           Enviroment *env,     //
                           String name,         //
                           BlockStatement body, //
@@ -274,6 +274,26 @@ Object eval_fn_expression(Arena *arena,        //
   function->parameters = parameters;
   function->body = body;
   function->env = fn_env;
+  evaluated_object.type = FUNCTION_OBJECT;
+  if (name.len) {
+    env_insert_object(arena, env, name, evaluated_object);
+    evaluated_object.function.name = name;
+  } else {
+    evaluated_object.function.name = (String){.str = "", .len = 0, .cap = 0};
+  }
+  return evaluated_object;
+}
+
+Object eval_fn_expression(Arena *arena,        //
+                          Enviroment *env,     //
+                          String name,         //
+                          BlockStatement body, //
+                          Identifier *parameters) {
+  Object evaluated_object;
+  ObjectFunction *function = &evaluated_object.function;
+  function->parameters = parameters;
+  function->body = body;
+  function->env = env;
   evaluated_object.type = FUNCTION_OBJECT;
   if (name.len) {
     env_insert_object(arena, env, name, evaluated_object);
@@ -318,7 +338,7 @@ void eval_unwrap_function_return(Object *returning_object) {
   }
 }
 
-Object eval_fn_call_expression(Arena *arena,            //
+Object _eval_fn_call_expression(Arena *arena,            //
                                Enviroment *env,         //
                                ObjectFunction function, //
                                Object *arguments) {
@@ -333,6 +353,23 @@ Object eval_fn_call_expression(Arena *arena,            //
   // because then it makes sense we wanna manipulate that env
   Enviroment *fn_env = function.env;
   fn_env->outer_memory = env;
+  BlockStatement fn_body = function.body;
+  Identifier *parameters = function.parameters;
+
+  eval_expand_function_enviroment(arena, fn_env, parameters, arguments);
+
+  Object returning_object =
+      eval_evaluate_block_statements(arena, fn_env, fn_body);
+  eval_unwrap_function_return(&returning_object);
+  return returning_object;
+}
+
+Object eval_fn_call_expression(Arena *arena,            //
+                               Enviroment *env,         //
+                               ObjectFunction function, //
+                               Object *arguments) {
+  Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
+  fn_env->outer_memory = function.env;
   BlockStatement fn_body = function.body;
   Identifier *parameters = function.parameters;
 
