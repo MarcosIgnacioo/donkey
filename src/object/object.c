@@ -11,6 +11,8 @@
 /* Object TRUE_OBJECT = (Object){.type = INTEGER_OBJECT, .integer.value =
  * popo};*/
 
+Enviroment built_in_env = {0};
+
 Object eval_evaluate_expression(Arena *arena, Enviroment *env,
                                 Expression *expression) {
   Object evaluated_object = DONKEY_PANIC_OBJECT;
@@ -20,6 +22,10 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
     {
       Identifier identifier = expression->identifier;
       evaluated_object = env_get_object(arena, env, identifier.value);
+      if (evaluated_object.type == ERROR_OBJECT) {
+        evaluated_object =
+            env_get_object(arena, &built_in_env, identifier.value);
+      }
       break;
     }
   case INTEGER_LIT_EXP:
@@ -89,33 +95,10 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
     //
     {
       FunctionCallExpression function_call = expression->function_call;
-      Object fn_object =
+      Object fn_call_object =
           eval_evaluate_expression(arena, env, function_call.function);
-      if (fn_object.type == ERROR_OBJECT) {
-        return fn_object;
-      }
-      if (fn_object.type != FUNCTION_OBJECT) {
-        return new_error(arena, "not a function: %S",
-                         error_stringify_object_type(fn_object));
-      }
-      Object *arguments =
-          eval_evaluate_expressions(arena, env, function_call.arguments);
-      // we check the first element of the array
-      // if it is an error well we then return it :D
-      if (arguments->type == ERROR_OBJECT) {
-        return *arguments;
-      }
-
-      ObjectFunction function = fn_object.function;
-      evaluated_object = eval_fn_call_expression( //
-          arena,                                  //
-          env,                                    //
-          function,                               //
-          arguments                               //
-      );
-      // here tmp arena would be super cool for storing the arguments
-      // cause after evaluating the fn_call_expression we dont really
-      // need them anymore so freeing that memory would be pretty cool
+      evaluated_object =
+          eval_evaluate_fn_call(arena, env, function_call, fn_call_object);
       break;
     }
   default:
@@ -349,6 +332,44 @@ void eval_unwrap_function_return(Object *returning_object) {
   }
 }
 
+Object eval_evaluate_fn_call(Arena *arena,    //
+                             Enviroment *env, //
+                             FunctionCallExpression function_call,
+                             Object fn_call_object) {
+  Object evaluated_object = {0};
+
+  if (fn_call_object.type == ERROR_OBJECT) {
+    return fn_call_object;
+  }
+
+  Object *arguments =
+      eval_evaluate_expressions(arena, env, function_call.arguments);
+
+  // we check the first element of the array
+  // if it is an error well we then return it :D
+  if (arguments->type == ERROR_OBJECT) {
+    return *arguments;
+  }
+
+  if (fn_call_object.type == BUILT_IN_OBJECT) {
+    ObjectBuiltIn function = fn_call_object.built_in;
+    evaluated_object = function.value(arena, arguments);
+  } else if (fn_call_object.type == FUNCTION_OBJECT) {
+    ObjectFunction function = fn_call_object.function;
+    evaluated_object = eval_fn_call_expression( //
+        arena,                                  //
+        env,                                    //
+        function,                               //
+        arguments                               //
+    );
+  }
+
+  // here tmp arena would be super cool for storing the arguments
+  // cause after evaluating the fn_call_expression we dont really
+  // need them anymore so freeing that memory would be pretty cool
+  return evaluated_object;
+}
+
 Object _eval_fn_call_expression(Arena *arena,            //
                                 Enviroment *env,         //
                                 ObjectFunction function, //
@@ -374,6 +395,7 @@ Object _eval_fn_call_expression(Arena *arena,            //
   eval_unwrap_function_return(&returning_object);
   return returning_object;
 }
+
 Object eval_fn_call_expression(Arena *arena,            //
                                Enviroment *env,         //
                                ObjectFunction function, //
@@ -692,7 +714,33 @@ Object eval_evaluate_node(Arena *arena, Enviroment *env, Node *node) {
   return evaluated_object;
 }
 
+// we must pass an array of objects here always jjijiijijij YAY
+Object _len(Arena *arena, Object *args) {
+  if (len(args) > 1) {
+    return new_error(arena, "wrong number of arguments. got=%d, want=1",
+                     len(args));
+  }
+  Object donkey_arg = args[0];
+  if (donkey_arg.type != STRING_OBJECT) {
+    return new_error(arena, "argument to `len` not supported, got %S",
+                     error_stringify_object_type(donkey_arg));
+  }
+  ObjectString donkey_string = donkey_arg.string;
+  ObjectInteger length = (ObjectInteger){.value = (int)donkey_string.value.len};
+  Object length_object = (Object){
+      .type = INTEGER_OBJECT,   //
+      .eval_type = EVAL_OBJECT, //
+      .integer = length         //
+  };
+  return length_object;
+}
+
 Object eval_evaluate_program(Arena *arena, Enviroment *env, Program program) {
+  env_init(arena, &built_in_env);
+  Object string_len_donkey = (Object){.eval_type = EVAL_OBJECT,
+                                      .type = BUILT_IN_OBJECT,
+                                      .built_in.value = &_len};
+  env_insert_object(arena, &built_in_env, string("len"), string_len_donkey);
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   // i dont think i need to pass the env as a parameter
   // here because this function lives the whole evaluation
@@ -777,3 +825,4 @@ String object_to_string(Arena *arena, Object object) {
     }
   }
 }
+// built_in

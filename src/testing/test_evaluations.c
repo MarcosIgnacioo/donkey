@@ -148,6 +148,12 @@ void test_error_handling() {
           .input =
               "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
           .expected = string("unknown operator: BOOLEAN + BOOLEAN")},
+      (TestResultError){
+          .input = "len(1)",
+          .expected = string("argument to `len` not supported, got INTEGER")},
+      (TestResultError){.input = "len(\"one\", \"two\")",
+                        .expected =
+                            string("wrong number of arguments. got=2, want=1")},
       (TestResultError){.input = "foobar",
                         .expected = string("identifier not found: foobar")}};
 
@@ -312,6 +318,43 @@ void test_function_application() {
     printf(LOG_SUCCESS "ALL TEST PASSED AT: test_integer_evaluations() \n");
   } else {
     printf(LOG_ERROR "TEST FAILED       AT: test_integer_evaluations() \n");
+  }
+  printf("\n");
+}
+
+typedef struct {
+  char *input;
+  I64 expected;
+} TestResultBuiltIn;
+
+void test_built_in_functions() {
+  TestResultBuiltIn test_cases[] = {
+      (TestResultBuiltIn){.input = "len(\"hellope\")", .expected = 7},
+      (TestResultBuiltIn){.input = "len(\"hello\")", .expected = 5},
+      (TestResultBuiltIn){.input = "len(\"pink pony club\")", .expected = 14},
+      (TestResultBuiltIn){.input = "len(\"seven drop\")", .expected = 10},
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestResultBuiltIn test = test_cases[i];
+    test_obj = test_eval(test.input);
+    if (!test_object_integer(test_obj, test.expected)) {
+      printf("FAILED:%s\n", test.input);
+      printf("expected:%lld\n", test.expected);
+      printfln("got:%S\n", object_to_string(&arena, test_obj));
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  // TODO: Find a way to make the part of the function name not be hardcoded and
+  //       just in a macro cause its better!! i hope
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_built_in_evaluations() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_built_in_evaluations() \n");
   }
   printf("\n");
 }

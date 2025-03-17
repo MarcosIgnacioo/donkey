@@ -13,6 +13,7 @@
   X(STRING_OBJECT)                                                             \
   X(IDENTIFIER_OBJECT)                                                         \
   X(FUNCTION_OBJECT)                                                           \
+  X(BUILT_IN_OBJECT)                                                           \
   X(ERROR_OBJECT)
 
 #define X(name) name,
@@ -39,6 +40,12 @@ typedef struct {
 
 typedef struct Enviroment Enviroment;
 
+typedef Object (*BuiltInFunc)(Arena *, Object *);
+
+typedef struct {
+  BuiltInFunc value;
+} ObjectBuiltIn;
+
 typedef struct {
   String name;
   Identifier *parameters;
@@ -62,6 +69,7 @@ struct Object {
     ObjectBoolean boolean;
     ObjectString string;
     ObjectFunction function;
+    ObjectBuiltIn built_in;
     ObjectError error;
     ObjectDonkey donkey; // this is null btw
   };
@@ -102,6 +110,8 @@ Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_string_infix_expression(Arena *, Object, String, Object);
 Object eval_if_expression(Arena *, Enviroment *, Object, BlockStatement,
                           BlockStatement);
+Object eval_evaluate_fn_call(Arena *, Enviroment *, FunctionCallExpression,
+                             Object);
 Object eval_fn_expression(Arena *, Enviroment *, String name, BlockStatement,
                           Identifier *);
 Object eval_fn_call_expression(Arena *, Enviroment *, ObjectFunction, Object *);
@@ -109,5 +119,7 @@ String object_to_string(Arena *, Object);
 String error_stringify_object_type(Object object);
 Object new_error(Arena *arena, const char *fmt, ...);
 Object test_eval(char *);
+// built_in
+Object _len(Arena *, Object *);
 
 #endif // !_OBJECT_H
