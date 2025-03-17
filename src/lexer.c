@@ -30,6 +30,9 @@ void _lexer_skip_white_space(Lexer *lexer);
 bool _lexer_is_valid_letter(char c) {
   return (c >= 'A' && c <= 'z') || c == '_';
 }
+
+bool _lexer_is_valid_string_char(char c) { return c != '"' && c != '\0'; }
+
 bool _lexer_is_valid_number(char c) {
   return (c >= '0' && c <= '9') || c == '.';
 }
@@ -72,6 +75,15 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   Token tok = (Token){0};
   U64 default_size = 1;
   switch (c) {
+  case '"': {
+    _lexer_read_char(lexer);
+    String literal =
+        _lexer_read_blank(arena, lexer, &_lexer_is_valid_string_char);
+    TokenType type = STRING;
+    tok = NEW_TOKEN(type, literal);
+    _lexer_read_char(lexer);
+    break;
+  }
   case '!':
   case '<':
   case '>':
@@ -119,7 +131,7 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
             _lexer_read_blank(arena, lexer, &_lexer_is_valid_number);
         tok = NEW_TOKEN(INT, number);
       } else {
-        tok = NEW_TOKEN(ILLEGAL, arena_new_string(arena,&c));
+        tok = NEW_TOKEN(ILLEGAL, arena_new_string(arena, &c));
       }
     }
   }

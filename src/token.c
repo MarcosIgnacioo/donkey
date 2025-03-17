@@ -33,6 +33,7 @@ typedef enum {
   // delimiter
   COMMA,
   SEMICOLON,
+  QUOTE,
 
   L_PAREN,
   R_PAREN,
@@ -41,6 +42,7 @@ typedef enum {
 
   // data_types
   INT,
+  STRING,
   // keywords
   LET,
   FUNCTION,
@@ -75,6 +77,7 @@ KeyValue TYPES_ARR[] = {
     kv(KeyValue, ")", R_PAREN),       //
     kv(KeyValue, "{", L_BRACE),       //
     kv(KeyValue, "}", R_BRACE),       //
+    kv(KeyValue, "\"", QUOTE),        //
                                       // keywords
     kv(KeyValue, "fn", FUNCTION),     //
     kv(KeyValue, "let", LET),         //
@@ -114,7 +117,7 @@ typedef struct {
 } Token;
 
 // todo cambiar a algo que no sea O(N)
-// probablemente sea un hashmap
+// probablemente sea un hashmap simon
 TokenType get_token_type(String input) {
   KeyValue *kv = hash_table_find_item(TYPES, &input);
   if (kv) {
@@ -141,7 +144,7 @@ bool token_equals(Token this, Token that) {
   if (this.type != that.type) {
     return false;
   }
-  if (!string_equals(this.literal,that.literal)) {
+  if (!string_equals(this.literal, that.literal)) {
     return false;
   }
   return true;

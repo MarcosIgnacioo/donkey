@@ -897,6 +897,7 @@ int test_booleans() {
 }
 
 int main() {
+  test_tokens();
   /*repl();*/
   /*test_infix_expressions_harder();*/
   /*test_infix_expressions();*/

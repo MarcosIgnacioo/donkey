@@ -1,6 +1,8 @@
 #include "test.h"
 #include "../object/object.h"
 #include "test_evaluations.c"
+#include "test_parser.c"
+#include "test_tokens.c"
 #include <stdio.h>
 
 ResultEquals let_statement_equals(LetStatement *a, LetStatement *b) {
@@ -636,6 +638,8 @@ void print_object_types() {
 // contains the number of the test, the name of the function of the test or just
 // the input test string yeah that sounds better andddd if passed or not}
 int main() {
+  test_parser();
+  test_token();
   test_generic();
   test_function_application();
   /*donkey_repl(&arena);*/

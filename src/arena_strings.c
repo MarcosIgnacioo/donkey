@@ -95,6 +95,8 @@ String arena_new_string_zero(Arena *arena, const char *source) {
   return new_string;
 }
 
+// rename to aren_string_slice_from_source
+// better name
 String arena_new_string_with_len(Arena *arena, const char *source, U64 len) {
   String new_string = (String){.str = NULL, .len = len, .cap = len};
   byte *arena_str = arena_alloc_zero(arena, len);

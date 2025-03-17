@@ -263,10 +263,10 @@ Object eval_if_expression(Arena *arena, Enviroment *env, Object condition,
 }
 
 Object _eval_fn_expression(Arena *arena,        //
-                          Enviroment *env,     //
-                          String name,         //
-                          BlockStatement body, //
-                          Identifier *parameters) {
+                           Enviroment *env,     //
+                           String name,         //
+                           BlockStatement body, //
+                           Identifier *parameters) {
   Enviroment *fn_env = arena_alloc(arena, sizeof(Enviroment));
   env_clone(arena, fn_env, env);
   Object evaluated_object;
@@ -339,9 +339,9 @@ void eval_unwrap_function_return(Object *returning_object) {
 }
 
 Object _eval_fn_call_expression(Arena *arena,            //
-                               Enviroment *env,         //
-                               ObjectFunction function, //
-                               Object *arguments) {
+                                Enviroment *env,         //
+                                ObjectFunction function, //
+                                Object *arguments) {
   // the enviroment doesnt get stored in inner functions
   // aka closures dont work
   // which makes me sad

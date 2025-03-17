@@ -286,6 +286,7 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser);
 Expression *ast_parse_identifier(Arena *arena, Parser *parser);
 Expression *ast_parse_boolean(Arena *arena, Parser *parser);
 Expression *ast_parse_int(Arena *arena, Parser *parser);
+Expression *ast_parse_string(Arena *arena, Parser *parser);
 Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
@@ -323,7 +324,9 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, IDENTIFIER,
        prs_fn(&ast_parse_identifier, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, INT, prs_fn(&ast_parse_int, NULL)),             //
-    kv(KeyValue_PF, ASSIGN, prs_fn(NULL, NULL)),                    // implement reasigning variables :3
+    kv(KeyValue_PF, STRING, prs_fn(&ast_parse_string, NULL)),             //
+    kv(KeyValue_PF, ASSIGN,
+       prs_fn(NULL, NULL)), // implement reasigning variables :3
     kv(KeyValue_PF, MINUS,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, PLUS,
@@ -618,6 +621,23 @@ Expression *ast_parse_int(Arena *arena, Parser *parser) {
   Expression *expression = arena_alloc(arena, sizeof(Expression));
   expression->type = INTEGER_LIT_EXP;
   expression->integer_literal = integer_literal;
+
+  return expression;
+}
+
+Expression *ast_parse_string(Arena *arena, Parser *parser) {
+  (void)arena;
+  (void)parser;
+  StringLiteral string_literal = (StringLiteral){0};
+  string_literal.token = parser->curr_token;
+  // TODO: add error handling to this function cause it
+  // may fail so yeah but right now we dont care!
+  // Result<Int,Error>
+  string_literal.value = parser->curr_token.literal;
+
+  Expression *expression = arena_alloc(arena, sizeof(Expression));
+  expression->type = STRING_LIT_EXP;
+  expression->string_literal = string_literal;
 
   return expression;
 }

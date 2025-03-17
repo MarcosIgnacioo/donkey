@@ -10,6 +10,10 @@ DBG = gdb
 build-main: build-dir
 	$(CC) -Wall -O0 -g -o build/test src/testing/test.c 
 
+.PHONY: build-token-test
+build-token-test: token-test
+	$(CC) -Wall -O0 -g -o build/test src/test.c 
+
 .PHONY: build-repl
 build-repl: build-dir
 	$(CC) -Wall -O0 -g -o build/main src/main.c 
@@ -29,6 +33,10 @@ build-test: build-dir
 
 .PHONY: run
 run: build-main
+	./build/test
+
+.PHONY: test_token
+test_token: token-test
 	./build/test
 
 .PHONY: repl
