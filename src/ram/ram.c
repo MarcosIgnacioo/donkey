@@ -98,6 +98,15 @@ Object env_get_object(Arena *arena, Enviroment *env, String key) {
   return needle;
 }
 
+void _env_clone(Arena *arena, Enviroment *inner, Enviroment *outer) {
+  /*memory_copy((byte *)inner, (byte *)&outer, sizeof(HashTable));*/
+  HashTable outer_ht = outer->memory;
+  hash_table_alloc(arena, &inner->memory, KeyValueMemory,
+                   outer_ht.are_keys_equals);
+  memory_copy((byte *)inner->memory.items, (byte *)outer_ht.items,
+              outer_ht.item_size * outer_ht.capacity);
+}
+
 void env_clone(Arena *arena, Enviroment *inner, Enviroment *outer) {
   /*memory_copy((byte *)inner, (byte *)&outer, sizeof(HashTable));*/
   HashTable outer_ht = outer->memory;

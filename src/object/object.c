@@ -363,7 +363,6 @@ Object _eval_fn_call_expression(Arena *arena,            //
   eval_unwrap_function_return(&returning_object);
   return returning_object;
 }
-
 Object eval_fn_call_expression(Arena *arena,            //
                                Enviroment *env,         //
                                ObjectFunction function, //
