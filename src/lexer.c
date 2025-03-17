@@ -23,8 +23,10 @@ Lexer lexer_new_lexer(String input);
 Token lexer_next_token(Arena *arena, Lexer *lexer);
 bool _lexer_is_valid_letter(char c);
 bool _lexer_is_valid_number(char c);
+
 // hidden
 void _lexer_read_char(Lexer *lexer);
+
 void _lexer_skip_white_space(Lexer *lexer);
 
 bool _lexer_is_valid_letter(char c) {
@@ -38,6 +40,8 @@ bool _lexer_is_valid_number(char c) {
 }
 String _lexer_read_blank(Arena *arena, Lexer *lexer,
                          PredicatorFN predicator_fn);
+String _lexer_read_string(Arena *arena, Lexer *lexer,
+                          PredicatorFN predicator_fn);
 
 Lexer lexer_new_lexer(String input) {
   Lexer lexer = (Lexer){
@@ -78,10 +82,9 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   case '"': {
     _lexer_read_char(lexer);
     String literal =
-        _lexer_read_blank(arena, lexer, &_lexer_is_valid_string_char);
+        _lexer_read_string(arena, lexer, &_lexer_is_valid_string_char);
     TokenType type = STRING;
     tok = NEW_TOKEN(type, literal);
-    _lexer_read_char(lexer);
     break;
   }
   case '!':
@@ -166,6 +169,23 @@ String _lexer_read_blank(Arena *arena, Lexer *lexer,
     _lexer_read_char(lexer);
   }
   U64 end = lexer->next_position;
+  String ret =
+      arena_new_string_with_len(arena, lexer->input.str + start, end - start);
+  return ret;
+}
+
+String _lexer_read_string(Arena *arena, Lexer *lexer,
+                          PredicatorFN predicator_fn) {
+  U64 start = lexer->position;
+  char c = lexer->current_char;
+  while (true) {
+    c = lexer->current_char;
+    if (c == '"' || c == '\0') {
+      break;
+    }
+    _lexer_read_char(lexer);
+  }
+  U64 end = lexer->position;
   String ret =
       arena_new_string_with_len(arena, lexer->input.str + start, end - start);
   return ret;

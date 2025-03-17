@@ -29,6 +29,13 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
       evaluated_object.integer.value = expression->integer_literal.value;
       break;
     }
+  case STRING_LIT_EXP:
+    //
+    {
+      evaluated_object.type = STRING_OBJECT;
+      evaluated_object.string.value = expression->string_literal.value;
+      break;
+    }
   case BOOLEAN_EXP:
     //
     {
@@ -208,6 +215,10 @@ Object eval_infix_expression(Arena *arena, Object left, String operator,
 
   if (right.type == BOOLEAN_OBJECT && left.type == BOOLEAN_OBJECT) {
     return eval_bool_infix_expression(arena, left, operator, right);
+  }
+
+  if (right.type == STRING_OBJECT && left.type == STRING_OBJECT) {
+    return eval_string_infix_expression(arena, left, operator, right);
   }
 
   Object error_object;
@@ -516,6 +527,7 @@ Object eval_bool_infix_expression(Arena *arena, Object left, String operator,
   OperationFunction operation;
 
   switch (*operator.str) {
+    // why do we allow this kind of crazyness
   case '>':
     //
     {
@@ -574,6 +586,70 @@ Object eval_bool_infix_expression(Arena *arena, Object left, String operator,
   result = operation(left.boolean.value, right.boolean.value);
   product_object.boolean.value = result;
   product_object.type = BOOLEAN_OBJECT;
+
+  return product_object;
+}
+
+Object eval_string_infix_expression(Arena *arena, Object left, String operator,
+                                    Object right) {
+  Object product_object = (Object){0};
+  String left_string = left.string.value;
+  String right_string = right.string.value;
+  switch (*operator.str) {
+  case '+':
+    //
+    {
+      ObjectString concat_string = {0};
+      concat_string.value = arena_new_empty_string_with_cap(
+          arena, left_string.len + right_string.len);
+      string_concat(&concat_string.value, left_string);
+      string_concat(&concat_string.value, right_string);
+      product_object.string = concat_string;
+      product_object.type = STRING_OBJECT;
+      break;
+    }
+  case '-':
+    //
+    {
+      ObjectString substract_string = {0};
+      substract_string.value =
+          arena_string_substract(arena, left_string, right_string);
+      product_object.string = substract_string;
+      product_object.type = STRING_OBJECT;
+      break;
+    }
+  case '!':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        ObjectBoolean not_equals = {0};
+        not_equals.value = !string_equals(left_string, right_string);
+        product_object.type = BOOLEAN_OBJECT;
+        product_object.boolean = not_equals;
+        break;
+      }
+    }
+  case '=':
+    //
+    {
+      if (operator.len> 1 && operator.str[1] == '=') {
+        ObjectBoolean equals = {0};
+        equals.value = string_equals(left_string, right_string);
+        product_object.type = BOOLEAN_OBJECT;
+        product_object.boolean = equals;
+        break;
+      }
+    }
+  default:
+    //
+    {
+      String left_type = error_stringify_object_type(left);
+      String right_type = error_stringify_object_type(right);
+      Object error_object = new_error(arena, "unknown operator: %S %S %S",
+                                      left_type, operator, right_type);
+      return error_object;
+    }
+  }
 
   return product_object;
 }
@@ -660,6 +736,12 @@ String object_to_string(Arena *arena, Object object) {
     //
     {
       return arena_string_fmt(arena, "%d", object.integer.value);
+      break;
+    }
+  case STRING_OBJECT:
+    //
+    {
+      return arena_string_fmt(arena, "%S", object.string.value);
       break;
     }
   case BOOLEAN_OBJECT:

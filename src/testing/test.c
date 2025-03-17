@@ -639,6 +639,7 @@ void print_object_types() {
 // the input test string yeah that sounds better andddd if passed or not}
 int main() {
   test_parser();
+  test_string_evaluation();
   test_token();
   test_generic();
   test_function_application();

@@ -53,6 +53,7 @@ int string_index_of(String source);
 void string_trim_space_right(String *trimming);
 void string_trim_space(String *trimming);
 void string_concat(String *dest, String source);
+String arena_string_substract(Arena *arena, String this, String that);
 void arena_string_concat(Arena *arena, String *dest, String source);
 void arena_c_string_concat(Arena *arena, String *dest, const char *source);
 
@@ -442,6 +443,31 @@ void string_concat(String *dest, String source) {
   dest->len = total_size;
 }
 
+void swap_strings(String *a, String *b) {
+  String t = *a;
+  *a = *b;
+  *b = t;
+}
+
+String arena_string_substract(Arena *arena, String this, String that) {
+  if (this.len < that.len) {
+    swap_strings(&this, &that);
+  }
+  String result = arena_new_empty_string_with_cap(arena, this.len);
+  U64 i, k;
+  for (i = 0, k = 0; i < this.len; i++) {
+    char this_c = this.str[i];
+    char that_c = that.str[k];
+    if (this_c == that_c) {
+      k++;
+      continue;
+    }
+    result.str[result.len] = this_c;
+    result.len++;
+  }
+  return result;
+}
+
 void arena_string_concat(Arena *arena, String *dest, String source) {
   U64 total_size = dest->len + source.len;
   U64 n_bytes = source.len;
@@ -610,9 +636,9 @@ int printfln(const char *str, ...) {
           fprintf(stdout, token, va_arg(ptr, int));
         } else if (ch1 == 'c') {
           fprintf(stdout, token, va_arg(ptr, int));
-          // a good refactor would be to just have this if and an else, where it
-          // fallstrhouth the vanilla c formatting, so adding stuff is not as
-          // noisy
+          // a good refactor would be to just have this if and an else, where
+          // it fallstrhouth the vanilla c formatting, so adding stuff is not
+          // as noisy
         } else if (ch1 == 'S') {
           String string = va_arg(ptr, String);
           char buf[512];

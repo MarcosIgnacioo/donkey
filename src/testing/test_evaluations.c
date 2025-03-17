@@ -295,10 +295,51 @@ void test_function_application() {
     printfln("EVALUATED TO:");
     printfln("%S", object_to_string(&arena, test_obj));
     printf("\n");
-    if (test.expected != -999 && !test_object_integer(test_obj, test.expected)) {
+    if (test.expected != -999 &&
+        !test_object_integer(test_obj, test.expected)) {
       printf("FAILED:%s\n", test.input);
       printf("expected:%lld\n", test.expected);
       printfln("got:%S\n", object_to_string(&arena, test_obj));
+      pass = false;
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  // TODO: Find a way to make the part of the function name not be hardcoded and
+  //       just in a macro cause its better!! i hope
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_integer_evaluations() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_integer_evaluations() \n");
+  }
+  printf("\n");
+}
+
+typedef struct {
+  char *input;
+  String expected;
+} TestString;
+
+void test_string_evaluation() {
+  env_init(&arena, &env);
+  TestString test_cases[] = {
+      {.input = "\"Hello World!\"", .expected = string("Hello World!")},
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestString test = test_cases[i];
+    test_obj = test_eval(test.input);
+    printfln("TEST ID:%d", i, test.input);
+    printfln("%s", test.input);
+    printfln("EVALUATED TO:");
+    printfln("%S", object_to_string(&arena, test_obj));
+    printf("\n");
+    if (!test_object_string(test_obj, test.expected)) {
+      printfln("FAILED:%s", test.input);
+      printfln("expected:%S", test.expected);
+      printfln("got:%S", object_to_string(&arena, test_obj));
       pass = false;
     }
   }

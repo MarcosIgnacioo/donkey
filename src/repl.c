@@ -40,7 +40,7 @@ void donkey_repl(Arena *arena) {
     program_str = object_to_string(arena, evaluation);
     if (len(parser.errors)) {
       print_parser_errors(parser);
-    } else if (program_str.len) {
+    } else {
       printfln(color(4) "DONKEY >> " end_color "%S", program_str);
     }
     /*arena_reset(arena);*/
