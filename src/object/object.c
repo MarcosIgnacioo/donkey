@@ -396,7 +396,6 @@ Object eval_evaluate_array(Arena *arena, Enviroment *env,
                            Array array_declaration) {
   Object evaluated_object = {0};
   Object *members = arena_array(arena, Object);
-  Array_Header *_asdf = head(array_declaration.value);
   for (I64 i = 0; i < len(array_declaration.value); i++) {
     Expression *exp = array_declaration.value[i];
     Object member = eval_evaluate_expression(arena, env, exp);

@@ -30,7 +30,7 @@ void _lexer_read_char(Lexer *lexer);
 void _lexer_skip_white_space(Lexer *lexer);
 
 bool _lexer_is_valid_letter(char c) {
-  return (c >= 'A' && c <= 'z') || c == '_';
+  return ((c >= 'A' && c <= 'z') || c == '_') && (c != '[' && c != ']');
 }
 
 bool _lexer_is_valid_string_char(char c) { return c != '"' && c != '\0'; }
