@@ -115,6 +115,8 @@ Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_string_infix_expression(Arena *, Object, String, Object);
 Object eval_evaluate_array(Arena *, Enviroment *, Array);
+Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
+                           IndexArray array_indexing);
 Object eval_if_expression(Arena *, Enviroment *, Object, BlockStatement,
                           BlockStatement);
 Object eval_evaluate_fn_call(Arena *, Enviroment *, FunctionCallExpression,

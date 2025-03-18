@@ -108,6 +108,13 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
       evaluated_object = eval_evaluate_array(arena, env, array_declaration);
       break;
     }
+  case INDEX_ARRAY_EXP:
+    //
+    {
+      IndexArray array_indexing = expression->index_array;
+      evaluated_object = eval_evaluate_index_array(arena, env, array_indexing);
+      break;
+    }
   default:
     break;
   }
@@ -403,6 +410,28 @@ Object eval_evaluate_array(Arena *arena, Enviroment *env,
   }
   evaluated_object.type = ARRAY_OBJECT;
   evaluated_object.array.value = members;
+  return evaluated_object;
+}
+
+Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
+                           IndexArray array_indexing) {
+  Object evaluated_object = {0};
+  Object array = eval_evaluate_expression(arena, env, array_indexing.array);
+  if (array.type != ARRAY_OBJECT) {
+    String not_matching_type = error_stringify_object_type(array);
+    return new_error(arena, "identifier is not an array, got : %S", not_matching_type);
+  }
+  Object index = eval_evaluate_expression(arena, env, array_indexing.index);
+  if (index.type != INTEGER_OBJECT) {
+    String not_matching_type = error_stringify_object_type(index);
+    return new_error(arena, "index is not an int, got : %S", not_matching_type);
+  }
+  I64 user_index = index.integer.value;
+  Object *user_array = array.array.value;
+  if (user_index >= len(user_array)) {
+    return new_error(arena, "index out of bounds: %d\nin array with length:%d", user_index, len(user_array));
+  }
+  evaluated_object = user_array[user_index];
   return evaluated_object;
 }
 
