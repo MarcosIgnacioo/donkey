@@ -943,27 +943,33 @@ Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
 
 Expression **ast_parse_array_members(Arena *arena, Parser *parser) {
 
-  Expression **arguments = arena_array_with_cap(arena, Expression *, 16);
+  Expression **members = arena_array_with_cap(arena, Expression *, 16);
+
   Expression *tmp = NULL;
 
+  if (peek_token_is(parser, R_SQUARE_BRACE)) {
+    ast_next_token(arena, parser);
+    return members;
+  }
+
   ast_next_token(arena, parser);
+
+  // null verificaction here in prod mode would go craaaazyyy
   tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-  // TODO after REFACTOR make this a ** cause this is kinda uwu owo lazyyyy
-  // but maybe making this rn could make the initial refactor even worse!
-  // making a memory bongus here btw
-  append(arguments, tmp);
+
+  append(members, tmp);
 
   while (peek_token_is(parser, COMMA)) {
     ast_next_token(arena, parser);
     ast_next_token(arena, parser);
 
     tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-    append(arguments, tmp);
+    append(members, tmp);
   }
 
   ast_expect_peek_token(arena, parser, R_SQUARE_BRACE);
 
-  return arguments;
+  return members;
 }
 
 Expression *ast_parse_infix_expression(Arena *arena, Parser *parser,

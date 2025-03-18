@@ -11,6 +11,7 @@
   X(INTEGER_OBJECT)                                                            \
   X(BOOLEAN_OBJECT)                                                            \
   X(STRING_OBJECT)                                                             \
+  X(ARRAY_OBJECT)                                                              \
   X(IDENTIFIER_OBJECT)                                                         \
   X(FUNCTION_OBJECT)                                                           \
   X(BUILT_IN_OBJECT)                                                           \
@@ -72,6 +73,7 @@ struct Object {
     ObjectInteger integer;
     ObjectBoolean boolean;
     ObjectString string;
+    ObjectArray array;
     ObjectFunction function;
     ObjectBuiltIn built_in;
     ObjectError error;
@@ -112,6 +114,7 @@ Object *eval_evaluate_expressions(Arena *arena, Enviroment *env,
 Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_string_infix_expression(Arena *, Object, String, Object);
+Object eval_evaluate_array(Arena *, Enviroment *, Array);
 Object eval_if_expression(Arena *, Enviroment *, Object, BlockStatement,
                           BlockStatement);
 Object eval_evaluate_fn_call(Arena *, Enviroment *, FunctionCallExpression,

@@ -101,6 +101,13 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
           eval_evaluate_fn_call(arena, env, function_call, fn_call_object);
       break;
     }
+  case ARRAY_EXP:
+    //
+    {
+      Array array_declaration = expression->array;
+      evaluated_object = eval_evaluate_array(arena, env, array_declaration);
+      break;
+    }
   default:
     break;
   }
@@ -111,6 +118,21 @@ String error_stringify_object_type(Object object) {
   String str_type = string(ObjectToString(object.type));
   string_chop_until(&str_type, '_');
   return str_type;
+}
+
+// expects dynamic array
+String arena_join_object_array(Arena *arena, Object *objects) {
+  String join = arena_new_empty_string_with_cap(arena, 512);
+  arena_string_concat(arena, &join, string("["));
+  for (I64 i = 0; i < len(objects); i++) {
+    if (i > 0) {
+      arena_string_concat(arena, &join, string(", "));
+    }
+    String obj = object_to_string(arena, objects[i]);
+    string_concat(&join, obj);
+  }
+  arena_string_concat(arena, &join, string("]"));
+  return join;
 }
 
 Object new_error(Arena *arena, const char *fmt, ...) {
@@ -367,6 +389,21 @@ Object eval_evaluate_fn_call(Arena *arena,    //
   // here tmp arena would be super cool for storing the arguments
   // cause after evaluating the fn_call_expression we dont really
   // need them anymore so freeing that memory would be pretty cool
+  return evaluated_object;
+}
+
+Object eval_evaluate_array(Arena *arena, Enviroment *env,
+                           Array array_declaration) {
+  Object evaluated_object = {0};
+  Object *members = arena_array(arena, Object);
+  Array_Header *_asdf = head(array_declaration.value);
+  for (I64 i = 0; i < len(array_declaration.value); i++) {
+    Expression *exp = array_declaration.value[i];
+    Object member = eval_evaluate_expression(arena, env, exp);
+    append(members, member);
+  }
+  evaluated_object.type = ARRAY_OBJECT;
+  evaluated_object.array.value = members;
   return evaluated_object;
 }
 
@@ -809,6 +846,16 @@ String object_to_string(Arena *arena, Object object) {
       }
       return arena_string_fmt(arena, "fn %S(%S) { %S }", name, parameters,
                               body);
+      break;
+    }
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray array = object.array;
+      Arena tmp_arena = {0};
+      String members = arena_join_object_array(&tmp_arena, array.value);
+      return arena_string_fmt(arena, "%S", members);
+      arena_free(&tmp_arena);
       break;
     }
   case ERROR_OBJECT:
