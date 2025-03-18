@@ -39,6 +39,8 @@ typedef enum {
   R_PAREN,
   L_BRACE,
   R_BRACE,
+  L_SQUARE_BRACE,
+  R_SQUARE_BRACE,
 
   // data_types
   INT,
@@ -54,38 +56,40 @@ typedef enum {
 } TokenType;
 
 KeyValue TYPES_ARR[] = {
-    kv(KeyValue, "ILLEGAL", ILLEGAL), // parsing stuff
-    kv(KeyValue, "", EOF_),           //
-                                      // operators
-    kv(KeyValue, "=", ASSIGN),        //
-    kv(KeyValue, "-", MINUS),         //
-    kv(KeyValue, "+", PLUS),          //
-    kv(KeyValue, "*", ASTERISK),      //
-    kv(KeyValue, "/", SLASH),         //
-                                      // relationals
-    kv(KeyValue, "==", EQUALS),       //
-    kv(KeyValue, "!", BANG),          //
-    kv(KeyValue, "!=", NOT_EQUALS),   //
-    kv(KeyValue, "<", LT),            //
-    kv(KeyValue, ">", GT),            //
-    kv(KeyValue, ">=", G_EQUALS),     //
-    kv(KeyValue, "<=", L_EQUALS),     //
-                                      //
-    kv(KeyValue, ",", COMMA),         // delimiters
-    kv(KeyValue, ";", SEMICOLON),     //
-    kv(KeyValue, "(", L_PAREN),       //
-    kv(KeyValue, ")", R_PAREN),       //
-    kv(KeyValue, "{", L_BRACE),       //
-    kv(KeyValue, "}", R_BRACE),       //
-    kv(KeyValue, "\"", QUOTE),        //
-                                      // keywords
-    kv(KeyValue, "fn", FUNCTION),     //
-    kv(KeyValue, "let", LET),         //
-    kv(KeyValue, "if", IF),           //
-    kv(KeyValue, "else", ELSE),       //
-    kv(KeyValue, "true", TRUE),       //
-    kv(KeyValue, "false", FALSE),     //
-    kv(KeyValue, "return", RETURN),   //
+    kv(KeyValue, "ILLEGAL", ILLEGAL),  // parsing stuff
+    kv(KeyValue, "", EOF_),            //
+                                       // operators
+    kv(KeyValue, "=", ASSIGN),         //
+    kv(KeyValue, "-", MINUS),          //
+    kv(KeyValue, "+", PLUS),           //
+    kv(KeyValue, "*", ASTERISK),       //
+    kv(KeyValue, "/", SLASH),          //
+                                       // relationals
+    kv(KeyValue, "==", EQUALS),        //
+    kv(KeyValue, "!", BANG),           //
+    kv(KeyValue, "!=", NOT_EQUALS),    //
+    kv(KeyValue, "<", LT),             //
+    kv(KeyValue, ">", GT),             //
+    kv(KeyValue, ">=", G_EQUALS),      //
+    kv(KeyValue, "<=", L_EQUALS),      //
+                                       //
+    kv(KeyValue, ",", COMMA),          // delimiters
+    kv(KeyValue, ";", SEMICOLON),      //
+    kv(KeyValue, "(", L_PAREN),        //
+    kv(KeyValue, ")", R_PAREN),        //
+    kv(KeyValue, "{", L_BRACE),        //
+    kv(KeyValue, "}", R_BRACE),        //
+    kv(KeyValue, "[", L_SQUARE_BRACE), //
+    kv(KeyValue, "]", R_SQUARE_BRACE), //
+    kv(KeyValue, "\"", QUOTE),         //
+                                       // keywords
+    kv(KeyValue, "fn", FUNCTION),      //
+    kv(KeyValue, "let", LET),          //
+    kv(KeyValue, "if", IF),            //
+    kv(KeyValue, "else", ELSE),        //
+    kv(KeyValue, "true", TRUE),        //
+    kv(KeyValue, "false", FALSE),      //
+    kv(KeyValue, "return", RETURN),    //
 }; //
 
 #define TYPES_LEN (sizeof TYPES_ARR / sizeof TYPES_ARR[0])

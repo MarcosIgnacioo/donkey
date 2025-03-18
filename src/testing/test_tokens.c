@@ -8,13 +8,15 @@ typedef struct {
 
 void test_token() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  String input = arena_new_string(&arena, "\"hello\"");
+  /*String input = arena_new_string(&arena, "\"hello\"");*/
+  String input = arena_new_string(&arena, "[]");
   /*String input = string("{}");*/
   Lexer lexi = lexer_new_lexer(input);
   bool failed = true;
 
   Token tokens_test[] = {
-      (Token){.type = STRING, .literal = string("hello")},
+      (Token){.type = L_SQUARE_BRACE, .literal = string("[")},
+      (Token){.type = R_SQUARE_BRACE, .literal = string("]")},
       (Token){.type = EOF_, .literal = string("")},
   };
 

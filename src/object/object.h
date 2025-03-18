@@ -31,6 +31,10 @@ typedef struct {
 } ObjectInteger;
 
 typedef struct {
+  Object *value; // this is an array !!!!
+} ObjectArray;
+
+typedef struct {
   bool value;
 } ObjectBoolean;
 

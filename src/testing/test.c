@@ -638,9 +638,9 @@ void print_object_types() {
 // contains the number of the test, the name of the function of the test or just
 // the input test string yeah that sounds better andddd if passed or not}
 int main() {
+  test_parser();
   test_built_in_functions();
   test_error_handling();
-  test_parser();
   test_string_evaluation();
   test_token();
   test_generic();

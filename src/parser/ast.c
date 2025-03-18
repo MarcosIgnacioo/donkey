@@ -65,6 +65,7 @@ typedef enum {
   IDENTIFIER_EXP,
   INTEGER_LIT_EXP,
   STRING_LIT_EXP,
+  ARRAY_EXP,
   BOOLEAN_EXP,
   PREFIX_EXP,
   INFIX_EXP,
@@ -98,6 +99,7 @@ typedef enum {
 /*  NodeType type;*/
 /*  void *exp_bytes;*/
 /*} Expression;*/
+typedef struct Expression Expression;
 
 typedef struct {
   Token token;
@@ -108,6 +110,11 @@ typedef struct {
   Token token;
   String value;
 } StringLiteral;
+
+typedef struct {
+  Token token;
+  Expression **value;
+} Array;
 
 // this can be an expression or a part of a statement
 // let foo = 1; <- this is an statement
@@ -121,8 +128,6 @@ typedef struct {
   Token token;
   bool value;
 } Boolean;
-
-typedef struct Expression Expression;
 
 // statements
 
@@ -199,6 +204,7 @@ struct Expression {
     Identifier identifier;
     IntLiteral integer_literal;
     StringLiteral string_literal;
+    Array array;
     IfExpression if_expression;
     FunctionCallExpression function_call;
     FunctionLiteral function_literal;
@@ -288,10 +294,14 @@ Expression *ast_parse_boolean(Arena *arena, Parser *parser);
 Expression *ast_parse_int(Arena *arena, Parser *parser);
 Expression *ast_parse_string(Arena *arena, Parser *parser);
 Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser);
+Expression *ast_parse_array(Arena *arena, Parser *parser);
+Expression *ast_parse_array_indexing(Arena *arena, Parser *parser,
+                                     Expression *left);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
 Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser);
 Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser);
+Expression **ast_parse_array_members(Arena *arena, Parser *parser);
 
 Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
                                                Expression *expression);
@@ -324,7 +334,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, IDENTIFIER,
        prs_fn(&ast_parse_identifier, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, INT, prs_fn(&ast_parse_int, NULL)),             //
-    kv(KeyValue_PF, STRING, prs_fn(&ast_parse_string, NULL)),             //
+    kv(KeyValue_PF, STRING, prs_fn(&ast_parse_string, NULL)),       //
     kv(KeyValue_PF, ASSIGN,
        prs_fn(NULL, NULL)), // implement reasigning variables :3
     kv(KeyValue_PF, MINUS,
@@ -351,10 +361,13 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
     kv(KeyValue_PF, L_PAREN,
        prs_fn(&ast_parse_grouped_expression,
-              &ast_parse_function_call_expression)),                      //
-    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),                         //
-    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),                         //
-    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                         //
+              &ast_parse_function_call_expression)), //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),    //
+    kv(KeyValue_PF, L_SQUARE_BRACE,
+       prs_fn(&ast_parse_array, &ast_parse_array_indexing)),              //
+    kv(KeyValue_PF, R_SQUARE_BRACE, prs_fn(NULL, NULL)),                  //
     kv(KeyValue_PF, FUNCTION, prs_fn(&ast_parse_function_literal, NULL)), //
     kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                             //
     kv(KeyValue_PF, IF, prs_fn(&ast_parse_if_expression, NULL)),          //
@@ -693,6 +706,30 @@ Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser) {
   return exp;
 }
 
+Expression *ast_parse_array(Arena *arena, Parser *parser) {
+  Token curr_token = parser->curr_token;
+  Expression **array_members = ast_parse_array_members(arena, parser);
+  Expression *array_expression = arena_alloc(arena, sizeof(Expression));
+  array_expression->type = ARRAY_EXP;
+  array_expression->array.token = curr_token;
+  array_expression->array.value = array_members;
+  /*ast_next_token(arena, parser);*/
+  return array_expression;
+}
+
+Expression *ast_parse_array_indexing(Arena *arena, Parser *parser,
+                                     Expression *left) {
+  Token curr_token = parser->curr_token;
+  Expression **array_members = ast_parse_array_members(arena, parser);
+  Expression *array_expression = arena_alloc(arena, sizeof(Expression));
+  array_expression->type = ARRAY_EXP;
+  array_expression->array.token = curr_token;
+  array_expression->array.value = array_members;
+  /*ast_next_token(arena, parser);*/
+  // TODO: this
+  return NULL;
+}
+
 /*
 when starting fn
 if (1)
@@ -904,6 +941,31 @@ Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
   return arguments;
 }
 
+Expression **ast_parse_array_members(Arena *arena, Parser *parser) {
+
+  Expression **arguments = arena_array_with_cap(arena, Expression *, 16);
+  Expression *tmp = NULL;
+
+  ast_next_token(arena, parser);
+  tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
+  // TODO after REFACTOR make this a ** cause this is kinda uwu owo lazyyyy
+  // but maybe making this rn could make the initial refactor even worse!
+  // making a memory bongus here btw
+  append(arguments, tmp);
+
+  while (peek_token_is(parser, COMMA)) {
+    ast_next_token(arena, parser);
+    ast_next_token(arena, parser);
+
+    tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
+    append(arguments, tmp);
+  }
+
+  ast_expect_peek_token(arena, parser, R_SQUARE_BRACE);
+
+  return arguments;
+}
+
 Expression *ast_parse_infix_expression(Arena *arena, Parser *parser,
                                        Expression *left) {
   InfixExpression infix_exp = (InfixExpression){0};
@@ -983,6 +1045,7 @@ Node *ast_parse_expression_statement(Arena *arena, Parser *parser) {
   Token initial_token = parser->curr_token;
 
   ExpressionStatement expression_statement = (ExpressionStatement){0};
+  expression_statement.token = initial_token;
 
   expression_statement.expression_value =
       ast_parse_expression(arena, parser, LOWEST_PREC);
@@ -1138,6 +1201,32 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
     // good luck!
     exp_string = arena_string_fmt(arena, "%d", parsed_int);
     /*exp_string = string("5");*/
+    break;
+  }
+  // here we should use a tmp arena for strings, after finishing the
+  // for loop we could just free everything and should be fineee and cool
+  // and sexy
+  case ARRAY_EXP: {
+    Array array = expression->array;
+    Arena tmp_arena = {0};
+    String member_str = {0};
+
+    String tmp_members_string =
+        arena_new_empty_string_with_cap(&tmp_arena, 128);
+    arena_string_concat(&tmp_arena, &tmp_members_string, string("["));
+
+    for (U64 i = 0; i < len(array.value); i++) {
+      if (i > 0) {
+        arena_string_concat(&tmp_arena, &tmp_members_string, string(", "));
+      }
+      Expression *exp = expression->array.value[i];
+      member_str = stringify_expression(&tmp_arena, node, exp);
+      arena_string_concat(&tmp_arena, &tmp_members_string, member_str);
+    }
+
+    arena_string_concat(arena, &tmp_members_string, string("]"));
+    exp_string = arena_string_fmt(arena, "%S", tmp_members_string);
+    arena_free(&tmp_arena);
     break;
   }
   case BOOLEAN_EXP: {
