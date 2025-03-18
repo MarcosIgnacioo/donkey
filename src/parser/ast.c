@@ -66,6 +66,7 @@ typedef enum {
   INTEGER_LIT_EXP,
   STRING_LIT_EXP,
   ARRAY_EXP,
+  INDEX_ARRAY_EXP,
   BOOLEAN_EXP,
   PREFIX_EXP,
   INFIX_EXP,
@@ -88,6 +89,7 @@ typedef enum {
   PREFIX_PREC,       // -X or !X 6
   PAREN_PREC,        // () 7
   CALL_PREC,         // myFunction(X) 8
+  INDEX_PREC,         // myFunction(X) 8
 } Precedence;
 
 // Individual parts of expressions
@@ -115,6 +117,13 @@ typedef struct {
   Token token;
   Expression **value;
 } Array;
+
+typedef struct {
+  Token token;
+  Expression *array;
+  Expression *index;
+} IndexArray;
+// ArrayIndex would have gone really hard
 
 // this can be an expression or a part of a statement
 // let foo = 1; <- this is an statement
@@ -205,6 +214,7 @@ struct Expression {
     IntLiteral integer_literal;
     StringLiteral string_literal;
     Array array;
+    IndexArray index_array;
     IfExpression if_expression;
     FunctionCallExpression function_call;
     FunctionLiteral function_literal;
@@ -295,8 +305,8 @@ Expression *ast_parse_int(Arena *arena, Parser *parser);
 Expression *ast_parse_string(Arena *arena, Parser *parser);
 Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_array(Arena *arena, Parser *parser);
-Expression *ast_parse_array_indexing(Arena *arena, Parser *parser,
-                                     Expression *left);
+Expression *ast_parse_index_array(Arena *arena, Parser *parser,
+                                  Expression *left);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
 Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser);
@@ -366,7 +376,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
     kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),    //
     kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),    //
     kv(KeyValue_PF, L_SQUARE_BRACE,
-       prs_fn(&ast_parse_array, &ast_parse_array_indexing)),              //
+       prs_fn(&ast_parse_array, &ast_parse_index_array)),                 //
     kv(KeyValue_PF, R_SQUARE_BRACE, prs_fn(NULL, NULL)),                  //
     kv(KeyValue_PF, FUNCTION, prs_fn(&ast_parse_function_literal, NULL)), //
     kv(KeyValue_PF, LET, prs_fn(NULL, NULL)),                             //
@@ -399,6 +409,7 @@ KeyValue_PRC PRECEDENCES_ARR[] = {
     kv(KeyValue_PRC, ASTERISK, PRODUCT_PREC),  //
     kv(KeyValue_PRC, SLASH, PRODUCT_PREC),     //
     kv(KeyValue_PRC, L_PAREN, CALL_PREC),      //
+    kv(KeyValue_PRC, L_SQUARE_BRACE, INDEX_PREC),      //
     /*kv(KeyValue_PRC, R_PAREN, PAREN_PREC),     //*/
 };
 
@@ -717,17 +728,19 @@ Expression *ast_parse_array(Arena *arena, Parser *parser) {
   return array_expression;
 }
 
-Expression *ast_parse_array_indexing(Arena *arena, Parser *parser,
-                                     Expression *left) {
+// parse_
+Expression *ast_parse_index_array(Arena *arena, Parser *parser,
+                                  Expression *left) {
   Token curr_token = parser->curr_token;
-  Expression **array_members = ast_parse_array_members(arena, parser);
+  ast_next_token(arena, parser);
+  Expression *index = ast_parse_expression(arena, parser, LOWEST_PREC);
   Expression *array_expression = arena_alloc(arena, sizeof(Expression));
-  array_expression->type = ARRAY_EXP;
-  array_expression->array.token = curr_token;
-  array_expression->array.value = array_members;
-  /*ast_next_token(arena, parser);*/
-  // TODO: this
-  return NULL;
+  array_expression->type = INDEX_ARRAY_EXP;
+  array_expression->index_array.token = curr_token;
+  array_expression->index_array.array = left;
+  array_expression->index_array.index = index;
+  ast_expect_peek_token(arena, parser, R_SQUARE_BRACE);
+  return array_expression;
 }
 
 /*
@@ -1233,6 +1246,20 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
     arena_string_concat(arena, &tmp_members_string, string("]"));
     exp_string = arena_string_fmt(arena, "%S", tmp_members_string);
     arena_free(&tmp_arena);
+    break;
+  }
+
+  case INDEX_ARRAY_EXP: {
+
+    IndexArray index_array = expression->index_array;
+
+    Expression *array_exp = index_array.array;
+    Expression *index_exp = index_array.index;
+
+    String array = stringify_expression(arena, node, array_exp);
+    String index = stringify_expression(arena, node, index_exp);
+
+    exp_string = arena_string_fmt(arena, "%S[%S]", array, index);
     break;
   }
   case BOOLEAN_EXP: {
