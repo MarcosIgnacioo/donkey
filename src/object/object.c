@@ -402,24 +402,25 @@ Object eval_evaluate_fn_call(Arena *arena,    //
 Object eval_evaluate_array(Arena *arena, Enviroment *env,
                            Array array_declaration) {
   Object evaluated_object = {0};
-  Object *members = arena_array(arena, Object);
-  for (I64 i = 0; i < len(array_declaration.value); i++) {
-    Expression *exp = array_declaration.value[i];
-    Object member = eval_evaluate_expression(arena, env, exp);
-    append(members, member);
+  Object *members =
+      eval_evaluate_expressions(arena, env, array_declaration.value);
+  if (len(members) == 1 && members[0].type == ERROR_OBJECT) {
+    return members[0];
   }
+
   evaluated_object.type = ARRAY_OBJECT;
   evaluated_object.array.value = members;
   return evaluated_object;
 }
 
 Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
-                           IndexArray array_indexing) {
+                                 IndexArray array_indexing) {
   Object evaluated_object = {0};
   Object array = eval_evaluate_expression(arena, env, array_indexing.array);
   if (array.type != ARRAY_OBJECT) {
     String not_matching_type = error_stringify_object_type(array);
-    return new_error(arena, "identifier is not an array, got : %S", not_matching_type);
+    return new_error(arena, "identifier is not an array, got : %S",
+                     not_matching_type);
   }
   Object index = eval_evaluate_expression(arena, env, array_indexing.index);
   if (index.type != INTEGER_OBJECT) {
@@ -428,8 +429,14 @@ Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
   }
   I64 user_index = index.integer.value;
   Object *user_array = array.array.value;
-  if (user_index >= len(user_array)) {
-    return new_error(arena, "index out of bounds: %d\nin array with length:%d", user_index, len(user_array));
+  // this worked even with negative numbers and "detecting" them as errors
+  // because a -1 is 0xFFFFFF which is promoted
+  // to an integer, and then is a big nummber cause all bits are on
+  // which most likely will always be greater than
+  // the len so it evaluated to true and returned the null object
+  // -------------------vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  if (0 > user_index || user_index >= len(user_array)) {
+    return DONKEY_PANIC_OBJECT;
   }
   evaluated_object = user_array[user_index];
   return evaluated_object;
@@ -786,12 +793,28 @@ Object _len(Arena *arena, Object *args) {
                      len(args));
   }
   Object donkey_arg = args[0];
-  if (donkey_arg.type != STRING_OBJECT) {
+  ObjectInteger length = (ObjectInteger){.value = 0};
+  switch (donkey_arg.type) {
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray donkey_array = donkey_arg.array;
+      length.value = len(donkey_array.value);
+      break;
+    }
+  case STRING_OBJECT:
+    //
+    {
+      ObjectString donkey_string = donkey_arg.string;
+      length.value = (int)donkey_string.value.len;
+      break;
+    }
+  default: {
+    /*length.value = 0;*/
     return new_error(arena, "argument to `len` not supported, got %S",
                      error_stringify_object_type(donkey_arg));
   }
-  ObjectString donkey_string = donkey_arg.string;
-  ObjectInteger length = (ObjectInteger){.value = (int)donkey_string.value.len};
+  }
   Object length_object = (Object){
       .type = INTEGER_OBJECT,   //
       .eval_type = EVAL_OBJECT, //
@@ -800,12 +823,192 @@ Object _len(Arena *arena, Object *args) {
   return length_object;
 }
 
+Object _first(Arena *arena, Object *args) {
+  if (len(args) > 1) {
+    return new_error(arena, "wrong number of arguments. got=%d, want=1",
+                     len(args));
+  }
+
+  Object donkey_arg = args[0];
+  Object return_object = (Object){
+      .eval_type = EVAL_OBJECT, //
+  };
+
+  switch (donkey_arg.type) {
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray donkey_array = donkey_arg.array;
+      Object *array = donkey_array.value;
+      // imagine this sceneario
+      // first([])
+      // here we might think well we should check if the
+      // array is empty no? which yeah that should be the cool
+      // and based option BUT, there is a little neat trick,
+      // the default NIL values in enums, why?
+      // well because when we evaluate a list of expressions
+      // we are passed the expressions in an array from the parser
+      // which are just an empty array, so we never evaluate any
+      // expression cause there arent any expressions!!! so cool rite
+      // well there is more to it, when doing an arena allocation we
+      // always zero the memory, which makes all the structs and objects
+      // we have allocated from it have default nil values
+      // which means that the first element in the array we got returned from
+      // the expressions the parser got (just an empty array) has nil values
+      // which welllll we can just return and its so amazing and oocoool
+      // aasdsfjaskdf
+      /*if (!len(array)) {*/
+      /*  return DONKEY_PANIC_OBJECT;*/
+      /*}*/
+      return_object = array[0];
+      break;
+    }
+  default: {
+    return new_error(arena, "argument to `first` not supported, got %S",
+                     error_stringify_object_type(donkey_arg));
+  }
+  }
+
+  return return_object;
+}
+
+Object _last(Arena *arena, Object *args) {
+  if (len(args) > 1) {
+    return new_error(arena, "wrong number of arguments. got=%d, want=1",
+                     len(args));
+  }
+
+  Object donkey_arg = args[0];
+  Object return_object = (Object){
+      .eval_type = EVAL_OBJECT, //
+  };
+
+  switch (donkey_arg.type) {
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray donkey_array = donkey_arg.array;
+      Object *array = donkey_array.value;
+      I64 last_idx = len(array) - 1;
+      I64 idx = (last_idx >= 0) ? last_idx : 0;
+      return_object = array[idx];
+      break;
+    }
+  default: {
+    return new_error(arena, "argument to `last` not supported, got %S",
+                     error_stringify_object_type(donkey_arg));
+  }
+  }
+
+  return return_object;
+}
+
+Object _tail(Arena *arena, Object *args) {
+  if (len(args) > 1) {
+    return new_error(arena, "wrong number of arguments. got=%d, want=1",
+                     len(args));
+  }
+
+  Object donkey_arg = args[0];
+  Object return_object = (Object){
+      .eval_type = EVAL_OBJECT, //
+  };
+
+  switch (donkey_arg.type) {
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray donkey_array = donkey_arg.array;
+      Object *array = donkey_array.value;
+      Object *array_tail = arena_array(arena, Object);
+      Object item = {0};
+      for (size_t i = 1; i < len(array); i++) {
+        item = array[i];
+        append(array_tail, item);
+      }
+      return_object.type = ARRAY_OBJECT;
+      return_object.array.value = array_tail;
+      break;
+    }
+  default: {
+    return new_error(arena, "argument to `tail` not supported, got %S",
+                     error_stringify_object_type(donkey_arg));
+  }
+  }
+
+  return return_object;
+}
+
+Object _push(Arena *arena, Object *args) {
+  if (len(args) < 2) {
+    return new_error(arena, "wrong number of arguments. got=%d, want=2 or more",
+                     len(args));
+  }
+
+  Object donkey_arg = args[0];
+  Object return_object = (Object){
+      .eval_type = EVAL_OBJECT, //
+  };
+
+  switch (donkey_arg.type) {
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray donkey_array = donkey_arg.array;
+      Object *array = donkey_array.value;
+      Object *new_array = arena_array_with_cap(arena, Object, len(array) * 2);
+
+      /*Object *append_ptr = args + 1;*/
+      /*int n_items_to_append = len(args) - 1;*/
+      /**/
+      /*Object *tail_ptr = new_array + len(new_array);*/
+      /*memory_copy((byte *)tail_ptr, (byte *)append_ptr,*/
+      /*            n_items_to_append * sizeof(Object));*/
+      /*head(new_array)->length += n_items_to_append;*/
+
+      for (int i = 0; i < len(array); i++) {
+        Object appending = array[i];
+        append(new_array, appending);
+      }
+
+      for (int i = 1; i < len(args); i++) {
+        Object appending = args[i];
+        append(new_array, appending);
+      }
+
+      return_object.type = ARRAY_OBJECT;
+      return_object.array.value = new_array;
+      break;
+    }
+  default: {
+    return new_error(arena, "argument to `push` not supported, got %S",
+                     error_stringify_object_type(donkey_arg));
+  }
+  }
+
+  return return_object;
+}
+
+#define new_built_in(__fn)                                                     \
+  (Object){.eval_type = EVAL_OBJECT,                                           \
+           .type = BUILT_IN_OBJECT,                                            \
+           .built_in.value = &__fn};
+
+#define BUILT_IN_FNS                                                           \
+  X(len)                                                                       \
+  X(first)                                                                     \
+  X(last)                                                                      \
+  X(tail)                                                                      \
+  X(push)
+
 Object eval_evaluate_program(Arena *arena, Enviroment *env, Program program) {
   env_init(arena, &built_in_env);
-  Object string_len_donkey = (Object){.eval_type = EVAL_OBJECT,
-                                      .type = BUILT_IN_OBJECT,
-                                      .built_in.value = &_len};
-  env_insert_object(arena, &built_in_env, string("len"), string_len_donkey);
+#define X(fn) Object fn##_donkey = new_built_in(_##fn)
+  BUILT_IN_FNS
+#undef X
+#define X(fn) env_insert_object(arena, &built_in_env, string(#fn), fn##_donkey);
+  BUILT_IN_FNS
+#undef X
   Object evaluated_object = DONKEY_PANIC_OBJECT;
   // i dont think i need to pass the env as a parameter
   // here because this function lives the whole evaluation
@@ -880,10 +1083,9 @@ String object_to_string(Arena *arena, Object object) {
     //
     {
       ObjectArray array = object.array;
-      Arena tmp_arena = {0};
-      String members = arena_join_object_array(&tmp_arena, array.value);
-      return arena_string_fmt(arena, "%S", members);
-      arena_free(&tmp_arena);
+      String members = arena_join_object_array(arena, array.value);
+      String result = arena_string_fmt(arena, "%S", members);
+      return result;
       break;
     }
   case ERROR_OBJECT:
@@ -892,12 +1094,22 @@ String object_to_string(Arena *arena, Object object) {
       return arena_string_fmt(arena, "[ERROR]: %S", object.error.value);
       break;
     }
+  case NIL_OBJECT:
+    //
+    {
+      return arena_string_fmt(arena, "(null)");
+      break;
+    }
   default:
     //
     {
-      return arena_string_fmt(arena, "not stringrified amix", object.donkey);
+      return arena_string_fmt(arena, "wtf%S", object.donkey);
       break;
     }
   }
+}
+
+void printo(Arena *arena, Object obj) {
+  printfln("%S", object_to_string(arena, obj));
 }
 // built_in

@@ -628,19 +628,32 @@ void test() {
   }
 }
 
-void print_object_types() {
+void print_object_types(){
 #define X(name) printf("%s\n", _ObjectToString[name]);
-  OBJECT_TYPES
+    OBJECT_TYPES
 #undef X
-}
-// TODO: put number of tests failed and passed just a counter girllll and if u
-// wanna get nitty and gritty use a hashtable {or just a struct array that
-// contains the number of the test, the name of the function of the test or just
-// the input test string yeah that sounds better andddd if passed or not}
+} // TODO: put number of tests failed and passed just a counter girllll and if u
+  // wanna get nitty and gritty use a hashtable {or just a struct array that
+  // contains the number of the test, the name of the function of the test or
+  // just the input test string yeah that sounds better andddd if passed or not}
+/*let map = fn(arr, f) {*/
+/*  let iter = fn(arr, accumulated) {*/
+/*    if (len(arr) == 0) {*/
+/*      accumulated*/
+/*    } else {*/
+/*      iter(tail(arr), push(accumulated, f(first(arr))));*/
+/*    }*/
+/*  };*/
+/*  iter(arr, []);*/
+/*};*/
+/*let a = [ 1, 2 ];*/
+/*let double = fn(x){x * 2};*/
+/*map(a, double);*/
 int main() {
-  test_parser();
-  return 0;
   test_built_in_functions();
+  return 0;
+  test_array_evaluations();
+  test_parser();
   test_error_handling();
   test_string_evaluation();
   test_token();

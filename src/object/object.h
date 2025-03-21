@@ -116,7 +116,7 @@ Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_string_infix_expression(Arena *, Object, String, Object);
 Object eval_evaluate_array(Arena *, Enviroment *, Array);
 Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
-                           IndexArray array_indexing);
+                                 IndexArray array_indexing);
 Object eval_if_expression(Arena *, Enviroment *, Object, BlockStatement,
                           BlockStatement);
 Object eval_evaluate_fn_call(Arena *, Enviroment *, FunctionCallExpression,
@@ -130,5 +130,9 @@ Object new_error(Arena *arena, const char *fmt, ...);
 Object test_eval(char *);
 // built_in
 Object _len(Arena *, Object *);
-
+Object _first(Arena *arena, Object *args);
+Object _last(Arena *arena, Object *args);
+Object _push(Arena *arena, Object *args);
+// debug
+void printo(Arena *arena, Object obj);
 #endif // !_OBJECT_H

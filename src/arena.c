@@ -65,13 +65,13 @@ U64 str_len(const char *str);
 // strings
 // this is not quite good btw but i like making the functions yay!
 void memory_copy(byte *this, const byte *that, int bytes) {
-  for (U64 i = 0; i < bytes; i++) {
+  for (int i = 0; i < bytes; i++) {
     this[i] = that[i];
   }
 };
 
 void memory_set(byte *memory, U64 bytes, byte value) {
-  for (U64 i = 0; i < bytes; i++) {
+  for (int i = 0; i < bytes; i++) {
     memory[i] = value;
   }
 }
@@ -135,6 +135,7 @@ void *arena_alloc(Arena *arena, U64 size_in_bytes) {
   }
 
   void *memory = &arena->end->data[arena->end->count];
+  // thhis carries so hard
   memory_set((byte *)memory, size, 0);
   arena->end->count += size;
   return memory;

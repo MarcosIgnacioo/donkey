@@ -310,9 +310,7 @@ Expression *ast_parse_index_array(Arena *arena, Parser *parser,
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
 Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser);
-Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser);
-Expression **ast_parse_array_members(Arena *arena, Parser *parser);
-
+Expression **ast_parse_expression_list(Arena *arena, Parser *parser, TokenType end);
 Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
                                                Expression *expression);
 Expression *ast_parse_prefix_expression(Arena *arena, Parser *parser);
@@ -719,7 +717,7 @@ Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser) {
 
 Expression *ast_parse_array(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
-  Expression **array_members = ast_parse_array_members(arena, parser);
+  Expression **array_members = ast_parse_expression_list(arena, parser, R_SQUARE_BRACE);
   Expression *array_expression = arena_alloc(arena, sizeof(Expression));
   array_expression->type = ARRAY_EXP;
   array_expression->array.token = curr_token;
@@ -843,6 +841,37 @@ Identifier *mine_ast_parse_function_parameters(Arena *arena, Parser *parser) {
   // this would always end the parser with the curr token being R_PAREN
 }
 
+Expression **ast_parse_expression_list(Arena *arena, Parser *parser, TokenType end) {
+
+  Expression **members = arena_array_with_cap(arena, Expression *, 16);
+
+  Expression *tmp = NULL;
+
+  if (peek_token_is(parser, end)) {
+    ast_next_token(arena, parser);
+    return members;
+  }
+
+  ast_next_token(arena, parser);
+
+  // null verificaction here in prod mode would go craaaazyyy
+  tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
+
+  append(members, tmp);
+
+  while (peek_token_is(parser, COMMA)) {
+    ast_next_token(arena, parser);
+    ast_next_token(arena, parser);
+
+    tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
+    append(members, tmp);
+  }
+
+  ast_expect_peek_token(arena, parser, end);
+
+  return members;
+}
+
 Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser) {
   Identifier *parameters = arena_array_with_cap(arena, Identifier, 16);
 
@@ -919,7 +948,7 @@ Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
   FunctionCallExpression function_call = (FunctionCallExpression){0};
   function_call.token = parser->curr_token; // the ( token
   function_call.function = function;
-  function_call.arguments = ast_parse_call_function_arguments(arena, parser);
+  function_call.arguments = ast_parse_expression_list(arena, parser, R_PAREN);
 
   Expression *expression = arena_alloc(arena, sizeof(Expression));
 
@@ -927,62 +956,6 @@ Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
   expression->function_call = function_call;
 
   return expression;
-}
-
-Expression **ast_parse_call_function_arguments(Arena *arena, Parser *parser) {
-
-  Expression **arguments = arena_array_with_cap(arena, Expression *, 16);
-  Expression *tmp = NULL;
-
-  ast_next_token(arena, parser);
-  tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-  // TODO after REFACTOR make this a ** cause this is kinda uwu owo lazyyyy
-  // but maybe making this rn could make the initial refactor even worse!
-  // making a memory bongus here btw
-  append(arguments, tmp);
-
-  while (peek_token_is(parser, COMMA)) {
-    ast_next_token(arena, parser);
-    ast_next_token(arena, parser);
-
-    tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-    append(arguments, tmp);
-  }
-
-  ast_expect_peek_token(arena, parser, R_PAREN);
-
-  return arguments;
-}
-
-Expression **ast_parse_array_members(Arena *arena, Parser *parser) {
-
-  Expression **members = arena_array_with_cap(arena, Expression *, 16);
-
-  Expression *tmp = NULL;
-
-  if (peek_token_is(parser, R_SQUARE_BRACE)) {
-    ast_next_token(arena, parser);
-    return members;
-  }
-
-  ast_next_token(arena, parser);
-
-  // null verificaction here in prod mode would go craaaazyyy
-  tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-
-  append(members, tmp);
-
-  while (peek_token_is(parser, COMMA)) {
-    ast_next_token(arena, parser);
-    ast_next_token(arena, parser);
-
-    tmp = ast_parse_expression(arena, parser, LOWEST_PREC);
-    append(members, tmp);
-  }
-
-  ast_expect_peek_token(arena, parser, R_SQUARE_BRACE);
-
-  return members;
 }
 
 Expression *ast_parse_infix_expression(Arena *arena, Parser *parser,

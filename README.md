@@ -1,4 +1,53 @@
 
+```c
+
+let map = fn(arr, f) {
+  let iter = fn(arr, accumulated) {
+    if (len(arr) == 0) {
+      accumulated;
+    } else {
+      iter(tail(arr), push(accumulated, f(first(arr))));
+    }
+  };
+  iter(arr, []);
+};
+let a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+let double = fn(x){x * 2};
+map(a, double);
+
+let map = fn(arr, f) {
+  let iter = fn(arr, accumulated) {
+    if (len(arr) == 0) {
+      accumulated
+    } else {
+      iter([2], push(accumulated, f(first(arr))));
+    }
+  };
+  iter([ 1, 2 ], []);
+};
+let a = [ 1, 2 ];
+let double = fn(x){x * 2};
+map(a, double);
+
+let y = push(y,double(8))    
+
+      /*Object *tail_ptr = array + 1;*/
+      /*Object *array_tail = arena_array_with_cap(arena, Object, len(array));*/
+      /*int items_to_copy = len(array) - 1;*/
+      /*memory_copy((byte *)array_tail, (byte *)tail_ptr,*/
+      /*            items_to_copy * sizeof(Object));*/
+      /*head(array_tail)->length = items_to_copy;*/
+```
+tdoayddd
+
+read the array implementation from the book [ ] 1-2:00
+implement hashtables in donkeylang          [ ] 3-4:00
+free time                                   [ ] 4-5:00
+do classmoods stuff                         [ ] 6-7:30
+
+
+
+
 finish hashmaps for variables in donkey
 
 see how to send the data of the login from google api to 

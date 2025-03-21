@@ -1,8 +1,7 @@
 // source
-// btw NEVER pass dynamic arrays as arguments IF i want the function to append to it
-// in that case it should be passed as a reference, 
-// cause the appending macro changes the pointer in case of 
-// resizing
+// btw NEVER pass dynamic arrays as arguments IF i want the function to append
+// to it in that case it should be passed as a reference, cause the appending
+// macro changes the pointer in case of resizing
 // https://bytesbeneath.com/articles/dynamic-arrays-in-c
 #ifndef _ARRAY_H
 #define _ARRAY_H
@@ -18,6 +17,7 @@
 #define len(array) ((head(array))->length)
 #define array_len(array) (sizeof array / sizeof array[0])
 #define cap(array) ((head(array))->capacity)
+
 
 #define append(a, v)                                                           \
   ((a) = array_ensure_capacity(a, 1, sizeof(*a)), (a)[head(a)->length] = (v),  \
@@ -40,7 +40,7 @@
 #define pop_back(array) ((array)[head(array)->length])
 #define reset(array) (head(array)->length = 0)
 
-typedef union {
+    typedef union {
   size_t padding;
   Arena *arena;
 } Context;
@@ -51,6 +51,9 @@ typedef struct {
 } Array_Header;
 
 void *array_init(Arena *arena, size_t item_size, size_t capacity) {
+  if (!capacity) {
+    capacity = 24;
+  }
   void *ptr = 0;
   size_t size = sizeof(Array_Header) + item_size * capacity;
   Array_Header *header = arena_alloc(arena, size);

@@ -52,7 +52,7 @@ void string_trim_space_left(String *trimming);
 int string_index_of(String source);
 void string_trim_space_right(String *trimming);
 void string_trim_space(String *trimming);
-void string_concat(String *dest, String source);
+void string_concat(String *dest, const String source);
 String arena_string_substract(Arena *arena, String this, String that);
 void arena_string_concat(Arena *arena, String *dest, String source);
 void arena_c_string_concat(Arena *arena, String *dest, const char *source);
@@ -431,7 +431,7 @@ void arena_c_string_concat(Arena *arena, String *dest, const char *source) {
 
 // make an arena version of this so if the capacity is overflowed we just
 // realloc the content of the string
-void string_concat(String *dest, String source) {
+void string_concat(String *dest, const String source) {
   U64 total_size = dest->len + source.len;
   U64 n_bytes = source.len;
   if (total_size >= dest->cap) {

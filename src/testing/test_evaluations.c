@@ -4,6 +4,103 @@
 #include "test.h"
 #include <stdio.h>
 
+typedef enum {
+  ARR_INT,
+  ARR_STR,
+} TestArrayType;
+typedef struct {
+  char *input;
+  TestArrayType type;
+  union {
+    I64 integer;
+    ObjectDonkey donkey;
+  } expected;
+} TestArray;
+
+bool test_array_evaluations() {
+  TestArray test_cases[] = {
+      //
+      {
+          .type = ARR_STR,
+          .input = "[1, 2, 3][-1]",
+          .expected.donkey = string("(null)"),
+      },
+      {
+          .type = ARR_INT,
+          .input = "[1, 2, 3][0]",
+          .expected.integer = 1,
+      },
+      {
+          .type = ARR_INT,
+          .input = "[1, 2, 3][1]",
+          .expected.integer = 2,
+      },
+      {
+          .type = ARR_INT,
+          .input = "[1, 2, 3][2]",
+          .expected.integer = 3,
+      },
+      {
+          .type = ARR_INT,
+          .input = "let i = 0; [1][i];",
+          .expected.integer = 1,
+      },
+      {
+          .type = ARR_INT,
+          .input = "[1, 2, 3][1 + 1];",
+          .expected.integer = 3,
+      },
+      {
+          .type = ARR_INT,
+          .input = "let myArray = [1, 2, 3]; myArray[2];",
+          .expected.integer = 3,
+      },
+      {
+          .type = ARR_INT,
+          .input =
+              "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+          .expected.integer = 6,
+      },
+      {
+          .type = ARR_INT,
+          .input = "let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",
+          .expected.integer = 2,
+      },
+      {
+          //
+          .type = ARR_STR,
+          .input = "[1, 2, 3][3]",
+          .expected.donkey = string("(null)")
+          //
+      },
+      //
+  };
+  bool pass = true;
+
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestArray test = test_cases[i];
+    Object test_obj = test_eval(test.input);
+    TestArrayType t = test.type;
+    if (t == ARR_INT) {
+      if (!test_object_integer(test_obj, test.expected.integer)) {
+        printf("FAILED:%s\n", test.input);
+        pass = false;
+      }
+    } else {
+      if (!test_object_null(test_obj)) {
+        printf("FAILED:%s\n", test.input);
+        pass = false;
+      }
+    }
+  }
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_array_evaluations() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_array_evaluations() \n");
+  }
+  return pass;
+}
+
 typedef struct {
   char *input;
   I64 expected;
@@ -11,6 +108,7 @@ typedef struct {
 
 void test_integer_evaluations() {
   TestResultInteger test_cases[] = {
+
       (TestResultInteger){.input = "-8", .expected = -8},
       (TestResultInteger){.input = "-5", .expected = -5},
       (TestResultInteger){.input = "8", .expected = 8},
@@ -322,28 +420,137 @@ void test_function_application() {
   printf("\n");
 }
 
+typedef enum {
+  NIL_TEST,
+  INT_TEST,
+  STR_TEST,
+  ARR_TEST,
+} Expected;
+
 typedef struct {
   char *input;
-  I64 expected;
+  Expected type;
+  union {
+    I64 integer;
+    String string;
+  } expected;
 } TestResultBuiltIn;
+
+void xd() {
+  TestResultBuiltIn t =
+      (TestResultBuiltIn){.type = ARR_TEST,
+                          .input = "let x = []; let x = push(x,2); x;",
+                          /*.input = "let x = 1; let x = 2; x;",*/
+                          .expected.string = string("[1]")};
+  Object test_obj = test_eval(t.input);
+  printfln("output :\n\t%S", object_to_string(&arena, test_obj));
+  printfln("output :\n\t%S", object_to_string(&arena, test_obj));
+  printfln("output :\n\t%S", object_to_string(&arena, test_obj));
+}
 
 void test_built_in_functions() {
   TestResultBuiltIn test_cases[] = {
-      (TestResultBuiltIn){.input = "len(\"hellope\")", .expected = 7},
-      (TestResultBuiltIn){.input = "len(\"hello\")", .expected = 5},
-      (TestResultBuiltIn){.input = "len(\"pink pony club\")", .expected = 14},
-      (TestResultBuiltIn){.input = "len(\"seven drop\")", .expected = 10},
+      (TestResultBuiltIn){.type = ARR_TEST,
+                          .input = "let x = []; let x = push(x,2); x;",
+                          .expected.string = string("[2]")},
+      (TestResultBuiltIn){.type = ARR_TEST,
+                          .input = " let x = []; let x = push(x, 123); x; x;",
+                          .expected.string = string("[123]")},
+      (TestResultBuiltIn){.type = ARR_TEST,
+                          .input = "let x = []; let x = push(x, 1); let x = "
+                                   "push(x, 2); let x = push(x, 3); x;",
+                          .expected.string = string("[1, 2, 3]")},
+      (TestResultBuiltIn){
+          .type = ARR_TEST,
+          .input =
+              "let map = fn(arr, f) { let iter = fn(arr, accumulated) { if "
+              "(len(arr) == 0) { accumulated;  } else { iter(tail(arr), "
+              "push(accumulated, f(first(arr)))); } }; iter(arr, []); }; let a "
+              "= [1,2,3];let double = fn(x) { x * 2 }; map(a, double);",
+          .expected.string = string("[2, 4, 6]")},
+      (TestResultBuiltIn){
+          .type = NIL_TEST, .input = "first([])", .expected.integer = 0},
+      (TestResultBuiltIn){
+          .type = INT_TEST, .input = "len(\"hellope\")", .expected.integer = 7},
+      (TestResultBuiltIn){
+          .type = INT_TEST, .input = "len(\"hello\")", .expected.integer = 5},
+      (TestResultBuiltIn){.type = INT_TEST,
+                          .input = "len(\"pink pony club\")",
+                          .expected.integer = 14},
+      (TestResultBuiltIn){.type = INT_TEST,
+                          .input = "len(\"seven drop\")",
+                          .expected.integer = 10},
+      (TestResultBuiltIn){
+          .type = INT_TEST, .input = "len([1,2,3])", .expected.integer = 3},
+      (TestResultBuiltIn){
+          .type = INT_TEST, .input = "len([])", .expected.integer = 0},
+
+      (TestResultBuiltIn){.type = INT_TEST,
+                          .input = "first([143289,2,3])",
+                          .expected.integer = 143289},
+
+      (TestResultBuiltIn){.type = ARR_TEST,
+                          .input = "tail([143289,2,3])",
+                          .expected.string = string("[2, 3]")},
+      (TestResultBuiltIn){.type = ARR_TEST,
+                          .input = "let x = []; let x = push(x, 43);",
+                          .expected.string = string("[43]")},
   };
   Object test_obj;
   bool pass = true;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestResultBuiltIn test = test_cases[i];
     test_obj = test_eval(test.input);
-    if (!test_object_integer(test_obj, test.expected)) {
-      printf("FAILED:%s\n", test.input);
-      printf("expected:%lld\n", test.expected);
-      printfln("got:%S\n", object_to_string(&arena, test_obj));
-      pass = false;
+    if (test.type == NIL_TEST) {
+      if (!test_object_null(test_obj)) {
+        pass = false;
+      }
+    } else if (test.type == INT_TEST) {
+      if (!test_object_integer(test_obj, test.expected.integer)) {
+        pass = false;
+      }
+    } else if (test.type == STR_TEST) {
+      if (!test_object_string(test_obj, test.expected.string)) {
+        pass = false;
+      }
+    } else if (test.type == ARR_TEST) {
+      if (!test_object_array(&arena, test_obj, test.expected.string)) {
+        pass = false;
+      }
+    }
+
+    if (!pass) {
+      printf("_____________________\n");
+      printf("test failed\n");
+      printfln("input  :\n\t%s", test.input);
+      printfln("output :\n\t%S", object_to_string(&arena, test_obj));
+      switch (test.type) {
+      case INT_TEST:
+        //
+        {
+          printfln("expected :\n\t%d", test.expected.integer);
+          break;
+        }
+      case STR_TEST:
+        //
+        {
+          printfln("expected :\n\t%s", test.expected.string.str);
+          break;
+        }
+      case ARR_TEST:
+        //
+        {
+          printfln("expected :\n\t%s", test.expected.string.str);
+          break;
+        }
+      default:
+        //
+        {
+          printfln("null");
+          break;
+        }
+      }
+      printf("_____________________\n");
     }
   }
   printfln("Last expression evaluated to: %S",
@@ -557,10 +764,41 @@ bool test_object_string(Object testing, String expected) {
   return true;
 }
 
+/*bool test_object_null(Object testing, String expected) {*/
+/*  if (testing.type != NIL_OBJECT) {*/
+/*    printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.type));*/
+/*    return false;*/
+/*  }*/
+/**/
+/*  ObjectDonkey testing_string = testing.donkey;*/
+/**/
+/*  if (!string_equals(testing_string, expected)) {*/
+/*    printfln("expected: %S\ngot:\t  %S", expected, testing_string);*/
+/*    return false;*/
+/*  }*/
+/**/
+/*  return true;*/
+/*}*/
+
 bool test_object_null(Object testing) {
   if (testing.type != NIL_OBJECT) {
     printf("\n%s!=NIL_OBJECT\n", ObjectToString(testing.type));
     return false;
   }
+  return true;
+}
+
+bool test_object_array(Arena *arena, Object testing, String expected) {
+  if (testing.type != ARRAY_OBJECT) {
+    printf("\n%s!=ARRAY_OBJECT\n", ObjectToString(testing.type));
+    return false;
+  }
+
+  String array_string = object_to_string(arena, testing);
+  if (!string_equals(array_string, expected)) {
+    printfln("expected: %S\ngot:\t  %S", expected, array_string);
+    return false;
+  }
+
   return true;
 }
