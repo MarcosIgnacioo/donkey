@@ -1083,8 +1083,10 @@ String object_to_string(Arena *arena, Object object) {
     //
     {
       ObjectArray array = object.array;
-      String members = arena_join_object_array(arena, array.value);
+      Arena tmp_arena = {0};
+      String members = arena_join_object_array(&tmp_arena, array.value);
       String result = arena_string_fmt(arena, "%S", members);
+      arena_free(&tmp_arena);
       return result;
       break;
     }
