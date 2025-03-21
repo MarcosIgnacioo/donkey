@@ -450,6 +450,9 @@ void xd() {
 
 void test_built_in_functions() {
   TestResultBuiltIn test_cases[] = {
+      (TestResultBuiltIn){.type = INT_TEST,
+                          .input = "let reduce = fn(arr, initial, f) { let iter = fn(arr, result) { if (len(arr) == 0) { result } else { iter(tail(arr), f(result, first(arr))); } }; iter(arr, initial); }; let sum = fn(arr) { reduce(arr, 0, fn(initial, el) { initial + el }); }; sum([1, 2, 3, 4, 5]);",
+                          .expected.integer = 15},
       (TestResultBuiltIn){.type = ARR_TEST,
                           .input = "let x = []; let x = push(x,2); x;",
                           .expected.string = string("[2]")},
@@ -460,6 +463,7 @@ void test_built_in_functions() {
                           .input = "let x = []; let x = push(x, 1); let x = "
                                    "push(x, 2); let x = push(x, 3); x;",
                           .expected.string = string("[1, 2, 3]")},
+
       (TestResultBuiltIn){
           .type = ARR_TEST,
           .input =
@@ -501,25 +505,30 @@ void test_built_in_functions() {
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestResultBuiltIn test = test_cases[i];
     test_obj = test_eval(test.input);
+    bool curr_pass = true;
     if (test.type == NIL_TEST) {
       if (!test_object_null(test_obj)) {
         pass = false;
+        curr_pass = false;
       }
     } else if (test.type == INT_TEST) {
       if (!test_object_integer(test_obj, test.expected.integer)) {
         pass = false;
+        curr_pass = false;
       }
     } else if (test.type == STR_TEST) {
       if (!test_object_string(test_obj, test.expected.string)) {
         pass = false;
+        curr_pass = false;
       }
     } else if (test.type == ARR_TEST) {
       if (!test_object_array(&arena, test_obj, test.expected.string)) {
         pass = false;
+        curr_pass = false;
       }
     }
 
-    if (!pass) {
+    if (!curr_pass) {
       printf("_____________________\n");
       printf("test failed\n");
       printfln("input  :\n\t%s", test.input);

@@ -840,6 +840,9 @@ Object _first(Arena *arena, Object *args) {
     {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
+      if (len(array) == 0) {
+          return DONKEY_PANIC_OBJECT;
+      }
       // imagine this sceneario
       // first([])
       // here we might think well we should check if the
@@ -889,6 +892,9 @@ Object _last(Arena *arena, Object *args) {
     {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
+      if (len(array) == 0) {
+          return DONKEY_PANIC_OBJECT;
+      }
       I64 last_idx = len(array) - 1;
       I64 idx = (last_idx >= 0) ? last_idx : 0;
       return_object = array[idx];
@@ -920,6 +926,9 @@ Object _tail(Arena *arena, Object *args) {
     {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
+      if (len(array) == 0) {
+          return DONKEY_PANIC_OBJECT;
+      }
       Object *array_tail = arena_array(arena, Object);
       Object item = {0};
       for (size_t i = 1; i < len(array); i++) {

@@ -1,4 +1,9 @@
 
+
+memory copy implementation cause 
+
+
+
 ```c
 
 let map = fn(arr, f) {
