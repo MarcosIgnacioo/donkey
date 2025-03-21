@@ -956,16 +956,24 @@ Object _push(Arena *arena, Object *args) {
     {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
-      Object *new_array = arena_array_with_cap(arena, Object, len(array) * 2);
+      int n_append_items = len(args);
+      int n_old_items = len(array);
+      Object *new_array =
+          arena_array_with_cap(arena, Object, n_old_items + n_append_items);
 
-      /*Object *append_ptr = args + 1;*/
-      /*int n_items_to_append = len(args) - 1;*/
+      /*byte *dest = (byte *)new_array;*/
+      /*byte *source = (byte *)array;*/
       /**/
-      /*Object *tail_ptr = new_array + len(new_array);*/
-      /*memory_copy((byte *)tail_ptr, (byte *)append_ptr,*/
-      /*            n_items_to_append * sizeof(Object));*/
-      /*head(new_array)->length += n_items_to_append;*/
+      /*memory_copy(dest, source, n_old_items * sizeof(Object));*/
+      /*head(new_array)->length += n_old_items;*/
+      /**/
+      /*dest = (byte *)(new_array + n_old_items);*/
+      /*source = (byte *)(args + 1);*/
+      /**/
+      /*memory_copy(dest, source, n_append_items * sizeof(Object));*/
+      /*head(new_array)->length += n_append_items - 1;*/
 
+      // this is the better code not error prone and that stuff
       for (int i = 0; i < len(array); i++) {
         Object appending = array[i];
         append(new_array, appending);
@@ -1105,7 +1113,7 @@ String object_to_string(Arena *arena, Object object) {
   default:
     //
     {
-      return arena_string_fmt(arena, "wtf%S", object.donkey);
+      return arena_string_fmt(arena, "(donk)%S", object.donkey);
       break;
     }
   }
