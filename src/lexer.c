@@ -102,6 +102,7 @@ Token lexer_next_token(Arena *arena, Lexer *lexer) {
   case '/':
   case ',': // delimiters
   case ';':
+  case ':':
   case '[':
   case ']':
   case '(':

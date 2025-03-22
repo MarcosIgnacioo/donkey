@@ -32,6 +32,7 @@ typedef enum {
 
   // delimiter
   COMMA,
+  COLON,
   SEMICOLON,
   QUOTE,
 
@@ -74,6 +75,7 @@ KeyValue TYPES_ARR[] = {
     kv(KeyValue, "<=", L_EQUALS),      //
                                        //
     kv(KeyValue, ",", COMMA),          // delimiters
+    kv(KeyValue, ":", COLON),          //
     kv(KeyValue, ";", SEMICOLON),      //
     kv(KeyValue, "(", L_PAREN),        //
     kv(KeyValue, ")", R_PAREN),        //

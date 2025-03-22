@@ -346,12 +346,7 @@ void test_repl() {
 
 void test_generic() {
   env_init(&arena, &env);
-  TestGeneric test_cases[] = {{.input = "let foo = 17;"
-                                        "let newAdder = fn(x) {"
-                                        "fn(y) { foo;x + y; };"
-                                        "};"
-                                        "let addTwo = newAdder(2);"
-                                        "addTwo(2);"}};
+  TestGeneric test_cases[] = {{.input = "let foo = {\"uwu\":23};"}};
   Object testing;
   for (I64 i = 0; i < array_len(test_cases); i++) {
     TestGeneric test = test_cases[i];
@@ -450,9 +445,15 @@ void xd() {
 
 void test_built_in_functions() {
   TestResultBuiltIn test_cases[] = {
-      (TestResultBuiltIn){.type = INT_TEST,
-                          .input = "let reduce = fn(arr, initial, f) { let iter = fn(arr, result) { if (len(arr) == 0) { result } else { iter(tail(arr), f(result, first(arr))); } }; iter(arr, initial); }; let sum = fn(arr) { reduce(arr, 0, fn(initial, el) { initial + el }); }; sum([1, 2, 3, 4, 5]);",
-                          .expected.integer = 15},
+      (TestResultBuiltIn){
+          .type = INT_TEST,
+          .input =
+              "let reduce = fn(arr, initial, f) { let iter = fn(arr, result) { "
+              "if (len(arr) == 0) { result } else { iter(tail(arr), f(result, "
+              "first(arr))); } }; iter(arr, initial); }; let sum = fn(arr) { "
+              "reduce(arr, 0, fn(initial, el) { initial + el }); }; sum([1, 2, "
+              "3, 4, 5]);",
+          .expected.integer = 15},
       (TestResultBuiltIn){.type = ARR_TEST,
                           .input = "let x = []; let x = push(x,2); x;",
                           .expected.string = string("[2]")},

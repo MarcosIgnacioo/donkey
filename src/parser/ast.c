@@ -67,6 +67,8 @@ typedef enum {
   STRING_LIT_EXP,
   ARRAY_EXP,
   INDEX_ARRAY_EXP,
+  HASH_MAP_EXP,
+  KEY_HASH_MAP_EXP,
   BOOLEAN_EXP,
   PREFIX_EXP,
   INFIX_EXP,
@@ -89,7 +91,9 @@ typedef enum {
   PREFIX_PREC,       // -X or !X 6
   PAREN_PREC,        // () 7
   CALL_PREC,         // myFunction(X) 8
-  INDEX_PREC,         // myFunction(X) 8
+  INDEX_PREC,        // myFunction(X) 8
+  KEY_VALUE_PREC,    // myFunction(X) 8
+  COLON_PREC,        // myFunction(X) 8
 } Precedence;
 
 // Individual parts of expressions
@@ -117,6 +121,11 @@ typedef struct {
   Token token;
   Expression **value;
 } Array;
+
+typedef struct {
+  Token token;
+  Expression **value;
+} HashMap;
 
 typedef struct {
   Token token;
@@ -215,6 +224,7 @@ struct Expression {
     StringLiteral string_literal;
     Array array;
     IndexArray index_array;
+    HashMap hash_map;
     IfExpression if_expression;
     FunctionCallExpression function_call;
     FunctionLiteral function_literal;
@@ -307,10 +317,12 @@ Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_array(Arena *arena, Parser *parser);
 Expression *ast_parse_index_array(Arena *arena, Parser *parser,
                                   Expression *left);
+Expression *ast_parse_hash_map(Arena *arena, Parser *parser);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
 Identifier *ast_parse_function_parameters(Arena *arena, Parser *parser);
-Expression **ast_parse_expression_list(Arena *arena, Parser *parser, TokenType end);
+Expression **ast_parse_expression_list(Arena *arena, Parser *parser,
+                                       TokenType end);
 Expression *ast_parse_function_call_expression(Arena *arena, Parser *parser,
                                                Expression *expression);
 Expression *ast_parse_prefix_expression(Arena *arena, Parser *parser);
@@ -363,16 +375,17 @@ KeyValue_PF FUNCTIONS_ARR[] = {
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, GT,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
+    kv(KeyValue_PF, COLON, prs_fn(NULL, &ast_parse_infix_expression)),     //
     kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
     kv(KeyValue_PF, SEMICOLON, prs_fn(NULL, NULL)), //
     kv(KeyValue_PF, L_PAREN,
        prs_fn(&ast_parse_grouped_expression,
-              &ast_parse_function_call_expression)), //
-    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, L_BRACE, prs_fn(NULL, NULL)),    //
-    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),    //
+              &ast_parse_function_call_expression)),             //
+    kv(KeyValue_PF, R_PAREN, prs_fn(NULL, NULL)),                //
+    kv(KeyValue_PF, L_BRACE, prs_fn(&ast_parse_hash_map, NULL)), //
+    kv(KeyValue_PF, R_BRACE, prs_fn(NULL, NULL)),                //
     kv(KeyValue_PF, L_SQUARE_BRACE,
        prs_fn(&ast_parse_array, &ast_parse_index_array)),                 //
     kv(KeyValue_PF, R_SQUARE_BRACE, prs_fn(NULL, NULL)),                  //
@@ -398,16 +411,17 @@ HashTable PARSING_FUNCTIONS = (HashTable){
 };
 
 KeyValue_PRC PRECEDENCES_ARR[] = {
-    kv(KeyValue_PRC, EQUALS, EQUALS_PREC),     //
-    kv(KeyValue_PRC, NOT_EQUALS, EQUALS_PREC), //
-    kv(KeyValue_PRC, LT, LESS_GREATER_PREC),   //
-    kv(KeyValue_PRC, GT, LESS_GREATER_PREC),   //
-    kv(KeyValue_PRC, MINUS, SUM_PREC),         //
-    kv(KeyValue_PRC, PLUS, SUM_PREC),          //
-    kv(KeyValue_PRC, ASTERISK, PRODUCT_PREC),  //
-    kv(KeyValue_PRC, SLASH, PRODUCT_PREC),     //
-    kv(KeyValue_PRC, L_PAREN, CALL_PREC),      //
-    kv(KeyValue_PRC, L_SQUARE_BRACE, INDEX_PREC),      //
+    kv(KeyValue_PRC, EQUALS, EQUALS_PREC),        //
+    kv(KeyValue_PRC, NOT_EQUALS, EQUALS_PREC),    //
+    kv(KeyValue_PRC, LT, LESS_GREATER_PREC),      //
+    kv(KeyValue_PRC, GT, LESS_GREATER_PREC),      //
+    kv(KeyValue_PRC, MINUS, SUM_PREC),            //
+    kv(KeyValue_PRC, PLUS, SUM_PREC),             //
+    kv(KeyValue_PRC, ASTERISK, PRODUCT_PREC),     //
+    kv(KeyValue_PRC, SLASH, PRODUCT_PREC),        //
+    kv(KeyValue_PRC, L_PAREN, CALL_PREC),         //
+    kv(KeyValue_PRC, L_SQUARE_BRACE, INDEX_PREC), //
+    kv(KeyValue_PRC, COLON, KEY_VALUE_PREC),      //
     /*kv(KeyValue_PRC, R_PAREN, PAREN_PREC),     //*/
 };
 
@@ -717,13 +731,25 @@ Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser) {
 
 Expression *ast_parse_array(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
-  Expression **array_members = ast_parse_expression_list(arena, parser, R_SQUARE_BRACE);
+  Expression **array_members =
+      ast_parse_expression_list(arena, parser, R_SQUARE_BRACE);
   Expression *array_expression = arena_alloc(arena, sizeof(Expression));
   array_expression->type = ARRAY_EXP;
   array_expression->array.token = curr_token;
   array_expression->array.value = array_members;
   /*ast_next_token(arena, parser);*/
   return array_expression;
+}
+
+Expression *ast_parse_hash_map(Arena *arena, Parser *parser) {
+  Token curr_token = parser->curr_token;
+  Expression **hash_map_key_values =
+      ast_parse_expression_list(arena, parser, R_BRACE);
+  Expression *hash_map_expression = arena_alloc(arena, sizeof(Expression));
+  hash_map_expression->type = HASH_MAP_EXP;
+  hash_map_expression->hash_map.token = curr_token;
+  hash_map_expression->hash_map.value = hash_map_key_values;
+  return hash_map_expression;
 }
 
 // parse_
@@ -841,7 +867,8 @@ Identifier *mine_ast_parse_function_parameters(Arena *arena, Parser *parser) {
   // this would always end the parser with the curr token being R_PAREN
 }
 
-Expression **ast_parse_expression_list(Arena *arena, Parser *parser, TokenType end) {
+Expression **ast_parse_expression_list(Arena *arena, Parser *parser,
+                                       TokenType end) {
 
   Expression **members = arena_array_with_cap(arena, Expression *, 16);
 

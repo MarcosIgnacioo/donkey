@@ -650,14 +650,14 @@ void print_object_types(){
 /*let double = fn(x){x * 2};*/
 /*map(a, double);*/
 int main() {
-  test_built_in_functions();
+  test_generic();
   return 0;
+  test_built_in_functions();
   test_array_evaluations();
   test_parser();
   test_error_handling();
   test_string_evaluation();
   test_token();
-  test_generic();
   test_function_application();
   /*donkey_repl(&arena);*/
   /*test_repl();*/
