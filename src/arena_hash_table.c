@@ -17,7 +17,7 @@ typedef long long I64;
 typedef char byte;
 
 typedef bool (*predicator_fn)(void *, void *);
-typedef U64 (*hash_fn)(String);
+typedef U64 (*hash_fn)(void *);
 typedef struct {
   void *item_ptr;
   void *key;
@@ -25,19 +25,25 @@ typedef struct {
 } HashResult;
 typedef HashResult (*get_item_in_hash_index)(void *, U64);
 
-typedef struct {
+typedef struct HashTable HashTable;
+typedef void (*insert_item_fn)(Arena *, HashTable *, void *, void *);
+
+struct HashTable {
   U64 len;
   U64 capacity;
   U64 item_size;
   void *items;
   predicator_fn are_keys_equals;
   predicator_fn are_values_equals;
+  insert_item_fn insert_item_into;
   hash_fn get_hash;
-} HashTable;
+};
 
 // stolen from https://stevehanov.ca/blog/?id=119 looks liek a good source
 // Use the FNV algorithm from http://isthe.com/chongo/tech/comp/fnv/
-U64 get_hash(String key) {
+U64 get_hash(void *key_ptr) {
+  String key = *(String *)key_ptr;
+
   U64 d = 0x01000193;
   for (U64 i = 0; i < key.len; i++) {
     d = ((d * 0x01000193) ^ key.str[i]) & 0xffffffff;
@@ -54,6 +60,28 @@ U64 cstr_get_hash(char *key) {
 }
 
 #define DEFAULT_CAPACITY 1024 * 8
+
+#define hash_table_create_equals_fn(_key_t, value_t)                           \
+  bool equals_key_t##value_t(void *a, void *b) {                               \
+    _key_t a_key = *(_key_t *)a;                                               \
+    _key_t b_key = *(_key_t *)b;                                               \
+    return _key_t##_equals(a_key, b_key);                                      \
+  }
+
+#define hash_table_alloc_custom(_arena, _hash_table, _key_value_t,             \
+                                _are_keys_equals, _hash_funciton)              \
+  do {                                                                         \
+    (_hash_table)->capacity = DEFAULT_CAPACITY;                                \
+    (_hash_table)->item_size = sizeof(_key_value_t);                           \
+    (_hash_table)->are_keys_equals = _are_keys_equals;                         \
+    (_hash_table)->get_hash = &_hash_funciton;                                 \
+    (_hash_table)->len = 0;                                                    \
+    (_hash_table)->items =                                                     \
+        arena_alloc(_arena, sizeof(_key_value_t) * DEFAULT_CAPACITY);          \
+    memory_set((byte *)(_hash_table)->items,                                   \
+               sizeof(_key_value_t) * DEFAULT_CAPACITY, 0);                    \
+  } while (false) // 54: this sizeof(*(_hash_table)->items) should segfault use
+                  // sizeof(_key_value_t) instead
 
 #define hash_table_alloc(_arena, _hash_table, _key_value_t, _are_keys_equals)  \
   do {                                                                         \

@@ -1,4 +1,7 @@
 
+a temporary arena for just data that requires calculations for example
+the hash function needs to stringify a expression to hash it, whic is fine
+but to hash we need 
 
 memory copy implementation cause 
 

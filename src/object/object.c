@@ -1,6 +1,6 @@
 #include "object.h"
 #include "../arena_strings.c"
-#include "../ram/ram.c"
+#include "../env/env.c"
 // remove the arena passing all around is annoyinnn and also i dont do any
 // allocations i think
 
@@ -106,6 +106,14 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
     {
       Array array_declaration = expression->array;
       evaluated_object = eval_evaluate_array(arena, env, array_declaration);
+      break;
+    }
+  case HASH_MAP_EXP:
+    //
+    {
+      HashLiteral hash_map_declaration = expression->hash_literal;
+      evaluated_object = eval_evaluate_hash_map(arena, env, hash_map_declaration);
+        // cmabio nuevo
       break;
     }
   case INDEX_ARRAY_EXP:
@@ -345,6 +353,31 @@ Object *eval_evaluate_expressions(Arena *arena, Enviroment *env,
   return resulting_objects;
 }
 
+Object *eval_evaluate_key_values(Arena *arena, Enviroment *env,
+                                 HashMapKeyValue **key_values) {
+  Object *resulting_objects = arena_array(arena, Object);
+
+  for (int i = 0; i < len(key_values); i++) {
+    HashMapKeyValue *kv = key_values[i];
+    Expression *key = kv->key;
+    Expression *value = kv->value;
+    Object eval_key = eval_evaluate_expression(arena, env, key);
+    Object eval_value = eval_evaluate_expression(arena, env, value);
+    if (eval_key.type == ERROR_OBJECT ) {
+      reset(resulting_objects);
+      append(resulting_objects, eval_key);
+      break;
+    }
+    if (eval_value.type == ERROR_OBJECT) {
+      reset(resulting_objects);
+      append(resulting_objects, eval_value);
+      break;
+    }
+  }
+
+  return resulting_objects;
+}
+
 void eval_expand_function_enviroment(Arena *arena, Enviroment *env,
                                      Identifier *parameters,
                                      Object *arguments) {
@@ -410,6 +443,20 @@ Object eval_evaluate_array(Arena *arena, Enviroment *env,
 
   evaluated_object.type = ARRAY_OBJECT;
   evaluated_object.array.value = members;
+  return evaluated_object;
+}
+
+Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
+                              HashLiteral hash_map_declaration) {
+  Object evaluated_object = {0};
+  Object *members = NULL;
+
+  if (len(members) == 1 && members[0].type == ERROR_OBJECT) {
+    return members[0];
+  }
+
+  evaluated_object.type = HASH_MAP_OBJECT;
+  evaluated_object.hash_map.value = members;
   return evaluated_object;
 }
 
@@ -841,7 +888,7 @@ Object _first(Arena *arena, Object *args) {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
       if (len(array) == 0) {
-          return DONKEY_PANIC_OBJECT;
+        return DONKEY_PANIC_OBJECT;
       }
       // imagine this sceneario
       // first([])
@@ -893,7 +940,7 @@ Object _last(Arena *arena, Object *args) {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
       if (len(array) == 0) {
-          return DONKEY_PANIC_OBJECT;
+        return DONKEY_PANIC_OBJECT;
       }
       I64 last_idx = len(array) - 1;
       I64 idx = (last_idx >= 0) ? last_idx : 0;
@@ -927,7 +974,7 @@ Object _tail(Arena *arena, Object *args) {
       ObjectArray donkey_array = donkey_arg.array;
       Object *array = donkey_array.value;
       if (len(array) == 0) {
-          return DONKEY_PANIC_OBJECT;
+        return DONKEY_PANIC_OBJECT;
       }
       Object *array_tail = arena_array(arena, Object);
       Object item = {0};
@@ -1102,6 +1149,17 @@ String object_to_string(Arena *arena, Object object) {
       ObjectArray array = object.array;
       Arena tmp_arena = {0};
       String members = arena_join_object_array(&tmp_arena, array.value);
+      String result = arena_string_fmt(arena, "%S", members);
+      arena_free(&tmp_arena);
+      return result;
+      break;
+    }
+  case HASH_MAP_OBJECT:
+    //
+    {
+      ObjectHashMap hash_map = object.hash_map;
+      Arena tmp_arena = {0};
+      String members = arena_join_object_array(&tmp_arena, hash_map.value);
       String result = arena_string_fmt(arena, "%S", members);
       arena_free(&tmp_arena);
       return result;

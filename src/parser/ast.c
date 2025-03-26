@@ -1,5 +1,6 @@
 #ifndef _PARSER_H
 #define _PARSER_H
+
 char BURRO[38][213] = {
     "                                                                       ",
     "                     #############     ###########                     ",
@@ -93,7 +94,6 @@ typedef enum {
   CALL_PREC,         // myFunction(X) 8
   INDEX_PREC,        // myFunction(X) 8
   KEY_VALUE_PREC,    // myFunction(X) 8
-  COLON_PREC,        // myFunction(X) 8
 } Precedence;
 
 // Individual parts of expressions
@@ -123,15 +123,27 @@ typedef struct {
 } Array;
 
 typedef struct {
+  Expression *key;
+  Expression *value;
+} HashMapKeyValue;
+
+typedef struct {
   Token token;
-  Expression **value;
-} HashMap;
+  HashTable *value; // i hate this naming convention
+} HashLiteral;
 
 typedef struct {
   Token token;
   Expression *array;
   Expression *index;
 } IndexArray;
+// ArrayIndex would have gone really hard
+
+typedef struct {
+  Token token;
+  HashLiteral *hash_map;
+  Expression *index;
+} KeyHash;
 // ArrayIndex would have gone really hard
 
 // this can be an expression or a part of a statement
@@ -224,7 +236,8 @@ struct Expression {
     StringLiteral string_literal;
     Array array;
     IndexArray index_array;
-    HashMap hash_map;
+    HashLiteral hash_literal;
+    KeyHash key_hash;
     IfExpression if_expression;
     FunctionCallExpression function_call;
     FunctionLiteral function_literal;
@@ -317,6 +330,8 @@ Expression *ast_parse_grouped_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_array(Arena *arena, Parser *parser);
 Expression *ast_parse_index_array(Arena *arena, Parser *parser,
                                   Expression *left);
+
+HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser);
 Expression *ast_parse_hash_map(Arena *arena, Parser *parser);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
@@ -692,6 +707,8 @@ Expression *ast_parse_identifier(Arena *arena, Parser *parser) {
   return identifier_expression;
 }
 
+// TOREFACTOR : use a global true and false expressions cause yeah there is no
+// need for them being allocated each time
 Expression *ast_parse_boolean(Arena *arena, Parser *parser) {
   (void)arena;
   (void)parser;
@@ -741,14 +758,62 @@ Expression *ast_parse_array(Arena *arena, Parser *parser) {
   return array_expression;
 }
 
+#include "./donkey_hashmap.c"
+// return null -> illegal syntax
+HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
+
+  HashTable *key_values = arena_alloc(arena, sizeof(HashTable));
+
+  Expression *key_value_infix = NULL;
+  Expression *key = NULL;
+  Expression *value = NULL;
+
+  if (peek_token_is(parser, R_BRACE)) {
+    ast_next_token(arena, parser);
+    return key_values;
+  }
+
+  ast_next_token(arena, parser);
+
+  // null verificaction here in prod mode would go craaaazyyy
+  key_value_infix = ast_parse_expression(arena, parser, LOWEST_PREC);
+  if (key_value_infix.type != INFIX_EXP) {
+    return key_values;
+  }
+
+  key = key_value_infix.infix.left
+  value = key_value_infix.infix.right;
+
+  value = ast_parse_expression(arena, parser, LOWEST_PREC);
+  donkey_hash_map_insert(arena, key_values, key, value);
+
+  while (peek_token_is(parser, COMMA)) {
+    ast_next_token(arena, parser);
+
+    key_value_infix = ast_parse_expression(arena, parser, LOWEST_PREC);
+
+    if (!ast_expect_peek_token(arena, parser, COLON)) {
+      break;
+    }
+
+    ast_next_token(arena, parser);
+
+    value = ast_parse_expression(arena, parser, LOWEST_PREC);
+    donkey_hash_map_insert(arena, key_values, key, value);
+  }
+
+  ast_expect_peek_token(arena, parser, R_BRACE);
+
+  return key_values;
+}
+
 Expression *ast_parse_hash_map(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
-  Expression **hash_map_key_values =
-      ast_parse_expression_list(arena, parser, R_BRACE);
+  HashTable *key_values = ast_parse_hash_map_members(arena, parser);
   Expression *hash_map_expression = arena_alloc(arena, sizeof(Expression));
   hash_map_expression->type = HASH_MAP_EXP;
-  hash_map_expression->hash_map.token = curr_token;
-  hash_map_expression->hash_map.value = hash_map_key_values;
+  hash_map_expression->hash_literal.token = curr_token;
+  hash_map_expression->hash_literal.value = key_values;
   return hash_map_expression;
 }
 
@@ -1194,9 +1259,21 @@ String stringify_program(Arena *arena, Program *program) {
   return result;
 }
 
-void print_expression() {
-  // TOOD PLEASE SDOMETHING THAT WORKS INSIDE THE DEBUGGER
+void print_node(Node *node) {
+  Arena tmp_arena = {0};
+  String node_str = arena_stringify_statement(&tmp_arena, node);
+  printfln("%S", node_str);
+  arena_free(&tmp_arena);
 }
+
+void print_expression(Expression *expression) {
+  Arena tmp_arena = {0};
+  String exp_str = stringify_expression(&tmp_arena, NULL, expression);
+  printfln("%S", exp_str);
+  arena_free(&tmp_arena);
+}
+
+#include "./donkey_hashmap.c"
 
 // TODO: remove node from args
 //       remove .str from Strings when formatting, i can use the %S format
@@ -1222,6 +1299,13 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
     /*exp_string = string("5");*/
     break;
   }
+  case STRING_LIT_EXP:
+    //
+    {
+      StringLiteral parsed_string = expression->string_literal;
+      exp_string = arena_string_fmt(arena, "%S", parsed_string.value);
+      break;
+    }
   // here we should use a tmp arena for strings, after finishing the
   // for loop we could just free everything and should be fineee and cool
   // and sexy
@@ -1260,6 +1344,37 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
     String index = stringify_expression(arena, node, index_exp);
 
     exp_string = arena_string_fmt(arena, "%S[%S]", array, index);
+    break;
+  }
+  case HASH_MAP_EXP: {
+    HashLiteral hash_literal = expression->hash_literal;
+    Arena tmp_arena = {0};
+    String key = {0};
+    String value = {0};
+    String colon = string(":");
+    String comma = string(",");
+
+    String hash_literal_string =
+        arena_new_empty_string_with_cap(&tmp_arena, 128);
+    arena_string_concat(&tmp_arena, &hash_literal_string, string("{"));
+
+    KeyValueExpression *hash_items = hash_literal.value->items;
+
+    for (U64 i = 0; i < len(hash_literal.value->capacity); i++) {
+      if (i > 0) {
+        arena_string_concat(arena, &hash_literal_string, comma);
+      }
+      KeyValueExpression item = hash_items[i];
+      key = stringify_expression(&tmp_arena, NULL, item.key);
+      value = stringify_expression(&tmp_arena, NULL, item.value);
+      arena_string_concat(&tmp_arena, &hash_literal_string, key);
+      arena_string_concat(&tmp_arena, &hash_literal_string, colon);
+      arena_string_concat(&tmp_arena, &hash_literal_string, value);
+    }
+
+    arena_string_concat(arena, &hash_literal_string, string("}"));
+    exp_string = arena_string_fmt(arena, "%S", hash_literal_string);
+    arena_free(&tmp_arena);
     break;
   }
   case BOOLEAN_EXP: {

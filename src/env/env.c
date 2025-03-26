@@ -1,4 +1,4 @@
-#include "./ram.h"
+#include "./env.h"
 #include "../object/object.h"
 
 void env_init(Arena *arena, Enviroment *env) {
@@ -29,7 +29,7 @@ void env_insert_object(Arena *arena, Enviroment *env, String key,
     env->memory.capacity = env->memory.capacity * 2;
   }
 
-  U64 hash = get_hash(key) % (env->memory).capacity;
+  U64 hash = get_hash(&key) % (env->memory).capacity;
   KeyValueMemory *items = (env->memory).items;
   KeyValueMemory *curr_item = &items[hash];
 
@@ -66,7 +66,7 @@ Object _env_get_object(Arena *arena, Enviroment *env, String key) {
 
   HashTable memory_env = env->memory;
 
-  U64 hash = get_hash(key) % (memory_env).capacity;
+  U64 hash = get_hash(&key) % (memory_env).capacity;
   KeyValueMemory *items = (memory_env).items;
   KeyValueMemory *curr_item = &items[hash];
 

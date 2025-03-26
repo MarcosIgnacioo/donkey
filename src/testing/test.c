@@ -628,9 +628,9 @@ void test() {
   }
 }
 
-void print_object_types(){
+void print_object_types() {
 #define X(name) printf("%s\n", _ObjectToString[name]);
-    OBJECT_TYPES
+  OBJECT_TYPES
 #undef X
 } // TODO: put number of tests failed and passed just a counter girllll and if u
   // wanna get nitty and gritty use a hashtable {or just a struct array that
@@ -650,6 +650,8 @@ void print_object_types(){
 /*let double = fn(x){x * 2};*/
 /*map(a, double);*/
 int main() {
+  test_parser();
+  return 0;
   test_generic();
   return 0;
   test_built_in_functions();

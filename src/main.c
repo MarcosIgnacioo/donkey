@@ -1,7 +1,7 @@
 #include "./lexer.c"
 #include "./object/object.c"
 #include "./parser/ast.c"
-#include "./ram/ram.h"
+#include "./env/env.h"
 #include "./repl.c"
 #include <stdbool.h>
 #include <stdio.h>

@@ -12,6 +12,7 @@
   X(BOOLEAN_OBJECT)                                                            \
   X(STRING_OBJECT)                                                             \
   X(ARRAY_OBJECT)                                                              \
+  X(HASH_MAP_OBJECT)                                                           \
   X(IDENTIFIER_OBJECT)                                                         \
   X(FUNCTION_OBJECT)                                                           \
   X(BUILT_IN_OBJECT)                                                           \
@@ -34,6 +35,15 @@ typedef struct {
 typedef struct {
   Object *value; // this is an array !!!!
 } ObjectArray;
+
+typedef struct {
+  Object *key;
+  Object *value;
+} ObjectKeyValue;
+
+typedef struct {
+  Object *value; // this is an array of kvs !!!!
+} ObjectHashMap;
 
 typedef struct {
   bool value;
@@ -74,13 +84,14 @@ struct Object {
     ObjectBoolean boolean;
     ObjectString string;
     ObjectArray array;
+    ObjectHashMap hash_map;
     ObjectFunction function;
     ObjectBuiltIn built_in;
     ObjectError error;
     ObjectDonkey donkey; // this is null btw
   };
 };
-#include "../ram/ram.h"
+#include "../env/env.h"
 
 typedef I64 (*OperationFunction)(I64, I64);
 
@@ -114,7 +125,10 @@ Object *eval_evaluate_expressions(Arena *arena, Enviroment *env,
 Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_string_infix_expression(Arena *, Object, String, Object);
+Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
+                              HashLiteral hash_map_declaration);
 Object eval_evaluate_array(Arena *, Enviroment *, Array);
+// popoasd
 Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
                                  IndexArray array_indexing);
 Object eval_if_expression(Arena *, Enviroment *, Object, BlockStatement,

@@ -110,6 +110,7 @@ void *arena_alloc(Arena *arena, U64 size_in_bytes) {
   U64 size = (size_in_bytes + (sizeof(U64_PTR) - 1)) / sizeof(U64_PTR);
 
   if (!arena->end) {
+    /*reset the arena if its a tmp arena */
     ARENA_ASSERT(arena->begin == NULL);
     U64 capacity = REGION_DEFAULT_CAPACITY;
     if (capacity < size)

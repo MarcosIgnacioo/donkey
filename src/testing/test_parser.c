@@ -1,5 +1,6 @@
 
 #ifndef _TEST_PARSER_H
+#include "../parser/donkey_hashmap.c"
 #include "./test.h"
 
 typedef struct {
@@ -9,28 +10,23 @@ typedef struct {
 
 void test_parser() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
-  char *input = "let arr = [1,2,3];arr[0];arr;";
-  String expected = string("1");
+  char *input = "{1:3,1:4}";
   (void)input;
-  (void)expected;
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
-  Enviroment env = {0};
-  env_init(&arena, &env);
-  (void)env;
-  Object evaluated = eval_evaluate_program(&arena, &env, program);
-  (void)evaluated;
-  /*ExpressionStatement expression_statement =*/
-  /*    program.statements[0].expression_statement;*/
-  /*Expression *expression = expression_statement.expression_value;*/
-  /*String string_literal = stringify_expression(&arena, NULL, expression);*/
-  /*StringLiteral string_literal = expression->string_literal;*/
-  /*if (!string_equals(string_literal, expected)) {*/
-  /*  printfln(LOG_ERROR "%S != %S\n", string_literal, expected);*/
-  /*} else {*/
-  /*  printfln(LOG_SUCCESS "%S == %S\n", string_literal, expected);*/
-  /*}*/
+  HashTable table = {0};
+  for (size_t i = 0; i < len(program.statements); i += 2) {
+    Node *left = &program.statements[i];
+    Node *right = &program.statements[i + 1];
+    Expression *key = left->expression_statement.expression_value;
+    Expression *value = right->expression_statement.expression_value;
+    donkey_hash_map_insert(&arena, &table, key, value);
+    Expression *needle = donkey_hash_map_get_item(&table, key);
+    String key_str = stringify_expression(&arena, NULL, key);
+    String value_str = stringify_expression(&arena, NULL, needle);
+    printfln("%S : %S", key_str, value_str);
+  }
 }
 
 #endif /* ifndef _TEST_PARSER_H */

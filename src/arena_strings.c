@@ -468,6 +468,8 @@ String arena_string_substract(Arena *arena, String this, String that) {
   return result;
 }
 
+// TODO URGE FEMEMNINE URGE: make this use of this function possible PLEASEEE
+/*arena_string_concat(arena, &hash_literal_string, "%S : %S", key, value);*/
 void arena_string_concat(Arena *arena, String *dest, String source) {
   U64 total_size = dest->len + source.len;
   U64 n_bytes = source.len;
