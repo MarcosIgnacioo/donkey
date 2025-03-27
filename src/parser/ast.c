@@ -69,6 +69,7 @@ typedef enum {
   ARRAY_EXP,
   INDEX_ARRAY_EXP,
   HASH_MAP_EXP,
+  HASH_MAP_EXP_,
   KEY_HASH_MAP_EXP,
   BOOLEAN_EXP,
   PREFIX_EXP,
@@ -131,6 +132,11 @@ typedef struct {
   Token token;
   HashTable *value; // i hate this naming convention
 } HashLiteral;
+
+typedef struct {
+  Token token;
+  Expression **value; // i hate this naming convention
+} HashLiteral_;
 
 typedef struct {
   Token token;
@@ -237,6 +243,7 @@ struct Expression {
     Array array;
     IndexArray index_array;
     HashLiteral hash_literal;
+    HashLiteral_ hash_literal_;
     KeyHash key_hash;
     IfExpression if_expression;
     FunctionCallExpression function_call;
@@ -760,8 +767,9 @@ Expression *ast_parse_array(Arena *arena, Parser *parser) {
 
 #include "./donkey_hashmap.c"
 // return null -> illegal syntax
+// todo change this to use the infix expression array thats a WAAAY better data
+// structure for this
 HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
-
   HashTable *key_values = arena_alloc(arena, sizeof(HashTable));
 
   Expression *key_value_infix = NULL;
@@ -777,28 +785,26 @@ HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
 
   // null verificaction here in prod mode would go craaaazyyy
   key_value_infix = ast_parse_expression(arena, parser, LOWEST_PREC);
-  if (key_value_infix.type != INFIX_EXP) {
+
+  if (key_value_infix->type != INFIX_EXP) {
     return key_values;
   }
 
-  key = key_value_infix.infix.left
-  value = key_value_infix.infix.right;
+  key = key_value_infix->infix.left;
+  value = key_value_infix->infix.right;
 
-  value = ast_parse_expression(arena, parser, LOWEST_PREC);
   donkey_hash_map_insert(arena, key_values, key, value);
 
   while (peek_token_is(parser, COMMA)) {
     ast_next_token(arena, parser);
-
+    ast_next_token(arena, parser);
     key_value_infix = ast_parse_expression(arena, parser, LOWEST_PREC);
-
-    if (!ast_expect_peek_token(arena, parser, COLON)) {
+    if (key_value_infix->type != INFIX_EXP) {
       break;
     }
 
-    ast_next_token(arena, parser);
-
-    value = ast_parse_expression(arena, parser, LOWEST_PREC);
+    key = key_value_infix->infix.left;
+    value = key_value_infix->infix.right;
     donkey_hash_map_insert(arena, key_values, key, value);
   }
 
@@ -809,11 +815,11 @@ HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
 
 Expression *ast_parse_hash_map(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
-  HashTable *key_values = ast_parse_hash_map_members(arena, parser);
+  Expression **key_values = ast_parse_expression_list(arena, parser, R_BRACE);
   Expression *hash_map_expression = arena_alloc(arena, sizeof(Expression));
-  hash_map_expression->type = HASH_MAP_EXP;
-  hash_map_expression->hash_literal.token = curr_token;
-  hash_map_expression->hash_literal.value = key_values;
+  hash_map_expression->type = HASH_MAP_EXP_;
+  hash_map_expression->hash_literal_.token = curr_token;
+  hash_map_expression->hash_literal_.value = key_values;
   return hash_map_expression;
 }
 
@@ -1360,20 +1366,48 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
 
     KeyValueExpression *hash_items = hash_literal.value->items;
 
-    for (U64 i = 0; i < len(hash_literal.value->capacity); i++) {
-      if (i > 0) {
+    U64 i, k;
+    for (i = 0, k = 0; i < hash_literal.value->capacity; i++) {
+      KeyValueExpression item = hash_items[i];
+      if (!item.is_occupied) {
+        continue;
+      }
+      if (k > 0) {
         arena_string_concat(arena, &hash_literal_string, comma);
       }
-      KeyValueExpression item = hash_items[i];
       key = stringify_expression(&tmp_arena, NULL, item.key);
       value = stringify_expression(&tmp_arena, NULL, item.value);
       arena_string_concat(&tmp_arena, &hash_literal_string, key);
       arena_string_concat(&tmp_arena, &hash_literal_string, colon);
       arena_string_concat(&tmp_arena, &hash_literal_string, value);
+      k++;
     }
 
     arena_string_concat(arena, &hash_literal_string, string("}"));
     exp_string = arena_string_fmt(arena, "%S", hash_literal_string);
+    arena_free(&tmp_arena);
+    break;
+  }
+  case HASH_MAP_EXP_: {
+    HashLiteral_ hash = expression->hash_literal_;
+    Arena tmp_arena = {0};
+    String member_str = {0};
+
+    String tmp_members_string =
+        arena_new_empty_string_with_cap(&tmp_arena, 128);
+    arena_string_concat(&tmp_arena, &tmp_members_string, string("{"));
+
+    for (U64 i = 0; i < len(hash.value); i++) {
+      if (i > 0) {
+        arena_string_concat(&tmp_arena, &tmp_members_string, string(", "));
+      }
+      Expression *exp = expression->array.value[i];
+      member_str = stringify_expression(&tmp_arena, node, exp);
+      arena_string_concat(&tmp_arena, &tmp_members_string, member_str);
+    }
+
+    arena_string_concat(arena, &tmp_members_string, string("}"));
+    exp_string = arena_string_fmt(arena, "%S", tmp_members_string);
     arena_free(&tmp_arena);
     break;
   }

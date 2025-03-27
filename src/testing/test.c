@@ -649,7 +649,21 @@ void print_object_types() {
 /*let a = [ 1, 2 ];*/
 /*let double = fn(x){x * 2};*/
 /*map(a, double);*/
+#define DEV
+#ifdef DEV
+#include <execinfo.h>
+#include <signal.h>
+
+void signal_handler(int code) {
+  printf("segfault darling\n");
+  exit(code);
+}
+#endif /* ifdef DEV */
+
 int main() {
+#ifdef DEV
+  signal(SIGSEGV, signal_handler);
+#endif /* ifdef DEV */
   test_parser();
   return 0;
   test_generic();
