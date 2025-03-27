@@ -20,7 +20,7 @@ bool are_if_expressions_equals(IfExpression a, IfExpression b);
 bool are_function_literals_equals(FunctionLiteral a, FunctionLiteral b);
 bool are_function_calls_equals(FunctionCallExpression a,
                                FunctionCallExpression b);
-bool are_hash_maps_equals_(HashLiteral a, HashLiteral b);
+bool are_hash_maps_equals_(HashLiteral_ a, HashLiteral_ b);
 bool are_key_hashes_equals_equals(KeyHash a, KeyHash b);
 bool are_booleans_equals(Boolean a, Boolean b);
 bool are_identifier_equals(Identifier a, Identifier b);
@@ -152,28 +152,6 @@ typedef struct {
   Expression *value;
 } KeyValueExpression;
 
-bool are_hash_maps_equals_(HashLiteral a, HashLiteral b) {
-  if (a.value || b.value) {
-    return false;
-  }
-
-  bool are_token_equals = token_equals(a.token, b.token);
-  bool are_key_values_equals = true;
-  KeyValueExpression *items_a = (KeyValueExpression *)a.value->items;
-
-  for (size_t i = 0; i < a.value->len; i++) {
-    KeyValueExpression item_a = items_a[i];
-    Expression *value_in_b = donkey_hash_map_get_item(b.value, item_a.key);
-    bool are_values_equals = are_expressions_equals(item_a.value, value_in_b);
-    if (!value_in_b || !are_values_equals) {
-      are_key_values_equals = false;
-      break;
-    }
-  }
-
-  return are_token_equals && are_key_values_equals;
-}
-
 bool are_key_hashes_equals_equals(KeyHash a, KeyHash b) {
   bool are_token_equals = token_equals(a.token, b.token);
   if (!a.hash_map || !b.hash_map) {
@@ -273,6 +251,12 @@ bool are_nodes_equals(Node *a, Node *b) {
       break;
     }
   }
+
+}
+bool are_hash_maps_equals_(HashLiteral_ a_hash_map, HashLiteral_ b_hash_map) {
+  (void) a_hash_map;
+  (void) b_hash_map;
+  return true;
 }
 
 bool are_expressions_equals(void *a_ptr, void *b_ptr) {
@@ -377,8 +361,8 @@ bool are_expressions_equals(void *a_ptr, void *b_ptr) {
   case HASH_MAP_EXP:
     //
     {
-      HashLiteral a_hash_map = a->hash_literal;
-      HashLiteral b_hash_map = b->hash_literal;
+      HashLiteral_ a_hash_map = a->hash_literal_;
+      HashLiteral_ b_hash_map = b->hash_literal_;
       return are_hash_maps_equals_(a_hash_map, b_hash_map);
       break;
     }

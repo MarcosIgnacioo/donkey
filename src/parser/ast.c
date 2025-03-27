@@ -143,11 +143,13 @@ typedef struct {
   Expression *array;
   Expression *index;
 } IndexArray;
+
+
 // ArrayIndex would have gone really hard
 
 typedef struct {
   Token token;
-  HashLiteral *hash_map;
+  HashLiteral_ *hash_map;
   Expression *index;
 } KeyHash;
 // ArrayIndex would have gone really hard
@@ -765,7 +767,6 @@ Expression *ast_parse_array(Arena *arena, Parser *parser) {
   return array_expression;
 }
 
-#include "./donkey_hashmap.c"
 // return null -> illegal syntax
 // todo change this to use the infix expression array thats a WAAAY better data
 // structure for this
@@ -792,8 +793,10 @@ HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
 
   key = key_value_infix->infix.left;
   value = key_value_infix->infix.right;
+  (void) key;
+  (void) value;
 
-  donkey_hash_map_insert(arena, key_values, key, value);
+  /*donkey_hash_map_insert(arena, key_values, key, value);*/
 
   while (peek_token_is(parser, COMMA)) {
     ast_next_token(arena, parser);
@@ -805,7 +808,7 @@ HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
 
     key = key_value_infix->infix.left;
     value = key_value_infix->infix.right;
-    donkey_hash_map_insert(arena, key_values, key, value);
+    /*donkey_hash_map_insert(arena, key_values, key, value);*/
   }
 
   ast_expect_peek_token(arena, parser, R_BRACE);

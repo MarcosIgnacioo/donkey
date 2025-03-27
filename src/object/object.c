@@ -113,8 +113,16 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
     {
       HashLiteral_ hash_map_declaration = expression->hash_literal_;
       evaluated_object =
-          eval_evaluate_hash_map(arena, env, hash_map_declaration);
+          eval_evaluate_hash_map(arena, env, &hash_map_declaration);
       // cmabio nuevo
+      break;
+    }
+  case KEY_HASH_MAP_EXP:
+    //
+    {
+      KeyHash array_indexing = expression->key_hash;
+      evaluated_object =
+          eval_evaluate_index_hash_map(arena, env, array_indexing);
       break;
     }
   case INDEX_ARRAY_EXP:
@@ -469,9 +477,9 @@ Object eval_evaluate_array(Arena *arena, Enviroment *env,
 #include "./object_hashmap.c"
 
 Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
-                              HashLiteral_ hash_map_declaration) {
+                              HashLiteral_ *hash_map_declaration) {
   Object evaluated_object = {0};
-  Expression **expressions = hash_map_declaration.value;
+  Expression **expressions = hash_map_declaration->value;
   HashTable *members = arena_alloc(arena, sizeof(HashTable));
 
   for (size_t i = 0; i < len(expressions); i++) {
@@ -524,6 +532,17 @@ Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
     return DONKEY_PANIC_OBJECT;
   }
   evaluated_object = user_array[user_index];
+  return evaluated_object;
+}
+
+Object eval_evaluate_index_hash_map(Arena *arena, Enviroment *env,
+                                    KeyHash hash_indexing) {
+  Object evaluated_object = {0};
+  Object evaluated_hash_map =
+      eval_evaluate_hash_map(arena, env, hash_indexing.hash_map);
+  HashTable *table = evaluated_hash_map.hash_map.value;
+  Object index = eval_evaluate_expression(arena, env, hash_indexing.index);
+  evaluated_object = object_hash_map_get_item(table, index);
   return evaluated_object;
 }
 
