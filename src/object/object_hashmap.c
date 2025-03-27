@@ -155,6 +155,7 @@ bool are_object_arrays_equals(ObjectArray array_a, ObjectArray array_b) {
 
   return are_equals;
 }
+#include "../parser/donkey_hashmap.c"
 
 bool are_object_functions_equals(ObjectFunction function_a,
                                  ObjectFunction function_b) {

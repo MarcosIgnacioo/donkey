@@ -125,10 +125,10 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
           eval_evaluate_index_hash_map(arena, env, array_indexing);
       break;
     }
-  case INDEX_ARRAY_EXP:
+  case INDEX_EXP:
     //
     {
-      IndexArray array_indexing = expression->index_array;
+      Index array_indexing = expression->index;
       evaluated_object = eval_evaluate_index_array(arena, env, array_indexing);
       break;
     }
@@ -507,15 +507,15 @@ Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
 }
 
 Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
-                                 IndexArray array_indexing) {
+                                 Index indexing) {
   Object evaluated_object = {0};
-  Object array = eval_evaluate_expression(arena, env, array_indexing.array);
+  Object array = eval_evaluate_expression(arena, env, indexing.data);
   if (array.type != ARRAY_OBJECT) {
     String not_matching_type = error_stringify_object_type(array);
     return new_error(arena, "identifier is not an array, got : %S",
                      not_matching_type);
   }
-  Object index = eval_evaluate_expression(arena, env, array_indexing.index);
+  Object index = eval_evaluate_expression(arena, env, indexing.index);
   if (index.type != INTEGER_OBJECT) {
     String not_matching_type = error_stringify_object_type(index);
     return new_error(arena, "index is not an int, got : %S", not_matching_type);

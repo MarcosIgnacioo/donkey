@@ -13,7 +13,7 @@
 // while since she boroguh u donwwwwwwwww girtl like that i wear cheer captain
 // dreaming about the day olloo kin is askdjfkasdjfsd
 bool are_array_equals(Array a, Array b);
-bool are_index_array_equals(IndexArray a, IndexArray b);
+bool are_index_equals(Index a, Index b);
 bool are_prefixs_equals(PrefixExpression a, PrefixExpression b);
 bool are_infixs_equals(InfixExpression a, InfixExpression b);
 bool are_if_expressions_equals(IfExpression a, IfExpression b);
@@ -52,12 +52,12 @@ bool are_array_equals(Array a, Array b) {
   return are_members_equals && are_token_equals;
 }
 
-bool are_index_array_equals(IndexArray a, IndexArray b) {
+bool are_index_equals(Index a, Index b) {
   bool are_token_equals = token_equals(a.token, b.token);
   bool are_indexes_equals = are_expressions_equals(a.index, b.index);
-  bool are_arrays_equals = are_expressions_equals(a.array, b.array);
+  bool are_data_equals = are_expressions_equals(a.data, b.data);
 
-  return are_token_equals && are_indexes_equals && are_arrays_equals;
+  return are_token_equals && are_indexes_equals && are_data_equals;
 }
 
 bool are_prefixs_equals(PrefixExpression a, PrefixExpression b) {
@@ -212,6 +212,7 @@ bool are_expression_statement_equals(ExpressionStatement a,
   return are_token_equals && are_expression_values_equals;
 }
 
+
 bool are_nodes_equals(Node *a, Node *b) {
   bool are_token_equals = token_equals(a->token, b->token);
   if (a->type != b->type || !are_token_equals) {
@@ -253,6 +254,7 @@ bool are_nodes_equals(Node *a, Node *b) {
   }
 
 }
+
 bool are_hash_maps_equals_(HashLiteral_ a_hash_map, HashLiteral_ b_hash_map) {
   (void) a_hash_map;
   (void) b_hash_map;
@@ -300,13 +302,13 @@ bool are_expressions_equals(void *a_ptr, void *b_ptr) {
       return are_array_equals(a_array, b_array);
       break;
     }
-  case INDEX_ARRAY_EXP:
+  case INDEX_EXP:
     //
     {
 
-      IndexArray a_index_array = a->index_array;
-      IndexArray b_index_array = b->index_array;
-      return are_index_array_equals(a_index_array, b_index_array);
+      Index a_index = a->index;
+      Index b_index = b->index;
+      return are_index_equals(a_index, b_index);
       break;
     }
   case BOOLEAN_EXP:

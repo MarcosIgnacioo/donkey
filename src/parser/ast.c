@@ -67,7 +67,7 @@ typedef enum {
   INTEGER_LIT_EXP,
   STRING_LIT_EXP,
   ARRAY_EXP,
-  INDEX_ARRAY_EXP,
+  INDEX_EXP,
   HASH_MAP_EXP,
   HASH_MAP_EXP_,
   KEY_HASH_MAP_EXP,
@@ -140,10 +140,9 @@ typedef struct {
 
 typedef struct {
   Token token;
-  Expression *array;
+  Expression *data;
   Expression *index;
-} IndexArray;
-
+} Index;
 
 // ArrayIndex would have gone really hard
 
@@ -243,7 +242,7 @@ struct Expression {
     IntLiteral integer_literal;
     StringLiteral string_literal;
     Array array;
-    IndexArray index_array;
+    Index index;
     HashLiteral hash_literal;
     HashLiteral_ hash_literal_;
     KeyHash key_hash;
@@ -833,10 +832,10 @@ Expression *ast_parse_index_array(Arena *arena, Parser *parser,
   ast_next_token(arena, parser);
   Expression *index = ast_parse_expression(arena, parser, LOWEST_PREC);
   Expression *array_expression = arena_alloc(arena, sizeof(Expression));
-  array_expression->type = INDEX_ARRAY_EXP;
-  array_expression->index_array.token = curr_token;
-  array_expression->index_array.array = left;
-  array_expression->index_array.index = index;
+  array_expression->type = INDEX_EXP;
+  array_expression->index.token = curr_token;
+  array_expression->index.data = left;
+  array_expression->index.index = index;
   ast_expect_peek_token(arena, parser, R_SQUARE_BRACE);
   return array_expression;
 }
@@ -1282,8 +1281,6 @@ void print_expression(Expression *expression) {
   arena_free(&tmp_arena);
 }
 
-#include "./donkey_hashmap.c"
-
 // TODO: remove node from args
 //       remove .str from Strings when formatting, i can use the %S format
 //       specifier to print them, forgot i implemented it XD
@@ -1342,53 +1339,17 @@ String stringify_expression(Arena *arena, Node *node, Expression *expression) {
     break;
   }
 
-  case INDEX_ARRAY_EXP: {
+  case INDEX_EXP: {
 
-    IndexArray index_array = expression->index_array;
+    Index index_array = expression->index;
 
-    Expression *array_exp = index_array.array;
+    Expression *array_exp = index_array.data;
     Expression *index_exp = index_array.index;
 
     String array = stringify_expression(arena, node, array_exp);
     String index = stringify_expression(arena, node, index_exp);
 
     exp_string = arena_string_fmt(arena, "%S[%S]", array, index);
-    break;
-  }
-  case HASH_MAP_EXP: {
-    HashLiteral hash_literal = expression->hash_literal;
-    Arena tmp_arena = {0};
-    String key = {0};
-    String value = {0};
-    String colon = string(":");
-    String comma = string(",");
-
-    String hash_literal_string =
-        arena_new_empty_string_with_cap(&tmp_arena, 128);
-    arena_string_concat(&tmp_arena, &hash_literal_string, string("{"));
-
-    KeyValueExpression *hash_items = hash_literal.value->items;
-
-    U64 i, k;
-    for (i = 0, k = 0; i < hash_literal.value->capacity; i++) {
-      KeyValueExpression item = hash_items[i];
-      if (!item.is_occupied) {
-        continue;
-      }
-      if (k > 0) {
-        arena_string_concat(arena, &hash_literal_string, comma);
-      }
-      key = stringify_expression(&tmp_arena, NULL, item.key);
-      value = stringify_expression(&tmp_arena, NULL, item.value);
-      arena_string_concat(&tmp_arena, &hash_literal_string, key);
-      arena_string_concat(&tmp_arena, &hash_literal_string, colon);
-      arena_string_concat(&tmp_arena, &hash_literal_string, value);
-      k++;
-    }
-
-    arena_string_concat(arena, &hash_literal_string, string("}"));
-    exp_string = arena_string_fmt(arena, "%S", hash_literal_string);
-    arena_free(&tmp_arena);
     break;
   }
   case HASH_MAP_EXP_: {
