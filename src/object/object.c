@@ -108,12 +108,13 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
       evaluated_object = eval_evaluate_array(arena, env, array_declaration);
       break;
     }
-  case HASH_MAP_EXP:
+  case HASH_MAP_EXP_:
     //
     {
-      HashLiteral hash_map_declaration = expression->hash_literal;
-      evaluated_object = eval_evaluate_hash_map(arena, env, hash_map_declaration);
-        // cmabio nuevo
+      HashLiteral_ hash_map_declaration = expression->hash_literal_;
+      evaluated_object =
+          eval_evaluate_hash_map(arena, env, hash_map_declaration);
+      // cmabio nuevo
       break;
     }
   case INDEX_ARRAY_EXP:
@@ -353,6 +354,23 @@ Object *eval_evaluate_expressions(Arena *arena, Enviroment *env,
   return resulting_objects;
 }
 
+// the expressions here should all BE InfixExpression's!
+HashTable *eval_evaluate_key_values_expression_list(Arena *arena,
+                                                    Enviroment *env,
+                                                    Expression **expressions) {
+  HashTable *resulting_objects = arena_alloc(arena, sizeof(HashTable));
+
+  for (size_t i = 0; i < len(expressions); i++) {
+    Expression *expression = expressions[i];
+    InfixExpression key_value = expression->infix;
+    String key_str = stringify_expression(arena, NULL, key_value.left);
+    Object value = eval_evaluate_expression(arena, env, key_value.right);
+    insert_object(arena, resulting_objects, key_str, value);
+  }
+
+  return resulting_objects;
+}
+
 Object *eval_evaluate_key_values(Arena *arena, Enviroment *env,
                                  HashMapKeyValue **key_values) {
   Object *resulting_objects = arena_array(arena, Object);
@@ -363,7 +381,7 @@ Object *eval_evaluate_key_values(Arena *arena, Enviroment *env,
     Expression *value = kv->value;
     Object eval_key = eval_evaluate_expression(arena, env, key);
     Object eval_value = eval_evaluate_expression(arena, env, value);
-    if (eval_key.type == ERROR_OBJECT ) {
+    if (eval_key.type == ERROR_OBJECT) {
       reset(resulting_objects);
       append(resulting_objects, eval_key);
       break;
@@ -446,13 +464,33 @@ Object eval_evaluate_array(Arena *arena, Enviroment *env,
   return evaluated_object;
 }
 
-Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
-                              HashLiteral hash_map_declaration) {
-  Object evaluated_object = {0};
-  Object *members = NULL;
+#define is_error(object) object.type == ERROR_OBJECT
 
-  if (len(members) == 1 && members[0].type == ERROR_OBJECT) {
-    return members[0];
+#include "./object_hashmap.c"
+
+Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
+                              HashLiteral_ hash_map_declaration) {
+  Object evaluated_object = {0};
+  Expression **expressions = hash_map_declaration.value;
+  HashTable *members = arena_alloc(arena, sizeof(HashTable));
+
+  for (size_t i = 0; i < len(expressions); i++) {
+    Expression *expression = expressions[i];
+    InfixExpression key_value = expression->infix;
+    Object key = eval_evaluate_expression(arena, env, key_value.left);
+    Object value = eval_evaluate_expression(arena, env, key_value.right);
+
+    if (is_error(key)) {
+      return key;
+      break;
+    }
+
+    if (is_error(value)) {
+      return value;
+      break;
+    }
+
+    object_hash_map_insert(arena, members, key, value);
   }
 
   evaluated_object.type = HASH_MAP_OBJECT;
@@ -1110,6 +1148,8 @@ Object eval_evaluate_block_statements(Arena *arena, Enviroment *env,
   return evaluated_object;
 }
 
+#include "./object_hashmap.c"
+
 String object_to_string(Arena *arena, Object object) {
   switch (object.type) {
   case INTEGER_OBJECT:
@@ -1121,7 +1161,7 @@ String object_to_string(Arena *arena, Object object) {
   case STRING_OBJECT:
     //
     {
-      return arena_string_fmt(arena, "%S", object.string.value);
+      return arena_string_fmt(arena, "'%S'", object.string.value);
       break;
     }
   case BOOLEAN_OBJECT:
@@ -1158,9 +1198,34 @@ String object_to_string(Arena *arena, Object object) {
     //
     {
       ObjectHashMap hash_map = object.hash_map;
+      HashTable *table = hash_map.value;
+      KeyValueObject *items = table->items;
+      size_t i, k;
       Arena tmp_arena = {0};
-      String members = arena_join_object_array(&tmp_arena, hash_map.value);
-      String result = arena_string_fmt(arena, "%S", members);
+      String str_buffer = arena_new_empty_string_with_cap(arena, 64);
+      String l_brace = string("{");
+      String r_brace = string("}");
+      String comma = string(", ");
+      arena_string_concat(&tmp_arena, &str_buffer, l_brace);
+      for (i = 0, k = 0; i < table->capacity; i++) {
+        KeyValueObject key_value = items[i];
+        if (!key_value.is_occupied) {
+          continue;
+        }
+        if (k > 0) {
+          arena_string_concat(&tmp_arena, &str_buffer, comma);
+        }
+        Object key = key_value.key;
+        Object value = key_value.value;
+        String key_str = object_to_string(arena, key);
+        String value_str = object_to_string(arena, value);
+        String kv_str =
+            arena_string_fmt(&tmp_arena, "%S : %S", key_str, value_str);
+        arena_string_concat(&tmp_arena, &str_buffer, kv_str);
+        k++;
+      }
+      arena_string_concat(&tmp_arena, &str_buffer, r_brace);
+      String result = arena_string_fmt(arena, "%S", str_buffer);
       arena_free(&tmp_arena);
       return result;
       break;

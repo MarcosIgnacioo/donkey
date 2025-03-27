@@ -86,6 +86,7 @@ typedef enum {
 typedef enum {
   NIL_PREC,          // 0
   LOWEST_PREC,       // 1
+  KEY_VALUE_PREC,    // myFunction(X) 8
   EQUALS_PREC,       // == 2
   LESS_GREATER_PREC, // > or < 3
   SUM_PREC,          // + 4
@@ -94,7 +95,6 @@ typedef enum {
   PAREN_PREC,        // () 7
   CALL_PREC,         // myFunction(X) 8
   INDEX_PREC,        // myFunction(X) 8
-  KEY_VALUE_PREC,    // myFunction(X) 8
 } Precedence;
 
 // Individual parts of expressions

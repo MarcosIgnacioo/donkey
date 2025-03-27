@@ -20,7 +20,7 @@ bool are_if_expressions_equals(IfExpression a, IfExpression b);
 bool are_function_literals_equals(FunctionLiteral a, FunctionLiteral b);
 bool are_function_calls_equals(FunctionCallExpression a,
                                FunctionCallExpression b);
-bool are_hash_maps_equals(HashLiteral a, HashLiteral b);
+bool are_hash_maps_equals_(HashLiteral a, HashLiteral b);
 bool are_key_hashes_equals_equals(KeyHash a, KeyHash b);
 bool are_booleans_equals(Boolean a, Boolean b);
 bool are_identifier_equals(Identifier a, Identifier b);
@@ -152,7 +152,7 @@ typedef struct {
   Expression *value;
 } KeyValueExpression;
 
-bool are_hash_maps_equals(HashLiteral a, HashLiteral b) {
+bool are_hash_maps_equals_(HashLiteral a, HashLiteral b) {
   if (a.value || b.value) {
     return false;
   }
@@ -180,7 +180,7 @@ bool are_key_hashes_equals_equals(KeyHash a, KeyHash b) {
     return false;
   }
   bool are_hash_literals_equals =
-      are_hash_maps_equals(*a.hash_map, *b.hash_map);
+      are_hash_maps_equals_(*a.hash_map, *b.hash_map);
   bool are_index_equals = are_expressions_equals(a.index, b.index);
   return are_token_equals && are_hash_literals_equals && are_index_equals;
 }
@@ -379,7 +379,7 @@ bool are_expressions_equals(void *a_ptr, void *b_ptr) {
     {
       HashLiteral a_hash_map = a->hash_literal;
       HashLiteral b_hash_map = b->hash_literal;
-      return are_hash_maps_equals(a_hash_map, b_hash_map);
+      return are_hash_maps_equals_(a_hash_map, b_hash_map);
       break;
     }
   case KEY_HASH_MAP_EXP:

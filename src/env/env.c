@@ -8,7 +8,8 @@ void env_init(Arena *arena, Enviroment *env) {
 }
 
 void env_reset_local(Enviroment *env) {
-  memory_set(env->memory.items, env->memory.item_size * env->memory.capacity, 0);
+  memory_set(env->memory.items, env->memory.item_size * env->memory.capacity,
+             0);
 }
 
 bool env_key_value_equals(void *this, void *that) {
@@ -56,6 +57,67 @@ void env_insert_object(Arena *arena, Enviroment *env, String key,
   curr_item->key = key;
   curr_item->is_occupied = true;
   curr_item->value = value;
+}
+
+void insert_object(Arena *arena, HashTable *table, String key, Object value) {
+  if (!table->items) {
+    hash_table_alloc(arena, table, KeyValueMemory, &env_key_value_equals);
+  }
+
+  if (table->len >= table->capacity) {
+    table->items = realloc(table->items, table->capacity * 2);
+    table->capacity = table->capacity * 2;
+  }
+
+  U64 hash = get_hash(&key) % (table)->capacity;
+  KeyValueMemory *items = (table)->items;
+  KeyValueMemory *curr_item = &items[hash];
+
+  while (curr_item->is_occupied && !(table)->are_keys_equals(curr_item, &key) &&
+         hash < (table)->capacity) {
+    hash++;
+    curr_item = &items[hash];
+  }
+
+  if (curr_item->is_occupied && !((table)->are_keys_equals(curr_item, &key))) {
+    printf("OUT OF MEMORY IN DONKEYLANG\n");
+    return;
+  }
+
+  if (!curr_item->is_occupied) {
+    table->len++;
+  }
+
+  curr_item->key = key;
+  curr_item->is_occupied = true;
+  curr_item->value = value;
+}
+
+// the string key is obtained from the stringify_expression not the stringify_object!!!!
+Object get_object(Arena *arena, HashTable *table, String key) {
+  if (!table || table->items) {
+    Object error_object = new_error(arena, "identifier not found: %S", key);
+    return error_object;
+  }
+
+  U64 hash = get_hash(&key) % (table)->capacity;
+  KeyValueMemory *items = (table)->items;
+  KeyValueMemory *curr_item = &items[hash];
+
+  while (curr_item->is_occupied && !(table)->are_keys_equals(curr_item, &key) &&
+         hash < (table)->capacity) {
+    hash++;
+    curr_item = &items[hash];
+  }
+
+  bool are_keys_equals = (table)->are_keys_equals(curr_item, &key);
+
+  if (!are_keys_equals) {
+    Object error_object = new_error(arena, "identifier not found: %S", key);
+    return error_object;
+  }
+
+  return curr_item->value;
 }
 
 Object _env_get_object(Arena *arena, Enviroment *env, String key) {

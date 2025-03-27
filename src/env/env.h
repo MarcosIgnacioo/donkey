@@ -23,5 +23,6 @@ void env_clone(Arena *, Enviroment *, Enviroment *);
 void env_reset_local(Enviroment *env);
 Object env_get_object(Arena *, Enviroment *, String);
 Object _env_get_object(Arena *, Enviroment *, String);
+void insert_object(Arena *arena, HashTable *table, String key, Object value);
 #endif // !_ENV_H
 //
