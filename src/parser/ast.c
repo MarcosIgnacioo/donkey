@@ -130,7 +130,7 @@ typedef struct {
 
 typedef struct {
   Token token;
-  HashTable *value; // i hate this naming convention
+  HashMapKeyValue *value; // i hate this naming convention
 } HashLiteral;
 
 typedef struct {
@@ -339,7 +339,7 @@ Expression *ast_parse_array(Arena *arena, Parser *parser);
 Expression *ast_parse_index_array(Arena *arena, Parser *parser,
                                   Expression *left);
 
-HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser);
+HashMapKeyValue *ast_parse_hash_map_members(Arena *arena, Parser *parser);
 Expression *ast_parse_hash_map(Arena *arena, Parser *parser);
 Expression *ast_parse_if_expression(Arena *arena, Parser *parser);
 Expression *ast_parse_function_literal(Arena *arena, Parser *parser);
@@ -398,7 +398,7 @@ KeyValue_PF FUNCTIONS_ARR[] = {
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
     kv(KeyValue_PF, GT,
        prs_fn(&ast_parse_prefix_expression, &ast_parse_infix_expression)), //
-    kv(KeyValue_PF, COLON, prs_fn(NULL, &ast_parse_infix_expression)),     //
+    kv(KeyValue_PF, COLON, prs_fn(NULL, NULL)),                            //
     kv(KeyValue_PF, G_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, L_EQUALS, prs_fn(NULL, NULL)),                         //
     kv(KeyValue_PF, COMMA, prs_fn(NULL, NULL)),     // delimiters
@@ -444,7 +444,7 @@ KeyValue_PRC PRECEDENCES_ARR[] = {
     kv(KeyValue_PRC, SLASH, PRODUCT_PREC),        //
     kv(KeyValue_PRC, L_PAREN, CALL_PREC),         //
     kv(KeyValue_PRC, L_SQUARE_BRACE, INDEX_PREC), //
-    kv(KeyValue_PRC, COLON, KEY_VALUE_PREC),      //
+    /*kv(KeyValue_PRC, COLON, KEY_VALUE_PREC),      //*/
     /*kv(KeyValue_PRC, R_PAREN, PAREN_PREC),     //*/
 };
 
@@ -769,50 +769,56 @@ Expression *ast_parse_array(Arena *arena, Parser *parser) {
 // return null -> illegal syntax
 // todo change this to use the infix expression array thats a WAAAY better data
 // structure for this
-HashTable *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
-  HashTable *key_values = arena_alloc(arena, sizeof(HashTable));
 
-  Expression *key_value_infix = NULL;
-  Expression *key = NULL;
-  Expression *value = NULL;
+HashMapKeyValue *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
+  HashMapKeyValue *members = arena_array_with_cap(arena, Expression *, 16);
+  HashMapKeyValue key_value = {0};
+
+  Expression *key, *value;
 
   if (peek_token_is(parser, R_BRACE)) {
     ast_next_token(arena, parser);
-    return key_values;
+    return members;
   }
 
   ast_next_token(arena, parser);
 
   // null verificaction here in prod mode would go craaaazyyy
-  key_value_infix = ast_parse_expression(arena, parser, LOWEST_PREC);
+  key = ast_parse_expression(arena, parser, LOWEST_PREC);
 
-  if (key_value_infix->type != INFIX_EXP) {
-    return key_values;
+  if (!ast_expect_peek_token(arena, parser, COLON)) {
+    return members;
   }
 
-  key = key_value_infix->infix.left;
-  value = key_value_infix->infix.right;
-  (void) key;
-  (void) value;
+  ast_next_token(arena, parser);
 
-  /*donkey_hash_map_insert(arena, key_values, key, value);*/
+  value = ast_parse_expression(arena, parser, LOWEST_PREC);
+  key_value.key = key;
+  key_value.value = value;
+
+  append(members, key_value);
 
   while (peek_token_is(parser, COMMA)) {
     ast_next_token(arena, parser);
-    ast_next_token(arena, parser);
-    key_value_infix = ast_parse_expression(arena, parser, LOWEST_PREC);
-    if (key_value_infix->type != INFIX_EXP) {
-      break;
+
+    key = ast_parse_expression(arena, parser, LOWEST_PREC);
+
+    if (!ast_expect_peek_token(arena, parser, COLON)) {
+      return members;
     }
 
-    key = key_value_infix->infix.left;
-    value = key_value_infix->infix.right;
-    /*donkey_hash_map_insert(arena, key_values, key, value);*/
+    ast_next_token(arena, parser);
+
+    value = ast_parse_expression(arena, parser, LOWEST_PREC);
+
+    key_value.key = key;
+    key_value.value = value;
+    append(members, key_value);
   }
 
   ast_expect_peek_token(arena, parser, R_BRACE);
 
-  return key_values;
+  return members;
 }
 
 Expression *ast_parse_hash_map(Arena *arena, Parser *parser) {

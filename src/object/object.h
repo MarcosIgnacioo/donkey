@@ -129,7 +129,7 @@ Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
                               HashLiteral_ *hash_map_declaration);
 Object eval_evaluate_array(Arena *, Enviroment *, Array);
 // popoasd
-Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
+Object eval_evaluate_index(Arena *arena, Enviroment *env,
                                  Index array_indexing);
 Object eval_evaluate_index_hash_map(Arena *arena, Enviroment *env,
                                  KeyHash hash_indexing);

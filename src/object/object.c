@@ -129,7 +129,7 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
     //
     {
       Index array_indexing = expression->index;
-      evaluated_object = eval_evaluate_index_array(arena, env, array_indexing);
+      evaluated_object = eval_evaluate_index(arena, env, array_indexing);
       break;
     }
   default:
@@ -506,32 +506,53 @@ Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
   return evaluated_object;
 }
 
-Object eval_evaluate_index_array(Arena *arena, Enviroment *env,
-                                 Index indexing) {
+Object eval_evaluate_index(Arena *arena, Enviroment *env, Index indexing) {
   Object evaluated_object = {0};
-  Object array = eval_evaluate_expression(arena, env, indexing.data);
-  if (array.type != ARRAY_OBJECT) {
-    String not_matching_type = error_stringify_object_type(array);
-    return new_error(arena, "identifier is not an array, got : %S",
+  Object data = eval_evaluate_expression(arena, env, indexing.data);
+  if (data.type != ARRAY_OBJECT && data.type != HASH_MAP_OBJECT) {
+    String not_matching_type = error_stringify_object_type(data);
+    return new_error(arena, "identifier is not an array/object, got : %S",
                      not_matching_type);
   }
   Object index = eval_evaluate_expression(arena, env, indexing.index);
-  if (index.type != INTEGER_OBJECT) {
-    String not_matching_type = error_stringify_object_type(index);
-    return new_error(arena, "index is not an int, got : %S", not_matching_type);
+  switch (data.type) {
+  case ARRAY_OBJECT:
+    //
+    {
+      ObjectArray array = data.array;
+      if (index.type != INTEGER_OBJECT) {
+        String not_matching_type = error_stringify_object_type(index);
+        return new_error(arena, "index is not an int, got : %S",
+                         not_matching_type);
+      }
+      I64 user_index = index.integer.value;
+      Object *user_array = array.value;
+      // this worked even with negative numbers and "detecting" them as errors
+      // because a -1 is 0xFFFFFF which is promoted
+      // to an integer, and then is a big nummber cause all bits are on
+      // which most likely will always be greater than
+      // the len so it evaluated to true and returned the null object
+      // -------------------vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+      if (0 > user_index || user_index >= len(user_array)) {
+        return DONKEY_PANIC_OBJECT;
+      }
+      evaluated_object = user_array[user_index];
+      break;
+    }
+  case HASH_MAP_OBJECT:
+    //
+    {
+      ObjectHashMap hash_map = data.hash_map;
+      evaluated_object = object_hash_map_get_item(hash_map.value, index);
+      break;
+    }
+  default:
+    //
+    {
+      return DONKEY_PANIC_OBJECT;
+      break;
+    }
   }
-  I64 user_index = index.integer.value;
-  Object *user_array = array.array.value;
-  // this worked even with negative numbers and "detecting" them as errors
-  // because a -1 is 0xFFFFFF which is promoted
-  // to an integer, and then is a big nummber cause all bits are on
-  // which most likely will always be greater than
-  // the len so it evaluated to true and returned the null object
-  // -------------------vvvvvvvvvvvvvvvvvvvvvvvvvvvv
-  if (0 > user_index || user_index >= len(user_array)) {
-    return DONKEY_PANIC_OBJECT;
-  }
-  evaluated_object = user_array[user_index];
   return evaluated_object;
 }
 
