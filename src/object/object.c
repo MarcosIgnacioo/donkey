@@ -1060,6 +1060,21 @@ Object _tail(Arena *arena, Object *args) {
   return return_object;
 }
 
+Object _sing(Arena *arena, Object *args) {
+  if (len(args) < 1) {
+    return new_error(arena, "wrong number of arguments. got=%d, want more than 0",
+                     len(args));
+  }
+
+  for (size_t i = 0; i < len(args); i++) {
+    Object arg = args[i];
+    String arg_string = object_to_string(arena, arg);
+    printfln("%S", arg_string);
+  }
+
+  return DONKEY_PANIC_OBJECT;
+}
+
 Object _push(Arena *arena, Object *args) {
   if (len(args) < 2) {
     return new_error(arena, "wrong number of arguments. got=%d, want=2 or more",
@@ -1128,6 +1143,7 @@ Object _push(Arena *arena, Object *args) {
   X(first)                                                                     \
   X(last)                                                                      \
   X(tail)                                                                      \
+  X(sing)                                                                      \
   X(push)
 
 Object eval_evaluate_program(Arena *arena, Enviroment *env, Program program) {
