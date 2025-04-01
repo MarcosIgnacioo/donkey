@@ -21,6 +21,7 @@ bool are_function_literals_equals(FunctionLiteral a, FunctionLiteral b);
 bool are_function_calls_equals(FunctionCallExpression a,
                                FunctionCallExpression b);
 bool are_hash_maps_equals_(HashLiteral_ a, HashLiteral_ b);
+bool are_hash_maps_equals(HashLiteral a_hash_map, HashLiteral b_hash_map);
 bool are_key_hashes_equals_equals(KeyHash a, KeyHash b);
 bool are_booleans_equals(Boolean a, Boolean b);
 bool are_identifier_equals(Identifier a, Identifier b);
@@ -154,13 +155,14 @@ typedef struct {
 
 bool are_key_hashes_equals_equals(KeyHash a, KeyHash b) {
   bool are_token_equals = token_equals(a.token, b.token);
-  if (!a.hash_map || !b.hash_map) {
-    return false;
-  }
-  bool are_hash_literals_equals =
-      are_hash_maps_equals_(*a.hash_map, *b.hash_map);
-  bool are_index_equals = are_expressions_equals(a.index, b.index);
-  return are_token_equals && are_hash_literals_equals && are_index_equals;
+  // TODO
+  /*if (!a.hash_map || !b.hash_map) {*/
+  /*  return false;*/
+  /*}*/
+  /*bool are_tables_equals =*/
+  /*    are_hash_maps_equals(*a.hash_map, *b.hash_map);*/
+  /*bool are_index_equals = are_expressions_equals(a.index, b.index);*/
+  return are_token_equals ;
 }
 
 bool are_booleans_equals(Boolean a, Boolean b) {
@@ -253,6 +255,12 @@ bool are_nodes_equals(Node *a, Node *b) {
     }
   }
 
+}
+
+bool are_hash_maps_equals(HashLiteral a_hash_map, HashLiteral b_hash_map) {
+  (void) a_hash_map;
+  (void) b_hash_map;
+  return true;
 }
 
 bool are_hash_maps_equals_(HashLiteral_ a_hash_map, HashLiteral_ b_hash_map) {

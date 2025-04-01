@@ -660,15 +660,17 @@ void signal_handler(int code) {
 }
 #endif /* ifdef DEV */
 
+#include "./test_hash_tables.c"
+
 int main() {
 #ifdef DEV
   signal(SIGSEGV, signal_handler);
 #endif /* ifdef DEV */
+  test_hash_indexing();
+  return 0;
+  test_hash_map();
   test_parser();
-  return 0;
-  return 0;
   test_generic();
-  return 0;
   test_built_in_functions();
   test_parser();
   test_error_handling();

@@ -28,6 +28,8 @@ typedef HashResult (*get_item_in_hash_index)(void *, U64);
 typedef struct HashTable HashTable;
 typedef void (*insert_item_fn)(Arena *, HashTable *, void *, void *);
 
+// make a version where i have the keys and the values so i can be a javascript uwu language
+
 struct HashTable {
   U64 len;
   U64 capacity;

@@ -65,8 +65,13 @@ void object_hash_map_insert(Arena *arena, HashTable *table, Object key,
                             Object value) {
 
   if (!table->items) {
-    hash_table_alloc_custom(arena, table, KeyValueObject, are_objects_equals,
-                            object_get_hash);
+    hash_table_alloc_custom(
+      arena,
+      table,
+      KeyValueObject,
+      are_objects_equals,
+      object_get_hash
+    );
   }
 
   if (table->len >= table->capacity) {
@@ -106,19 +111,22 @@ void object_hash_map_insert(Arena *arena, HashTable *table, Object key,
 }
 
 bool are_object_hash_maps_equals(ObjectHashMap a, ObjectHashMap b) {
-  if (a.value || b.value) {
+  if (!a.value || !b.value) {
     return false;
   }
 
-  bool are_key_values_equals = true;
+  bool are_key_values_equals = false;
   KeyValueObject *items_a = (KeyValueObject *)a.value->items;
 
-  for (size_t i = 0; i < a.value->len; i++) {
+  for (size_t i = 0; i < a.value->capacity; i++) {
     KeyValueObject item_a = items_a[i];
+    if (!item_a.is_occupied) {
+      continue;
+    }
     Object value_in_b = object_hash_map_get_item(b.value, item_a.key);
     bool are_values_equals = are_objects_equals(&item_a.value, &value_in_b);
-    if (!are_values_equals) {
-      are_key_values_equals = false;
+    if (are_values_equals) {
+      are_key_values_equals = true;
       break;
     }
   }
@@ -225,7 +233,6 @@ bool are_objects_equals(void *a_ptr, void *b_ptr) {
   default:
     //
     {
-      printf("why did we got here");
       return false;
     }
   }
@@ -233,7 +240,6 @@ bool are_objects_equals(void *a_ptr, void *b_ptr) {
 
 // TODO: hashmap cool implementation use void pointers and because we have a
 // equals function we dont actually need them to be a fixed type
-
 
 // hashtable for object implementation
 

@@ -1,3 +1,26 @@
+small buffer for saving wbhjkl jumps vim
+
+because i didnt read the part of the hash first and decided to implement it myself
+mainly because in cc well we donty have any hashmapps built in and just tought well
+might just write the whole equals functions to make the map[Object]Object work in c
+so i did it and it worked because of that, but in go u cant actually make that hashmap
+theyu just gaslighted me because im a pretty girl, and they did something similar, actaully
+something i look it up when starting this part and that being how does java handle 
+object hashmaps and basically what they do is just to write a to_hash function to the class
+and that gives the hash thing and thats just it, thats the key stored in it so yeah
+
+the book just does that implements a hashing struct that has the key (the hashed one) and the kevalue as the value 
+KeyValue {
+  Object key;
+  Object value;
+}
+map[KeyHash]KeyValue
+
+this is because they loose the key when hashing so they just store it as the value
+which makes handling the collisions and getting the right value when trying to index
+them way easier cause now is possible to get well the real key and make an equals thing etc
+
+
 
 a temporary arena for just data that requires calculations for example
 the hash function needs to stringify a expression to hash it, whic is fine

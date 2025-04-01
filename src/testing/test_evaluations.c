@@ -1,6 +1,6 @@
 #include "../array.c"
-#include "../object/object.c"
 #include "../env/env.h"
+#include "../object/object.c"
 #include "test.h"
 #include <stdio.h>
 
@@ -360,6 +360,88 @@ void test_generic() {
 typedef struct {
   char *input;
   I64 expected;
+} TestHashIndexing;
+
+void test_hash_indexing() {
+  env_init(&arena, &env);
+  TestHashIndexing test_cases[] = {
+      {
+          "let x = {1 : 2}; x[1,]",
+          -999,
+      },
+      {
+          "{\"foo\" : 5}[\"foo\"]",
+          5,
+      },
+      {
+          "{\" foo \" : 5}[\" bar \"]",
+          -999,
+      },
+      {
+          "let key = \"foo\";"
+          " {\"foo\" : 5}[key] ",
+          5,
+      },
+      {
+          "{}[\"foo\"]",
+          -999,
+      },
+      {
+          "{5 : 5}[5]",
+          5,
+      },
+      {
+          "{true : 5}[true]",
+          5,
+      },
+      {
+          "{false : 5}[false]",
+          5,
+      } //
+  };
+  Object test_obj;
+  bool pass = true;
+  for (I64 i = 0; i < array_len(test_cases); i++) {
+    TestHashIndexing test = test_cases[i];
+    test_obj = test_eval(test.input);
+    printfln("TEST ID:%d", i, test.input);
+    printfln("%s", test.input);
+    printfln("EVALUATED TO:");
+    printfln("%S", object_to_string(&arena, test_obj));
+    printf("\n");
+    if (test.expected == -999) {
+      if (!test_object_null(test_obj)) {
+        /*test ./main "test_hash_indexing" input.json expected.json*/
+        printf("FAILED:%s\n", test.input);
+        printf("expected:%lld\n", test.expected);
+        printfln("got:%S\n", object_to_string(&arena, test_obj));
+        pass = false;
+      }
+
+    } else {
+      if (!test_object_integer(test_obj, test.expected)) {
+        /*test ./main "test_hash_indexing" input.json expected.json*/
+        printf("FAILED:%s\n", test.input);
+        printf("expected:%lld\n", test.expected);
+        printfln("got:%S\n", object_to_string(&arena, test_obj));
+        pass = false;
+      }
+    }
+  }
+  printfln("Last expression evaluated to: %S",
+           object_to_string(&arena, test_obj));
+
+  if (pass) {
+    printf(LOG_SUCCESS "ALL TEST PASSED AT: test_hash_indexing() \n");
+  } else {
+    printf(LOG_ERROR "TEST FAILED       AT: test_hash_indexing() \n");
+  }
+  printf("\n");
+}
+
+typedef struct {
+  char *input;
+  I64 expected;
 } TestFunctionApplication;
 void test_function_application() {
   env_init(&arena, &env);
@@ -620,7 +702,7 @@ typedef struct {
   char *input;
   union {
     int value;
-    void * not;
+    void *not;
   };
 } TestResultIfExpression;
 
@@ -635,10 +717,10 @@ void test_if_expressions_evaluations() {
               "if (10 > 1) { if (10 > 1) { 123; return 10; 456;} return 1; }",
           .value = 10},
       (TestResultIfExpression){.input = "if (true) { 10 }", .value = 10},
-      (TestResultIfExpression){.input = "if (false) { 10 }", .not= nil},
+      (TestResultIfExpression){.input = "if (false) { 10 }", .not = nil},
       (TestResultIfExpression){.input = "if (1) { 10 }", .value = 10},
       (TestResultIfExpression){.input = "if (1 < 2) { 10 }", .value = 10},
-      (TestResultIfExpression){.input = "if (1 > 2) { 10 }", .not= nil},
+      (TestResultIfExpression){.input = "if (1 > 2) { 10 }", .not = nil},
       (TestResultIfExpression){.input = "if (1 > 2) { 10 } else { 20 }",
                                .value = 20},
       (TestResultIfExpression){.input = "if (1 < 2) { 10 } else { 20 }",
@@ -673,7 +755,7 @@ typedef struct {
   char *input;
   union {
     int value;
-    void * not;
+    void *not;
   };
 } TestResultReturnExpressions;
 
@@ -718,6 +800,10 @@ Object test_eval(char *input) {
   Lexer lexer = lexer_new_lexer(string(input));
   Parser parser = ast_new_parser(&arena, &lexer);
   Program program = ast_parse_program(&arena, &parser);
+  if (len(parser.errors)) {
+    print_parser_errors(parser);
+    return (Object){0};
+  }
   Object evaluated = eval_evaluate_program(&arena, &env, program);
   return evaluated;
 }

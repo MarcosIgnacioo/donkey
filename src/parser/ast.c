@@ -148,7 +148,7 @@ typedef struct {
 
 typedef struct {
   Token token;
-  HashLiteral_ *hash_map;
+  Expression *hash_map;
   Expression *index;
 } KeyHash;
 // ArrayIndex would have gone really hard
@@ -775,6 +775,8 @@ HashMapKeyValue *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
   HashMapKeyValue key_value = {0};
 
   Expression *key, *value;
+  key = NULL;
+  value = NULL;
 
   if (peek_token_is(parser, R_BRACE)) {
     ast_next_token(arena, parser);
@@ -800,6 +802,7 @@ HashMapKeyValue *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
 
   while (peek_token_is(parser, COMMA)) {
     ast_next_token(arena, parser);
+    ast_next_token(arena, parser);
 
     key = ast_parse_expression(arena, parser, LOWEST_PREC);
 
@@ -823,13 +826,23 @@ HashMapKeyValue *ast_parse_hash_map_members(Arena *arena, Parser *parser) {
 
 Expression *ast_parse_hash_map(Arena *arena, Parser *parser) {
   Token curr_token = parser->curr_token;
-  Expression **key_values = ast_parse_expression_list(arena, parser, R_BRACE);
+  HashMapKeyValue *key_values = ast_parse_hash_map_members(arena, parser);
   Expression *hash_map_expression = arena_alloc(arena, sizeof(Expression));
-  hash_map_expression->type = HASH_MAP_EXP_;
-  hash_map_expression->hash_literal_.token = curr_token;
-  hash_map_expression->hash_literal_.value = key_values;
+  hash_map_expression->type = HASH_MAP_EXP;
+  hash_map_expression->hash_literal.token = curr_token;
+  hash_map_expression->hash_literal.value = key_values;
   return hash_map_expression;
 }
+
+/*Expression *ast_parse_hash_map(Arena *arena, Parser *parser) {*/
+/*  Token curr_token = parser->curr_token;*/
+/*  Expression **key_values = ast_parse_expression_list(arena, parser, R_BRACE);*/
+/*  Expression *hash_map_expression = arena_alloc(arena, sizeof(Expression));*/
+/*  hash_map_expression->type = HASH_MAP_EXP_;*/
+/*  hash_map_expression->hash_literal_.token = curr_token;*/
+/*  hash_map_expression->hash_literal_.value = key_values;*/
+/*  return hash_map_expression;*/
+/*}*/
 
 // parse_
 Expression *ast_parse_index_array(Arena *arena, Parser *parser,

@@ -11,10 +11,17 @@ void test_parser() {
   Arena arena = (Arena){.begin = NULL, .end = NULL};
   // why the object keeps the } as a token and the parser thinks is consumable
   // or parseable
-  /*char *input = "[1,1]";*/
-  /*char *inputs[] = {"asdf:3"};*/
-  char *inputs[] = {"let x = {1:2,3:4}; x[true]"};
-    Enviroment env = {0};
+  char *input = "let two = \" two \";"
+                "{"
+                "\" one \": 10 - 9,"
+                "two: 1 + 1,"
+                "\" thr \" + \" ee \": 6 / 2,"
+                "4: 4,"
+                "true: 5,"
+                "false: 6"
+                "}";
+  char *inputs[] = {input};
+  Enviroment env = {0};
   for (size_t i = 0; i < array_len(inputs); i += 1) {
     Lexer lexer = lexer_new_lexer(string(inputs[i]));
     Parser parser = ast_new_parser(&arena, &lexer);

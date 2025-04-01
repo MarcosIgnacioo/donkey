@@ -126,7 +126,7 @@ Object eval_integer_infix_expression(Arena *, Object, String, Object);
 Object eval_bool_infix_expression(Arena *, Object, String, Object);
 Object eval_string_infix_expression(Arena *, Object, String, Object);
 Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
-                              HashLiteral_ *hash_map_declaration);
+                              HashLiteral *hash_map_declaration);
 Object eval_evaluate_array(Arena *, Enviroment *, Array);
 // popoasd
 Object eval_evaluate_index(Arena *arena, Enviroment *env,

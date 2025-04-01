@@ -111,25 +111,26 @@ Object eval_evaluate_expression(Arena *arena, Enviroment *env,
   case HASH_MAP_EXP_:
     //
     {
-      HashLiteral_ hash_map_declaration = expression->hash_literal_;
+      /*HashLiteral_ hash_map_declaration = expression->hash_literal_;*/
+      /*evaluated_object =*/
+      /*    eval_evaluate_hash_map(arena, env, &hash_map_declaration);*/
+      // cmabio nuevo
+      break;
+    }
+  case HASH_MAP_EXP:
+    //
+    {
+      HashLiteral hash_map_declaration = expression->hash_literal;
       evaluated_object =
           eval_evaluate_hash_map(arena, env, &hash_map_declaration);
       // cmabio nuevo
       break;
     }
-  case KEY_HASH_MAP_EXP:
-    //
-    {
-      KeyHash array_indexing = expression->key_hash;
-      evaluated_object =
-          eval_evaluate_index_hash_map(arena, env, array_indexing);
-      break;
-    }
   case INDEX_EXP:
     //
     {
-      Index array_indexing = expression->index;
-      evaluated_object = eval_evaluate_index(arena, env, array_indexing);
+      Index data_indexing = expression->index;
+      evaluated_object = eval_evaluate_index(arena, env, data_indexing);
       break;
     }
   default:
@@ -477,32 +478,29 @@ Object eval_evaluate_array(Arena *arena, Enviroment *env,
 #include "./object_hashmap.c"
 
 Object eval_evaluate_hash_map(Arena *arena, Enviroment *env,
-                              HashLiteral_ *hash_map_declaration) {
+                              HashLiteral *hash_map_declaration) {
   Object evaluated_object = {0};
-  Expression **expressions = hash_map_declaration->value;
+  HashMapKeyValue *key_values = hash_map_declaration->value;
   HashTable *members = arena_alloc(arena, sizeof(HashTable));
 
-  for (size_t i = 0; i < len(expressions); i++) {
-    Expression *expression = expressions[i];
-    InfixExpression key_value = expression->infix;
-    Object key = eval_evaluate_expression(arena, env, key_value.left);
-    Object value = eval_evaluate_expression(arena, env, key_value.right);
-
+  for (size_t i = 0; i < len(key_values); i++) {
+    HashMapKeyValue *key_value = &key_values[i];
+    Object key = eval_evaluate_expression(arena, env, key_value->key);
+    Object value = eval_evaluate_expression(arena, env, key_value->value);
     if (is_error(key)) {
       return key;
       break;
     }
-
     if (is_error(value)) {
       return value;
       break;
     }
-
     object_hash_map_insert(arena, members, key, value);
   }
 
   evaluated_object.type = HASH_MAP_OBJECT;
   evaluated_object.hash_map.value = members;
+
   return evaluated_object;
 }
 
@@ -514,6 +512,7 @@ Object eval_evaluate_index(Arena *arena, Enviroment *env, Index indexing) {
     return new_error(arena, "identifier is not an array/object, got : %S",
                      not_matching_type);
   }
+
   Object index = eval_evaluate_expression(arena, env, indexing.index);
   switch (data.type) {
   case ARRAY_OBJECT:
@@ -556,17 +555,6 @@ Object eval_evaluate_index(Arena *arena, Enviroment *env, Index indexing) {
   return evaluated_object;
 }
 
-Object eval_evaluate_index_hash_map(Arena *arena, Enviroment *env,
-                                    KeyHash hash_indexing) {
-  Object evaluated_object = {0};
-  Object evaluated_hash_map =
-      eval_evaluate_hash_map(arena, env, hash_indexing.hash_map);
-  HashTable *table = evaluated_hash_map.hash_map.value;
-  Object index = eval_evaluate_expression(arena, env, hash_indexing.index);
-  evaluated_object = object_hash_map_get_item(table, index);
-  return evaluated_object;
-}
-
 Object _eval_fn_call_expression(Arena *arena,            //
                                 Enviroment *env,         //
                                 ObjectFunction function, //
@@ -584,7 +572,6 @@ Object _eval_fn_call_expression(Arena *arena,            //
   fn_env->outer_memory = env;
   BlockStatement fn_body = function.body;
   Identifier *parameters = function.parameters;
-
   eval_expand_function_enviroment(arena, fn_env, parameters, arguments);
 
   Object returning_object =
